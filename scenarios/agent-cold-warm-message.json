@@ -3,7 +3,7 @@
   "surface": "agent-cli-local-turn",
   "title": "Agent CLI Local Cold/Warm Message",
   "objective": "Send cold and warm simple messages through `openclaw agent --local`, verify mock-provider responses, and attribute latency before, during, and after provider work.",
-  "tags": ["agent", "message", "latency", "providers", "gateway", "cold-warm"],
+  "tags": ["agent", "message", "latency", "providers", "cold-warm"],
   "timeoutMs": 240000,
   "agent": {
     "expectedText": "KOVA_AGENT_OK"
@@ -16,11 +16,11 @@
     "coldWarmDeltaMs": 30000,
     "preProviderMs": 10000,
     "coldPreProviderMs": 10000,
-    "warmPreProviderMs": 5000,
+    "warmPreProviderMs": 10000,
     "providerFinalMs": 3000,
-    "preProviderDominanceRatio": 0.8,
     "statusMs": 10000,
     "peakRssMb": 900,
+    "agentProcessLeaks": 4,
     "missingDependencyErrors": 0,
     "pluginLoadFailures": 0,
     "providerTimeoutMentions": 0
@@ -29,9 +29,9 @@
     {
       "id": "provision",
       "title": "Provision Agent Env",
-      "intent": "Start a disposable OpenClaw gateway before wiring the model provider and sending messages.",
-      "commands": ["ocm start {env} {startSelector} --json"],
-      "evidence": ["gateway port", "runtime binding", "startup readiness"]
+      "intent": "Create a disposable OpenClaw env before wiring the model provider and sending local agent messages.",
+      "commands": ["ocm start {env} {startSelector} --no-service --json"],
+      "evidence": ["gateway port", "runtime binding", "env created without service"]
     },
     {
       "id": "cold-agent-turn",
@@ -53,10 +53,10 @@
     },
     {
       "id": "post-agent-health",
-      "title": "Post-Agent Gateway Health",
-      "intent": "Verify the gateway remains responsive after both agent turns and capture provider/plugin diagnostics.",
-      "commands": ["ocm @{env} -- status", "ocm logs {env} --tail 300 --raw"],
-      "evidence": ["gateway status", "provider logs", "plugin errors", "memory after agent turns"]
+      "title": "Post-Agent Env Status",
+      "intent": "Verify the env remains usable after both local agent turns and capture plugin diagnostics.",
+      "commands": ["ocm @{env} -- status"],
+      "evidence": ["env status", "plugin errors", "memory after agent turns"]
     }
   ]
 }

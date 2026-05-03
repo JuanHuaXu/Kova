@@ -110,6 +110,7 @@ export async function runSelfCheck(flags = {}) {
     checks.push(await commandTimeoutContractCheck());
     checks.push(ocmCommandBuildersCheck());
     checks.push(evaluationViolationHelpersCheck());
+    checks.push(localBuildTargetSetupResourceExclusionCheck());
     checks.push(await jsonCommandCheck("plan-json", "node bin/kova.mjs plan --json", (data) => {
       assertEqual(data.schemaVersion, "kova.plan.v1", "plan schema");
       assertArrayNotEmpty(data.surfaces, "plan surfaces");
@@ -555,6 +556,91 @@ function evaluationViolationHelpersCheck() {
       message: error.message
     };
   }
+}
+
+function localBuildTargetSetupResourceExclusionCheck() {
+  try {
+    const record = {
+      scenario: "local-build-runtime-resources",
+      status: "PASS",
+      phases: [
+        {
+          id: "target-setup",
+          results: [{
+            command: "ocm runtime build-local kova-local-test --repo /tmp/openclaw --force",
+            status: 0,
+            durationMs: 60000,
+            resourceSamples: syntheticResourceSamples({
+              peakRssMb: 2500,
+              maxCpuPercent: 350,
+              role: "build-tooling"
+            })
+          }]
+        },
+        {
+          id: "scenario-command",
+          results: [{
+            command: "ocm @kova-self-check -- status",
+            status: 0,
+            durationMs: 100,
+            resourceSamples: syntheticResourceSamples({
+              peakRssMb: 100,
+              maxCpuPercent: 20,
+              role: "gateway"
+            })
+          }]
+        }
+      ],
+      finalMetrics: {
+        service: { gatewayState: "disabled" },
+        logs: zeroLogMetrics()
+      }
+    };
+    evaluateRecord(record, { thresholds: { peakRssMb: 900 } }, {
+      surface: { thresholds: {} },
+      targetPlan: { kind: "local-build" }
+    });
+    assertEqual(record.status, "PASS", "local-build target setup resources ignored status");
+    assertEqual(record.measurements.peakRssMb, 100, "local-build target setup resources ignored RSS");
+    assertEqual(record.measurements.resourceByRole.gateway.peakRssMb, 100, "scenario role RSS retained");
+    assertEqual(record.measurements.resourceByRole["build-tooling"], undefined, "target setup role excluded");
+    assertEqual(record.violations, undefined, "no-service local-build record has no gateway violation");
+    return {
+      id: "local-build-target-setup-resource-exclusion",
+      status: "PASS",
+      command: "evaluate local-build target setup resource exclusion",
+      durationMs: 0
+    };
+  } catch (error) {
+    return {
+      id: "local-build-target-setup-resource-exclusion",
+      status: "FAIL",
+      command: "evaluate local-build target setup resource exclusion",
+      durationMs: 0,
+      message: error.message
+    };
+  }
+}
+
+function syntheticResourceSamples({ peakRssMb, maxCpuPercent, role }) {
+  return {
+    sampleCount: 1,
+    peakTotalRssMb: peakRssMb,
+    maxTotalCpuPercent: maxCpuPercent,
+    peakCommandTreeRssMb: peakRssMb,
+    peakGatewayRssMb: role === "gateway" ? peakRssMb : 0,
+    byRole: {
+      [role]: {
+        peakRssMb,
+        maxCpuPercent,
+        peakProcessCount: 1
+      }
+    },
+    topRolesByRss: [{ role, peakRssMb, maxCpuPercent }],
+    topRolesByCpu: [{ role, peakRssMb, maxCpuPercent }],
+    topByRss: [],
+    topByCpu: []
+  };
 }
 
 function gatePartialFailureCheck() {

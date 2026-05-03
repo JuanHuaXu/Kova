@@ -21,8 +21,12 @@ export function evaluateRecord(record, scenario, options = {}) {
   const roleThresholds = thresholdPolicy.roleThresholds;
   const violations = [];
   const allResults = collectResults(record);
-  const resourceSummary = collectResourceSummary(allResults);
-  const peakRssMb = maxNullable(collectPeakRss(record), resourceSummary.peakTotalRssMb);
+  const measuredResults = collectResults(record, { excludePhaseIds: ["target-setup"] });
+  const resourceSummary = collectResourceSummary(measuredResults);
+  const peakRssMb = maxNullable(
+    collectPeakRss(record, { excludePhaseIds: ["target-setup"] }),
+    resourceSummary.peakTotalRssMb
+  );
   const cpuPercentMax = maxNullable(collectCpuPercentMax(record), resourceSummary.maxTotalCpuPercent);
   const missingDependencyErrors = countMissingDependencyErrors(allResults) + countLogMetric(record, "missingDependencyErrors");
   const pluginLoadFailures = countLogMetric(record, "pluginLoadFailures");
@@ -46,6 +50,7 @@ export function evaluateRecord(record, scenario, options = {}) {
   const heapSnapshotBytes = countHeapSnapshotBytes(record);
   const diagnosticReportCount = countDiagnosticReportMetric(record, "fileCount");
   const diagnosticReportBytes = countDiagnosticReportMetric(record, "artifactBytes");
+  const gatewayExpected = recordExpectsGateway(record);
   const openclawDiagnostics = collectOpenClawDiagnostics(record);
   const timelineSummary = collectTimelineSummary(record);
   const logSummary = collectLogSummary(record);
@@ -73,7 +78,7 @@ export function evaluateRecord(record, scenario, options = {}) {
   const agentTurnMs = maxNullable(maxDurationWhere(allResults, isAgentMessageCommand), maxTurnDuration(agentTurns));
   const agentResponseOk = agentTurns.length === 0 ? null : agentTurns.every((turn) => turn.responseOk === true);
   const agentProviderSimulation = evaluateProviderSimulation({ turns: agentTurns, scenario, record, thresholds });
-  const agentFailureContainment = evaluateAgentFailureContainment({ turns: agentTurns, record, thresholds });
+  const agentFailureContainment = evaluateAgentFailureContainment({ turns: agentTurns, record, thresholds, gatewayExpected });
   const agentCleanupDiagnosis = diagnoseAgentCleanup(agentTurns, agentTurnStats, thresholds);
   const agentLatencyDiagnosis = diagnoseAgentLatency({
     coldAgentTurn,
@@ -166,7 +171,7 @@ export function evaluateRecord(record, scenario, options = {}) {
     });
   }
 
-  if (finalGatewayState && finalGatewayState !== "running") {
+  if (gatewayExpected && finalGatewayState && finalGatewayState !== "running") {
     violations.push({
       kind: "gateway",
       metric: "finalGatewayState",
@@ -950,7 +955,7 @@ function collectAgentTurns(record, providerEvidence, scenario, timelineSummary, 
   return turns;
 }
 
-function evaluateAgentFailureContainment({ turns, record, thresholds }) {
+function evaluateAgentFailureContainment({ turns, record, thresholds, gatewayExpected = true }) {
   if (turns.length === 0) {
     return {
       schemaVersion: "kova.agentFailureContainment.v1",
@@ -959,7 +964,7 @@ function evaluateAgentFailureContainment({ turns, record, thresholds }) {
       leakedProcesses: [],
       processLeaksOk: true,
       finalGatewayState: record.finalMetrics?.service?.gatewayState ?? null,
-      gatewayHealthy: null,
+      gatewayHealthy: gatewayExpected ? null : true,
       healthFailures: countHealthFailures(record),
       healthLimit: 0,
       statusWorks: null,
@@ -989,7 +994,7 @@ function evaluateAgentFailureContainment({ turns, record, thresholds }) {
     leakedProcesses,
     processLeaksOk: leakCount <= leakLimit,
     finalGatewayState,
-    gatewayHealthy: finalGatewayState === "running" && healthFailures <= healthLimit,
+    gatewayHealthy: gatewayExpected ? finalGatewayState === "running" && healthFailures <= healthLimit : true,
     healthFailures,
     healthLimit,
     statusWorks,
@@ -2164,9 +2169,13 @@ function healthFailureCount(samples) {
   return samples.filter((sample) => sample && !sample.ok).length;
 }
 
-function collectResults(record) {
+function collectResults(record, options = {}) {
+  const excludePhaseIds = new Set(options.excludePhaseIds ?? []);
   const results = [];
   for (const phase of record.phases ?? []) {
+    if (excludePhaseIds.has(phase.id)) {
+      continue;
+    }
     for (const result of phase.results ?? []) {
       results.push(result);
     }
@@ -2174,9 +2183,23 @@ function collectResults(record) {
   return results;
 }
 
-function collectPeakRss(record) {
+function recordExpectsGateway(record) {
+  return collectResults(record).some((result) => {
+    const command = result.command ?? "";
+    if (command.startsWith("ocm service start ") || command.startsWith("ocm service restart ")) {
+      return true;
+    }
+    return command.startsWith("ocm start ") && !/(?:^|\s)--no-service(?:\s|$)/.test(command);
+  });
+}
+
+function collectPeakRss(record, options = {}) {
+  const excludePhaseIds = new Set(options.excludePhaseIds ?? []);
   let peak = null;
   for (const phase of record.phases ?? []) {
+    if (excludePhaseIds.has(phase.id)) {
+      continue;
+    }
     const rss = phase.metrics?.process?.rssMb;
     if (typeof rss === "number") {
       peak = peak === null ? rss : Math.max(peak, rss);
