@@ -21,13 +21,10 @@ import {
 import { buildPerformanceSummary } from "./performance/stats.mjs";
 import { platformInfo } from "./platform.mjs";
 import { artifactsDir, repoRoot, reportsDir } from "./paths.mjs";
-import { loadProcessRoles } from "./registries/process-roles.mjs";
-import { loadMetrics } from "./registries/metrics.mjs";
-import { loadProfile, loadProfiles } from "./registries/profiles.mjs";
+import { loadRegistryContext } from "./registries/context.mjs";
+import { loadProfile } from "./registries/profiles.mjs";
 import { loadScenarios, validateScenarioRun } from "./registries/scenarios.mjs";
-import { loadState, loadStates } from "./registries/states.mjs";
-import { loadSurfaces } from "./registries/surfaces.mjs";
-import { validateRegistryReferences } from "./registries/validate.mjs";
+import { loadState } from "./registries/states.mjs";
 import { renderMarkdownReport, renderPasteSummary, renderReportSummary, summarizeRecords } from "./reporting/report.mjs";
 import { buildDryRunRecord, buildSkippedRecord, createRunId, executeScenario } from "./runner.mjs";
 import { runSelfCheck } from "./selfcheck.mjs";
@@ -101,19 +98,6 @@ async function versionCommand(flags = {}) {
   }
 
   console.log(packageJson.version);
-}
-
-async function loadRegistryContext() {
-  const [surfaces, processRoles, metrics, scenarios, states, profiles] = await Promise.all([
-    loadSurfaces(),
-    loadProcessRoles(),
-    loadMetrics(),
-    loadScenarios(),
-    loadStates(),
-    loadProfiles()
-  ]);
-  validateRegistryReferences({ scenarios, states, profiles, surfaces, processRoles, metrics });
-  return { surfaces, processRoles, metrics, scenarios, states, profiles };
 }
 
 function filterRegistry(items, selectedId, kind) {
