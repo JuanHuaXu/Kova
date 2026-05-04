@@ -168,6 +168,18 @@
           "tui-message-turn",
           "openai-compatible-turn"
         ]
+      },
+      "requirements": {
+        "blocking": [
+          "release-runtime-startup:baseline",
+          "gateway-performance:baseline",
+          "bundled-runtime-deps:baseline",
+          "agent-cli-local-turn:baseline",
+          "agent-gateway-rpc-turn:baseline",
+          "dashboard-session-send-turn:baseline",
+          "tui-message-turn:baseline",
+          "openai-compatible-turn:baseline"
+        ]
       }
     },
     "blocking": [

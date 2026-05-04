@@ -125,6 +125,7 @@ export async function runSelfCheck(flags = {}) {
       const releaseCoverage = data.coverage?.profiles?.find((profile) => profile.id === "release");
       const releaseProfile = data.profiles?.find((profile) => profile.id === "release");
       assertArrayNotEmpty(releaseCoverage?.required?.platforms, "release required platform coverage");
+      assertArrayNotEmpty(releaseCoverage?.required?.requirements, "release required requirement coverage");
       assertArrayNotEmpty(releaseCoverage?.currentPlatformKeys, "current platform coverage keys");
       assertEqual(releaseProfile?.purpose, "release", "release profile purpose");
       assertEqual((releaseProfile?.calibration?.surfaceCount ?? 0) > 0, true, "release profile calibrated surfaces");

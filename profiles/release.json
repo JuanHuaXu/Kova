@@ -347,6 +347,41 @@
           "media-understanding-timeout",
           "agent-network-offline"
         ]
+      },
+      "requirements": {
+        "blocking": [
+          "release-runtime-startup:baseline",
+          "fresh-install:baseline",
+          "upgrade-existing-user:baseline",
+          "bundled-runtime-deps:baseline",
+          "plugin-lifecycle:baseline",
+          "plugin-external-install:baseline",
+          "official-plugin-install:baseline",
+          "plugin-remove:baseline",
+          "plugin-update:baseline",
+          "plugin-bad-manifest:baseline",
+          "plugin-missing-runtime-deps:baseline",
+          "bundled-plugin-startup:baseline",
+          "provider-models:baseline",
+          "agent-cli-local-turn:baseline",
+          "agent-gateway-rpc-turn:baseline",
+          "dashboard-session-send-turn:baseline",
+          "tui-message-turn:baseline",
+          "openai-compatible-turn:baseline",
+          "dashboard:baseline",
+          "tui:baseline",
+          "gateway-performance:baseline"
+        ],
+        "warning": [
+          "failure-containment:baseline",
+          "soak:baseline",
+          "workspace-scan:baseline",
+          "mcp-runtime:baseline",
+          "browser-automation:baseline",
+          "media-understanding:baseline",
+          "network-offline:baseline",
+          "cross-platform-smoke:baseline"
+        ]
       }
     },
     "blocking": [

@@ -30,6 +30,11 @@
         "blocking": [
           "official-plugin-install"
         ]
+      },
+      "requirements": {
+        "blocking": [
+          "official-plugin-install:baseline"
+        ]
       }
     },
     "blocking": [
