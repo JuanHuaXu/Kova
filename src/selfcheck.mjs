@@ -127,6 +127,9 @@ export async function runSelfCheck(flags = {}) {
       assertArrayNotEmpty(releaseCoverage?.currentPlatformKeys, "current platform coverage keys");
       assertEqual((releaseProfile?.calibration?.surfaceCount ?? 0) > 0, true, "release profile calibrated surfaces");
       assertEqual((releaseProfile?.calibration?.roleCount ?? 0) > 0, true, "release profile calibrated roles");
+      assertEqual(data.surfaces.some((surface) => surface.id === "official-plugin-install"), true, "official plugin surface present");
+      assertEqual(data.states.some((state) => state.id === "official-plugins"), true, "official plugins state present");
+      assertEqual(data.scenarios.some((scenario) => scenario.id === "official-plugin-install" && scenario.surface === "official-plugin-install"), true, "official plugin scenario present");
       if (data.scenarios.some((scenario) => typeof scenario.surface !== "string" || scenario.surface.length === 0)) {
         throw new Error("every scenario must expose a surface");
       }
@@ -365,6 +368,7 @@ export async function runSelfCheck(flags = {}) {
     checks.push(browserAutomationEvidenceEvaluationCheck());
     checks.push(mediaUnderstandingEvidenceEvaluationCheck());
     checks.push(networkOfflineEvidenceEvaluationCheck());
+    checks.push(await officialPluginInstallRunnerCheck(tmp));
     checks.push(await jsonCommandCheck(
       "dry-run-state-lifecycle-json",
       `node bin/kova.mjs run --target runtime:stable --scenario fresh-install --state missing-plugin-index --report-dir ${quoteShell(tmp)} --json`,
@@ -375,6 +379,15 @@ export async function runSelfCheck(flags = {}) {
         if (!commands.some((command) => command.includes("rm -f") && command.includes("plugins/installs.json"))) {
           throw new Error("state lifecycle command missing from dry-run report");
         }
+      }
+    ));
+    checks.push(await jsonCommandCheck(
+      "official-plugin-install-dry-run-json",
+      `node bin/kova.mjs run --target runtime:stable --scenario official-plugin-install --state official-plugins --report-dir ${quoteShell(tmp)} --json`,
+      async (data) => {
+        const report = JSON.parse(await readFile(data.jsonPath, "utf8"));
+        const commands = report.records?.[0]?.phases?.flatMap((phase) => phase.commands ?? []) ?? [];
+        assertEqual(commands.some((command) => command.includes("run-official-plugin-install.mjs") && command.includes("states/official-plugins.json")), true, "official plugin state-backed command present");
       }
     ));
     checks.push(await jsonCommandCheck(
@@ -2035,6 +2048,83 @@ async function concurrentAgentRunnerCheck(tmp) {
       status: "FAIL",
       command,
       durationMs: result.durationMs,
+      message: error.message
+    };
+  }
+}
+
+async function officialPluginInstallRunnerCheck(tmp) {
+  const fakeBin = join(tmp, "official-plugin-runner-bin");
+  const fakeOcm = join(fakeBin, "ocm");
+  const artifactDir = join(tmp, "official-plugin-runner-artifacts");
+  await mkdir(fakeBin, { recursive: true });
+  await writeFile(fakeOcm, [
+    "#!/usr/bin/env node",
+    "const text = process.argv.slice(2).join(' ');",
+    "if (text.includes('@kova-self-check -- plugins install @openclaw/discord')) {",
+    "  if (process.env.KOVA_FAKE_OCM_SECURITY_BLOCK === '1') {",
+    "    process.stderr.write('WARNING: Plugin \"discord\" contains dangerous code patterns: credential harvesting\\n');",
+    "    process.exit(1);",
+    "  }",
+    "  process.stdout.write('installed @openclaw/discord\\n');",
+    "  process.exit(0);",
+    "}",
+    "if (text.includes('@kova-self-check -- plugins list')) {",
+    "  process.stdout.write('discord @openclaw/discord\\n');",
+    "  process.exit(0);",
+    "}",
+    "if (text.includes('@kova-self-check -- plugins registry --refresh --json')) {",
+    "  process.stdout.write(JSON.stringify({ plugins: [{ id: 'discord' }] }) + '\\n');",
+    "  process.exit(0);",
+    "}",
+    "if (text.includes('@kova-self-check -- status')) {",
+    "  process.stdout.write('status ok\\n');",
+    "  process.exit(0);",
+    "}",
+    "if (text.includes('logs kova-self-check --tail 400 --raw')) {",
+    "  process.stdout.write('[plugins] diagnostic log line\\n');",
+    "  process.exit(0);",
+    "}",
+    "process.stderr.write('unexpected fake ocm command: ' + text + '\\n');",
+    "process.exit(2);"
+  ].join("\n"), "utf8");
+  await chmod(fakeOcm, 0o755);
+
+  const successCommand = `PATH=${quoteShell(fakeBin)}:$PATH node support/run-official-plugin-install.mjs --env kova-self-check --state states/official-plugins.json --artifact-dir ${quoteShell(artifactDir)} --timeout-ms 5000`;
+  const success = await runCommand(successCommand, { timeoutMs: 10000, maxOutputChars: 1000000 });
+  const blockedCommand = `PATH=${quoteShell(fakeBin)}:$PATH KOVA_FAKE_OCM_SECURITY_BLOCK=1 node support/run-official-plugin-install.mjs --env kova-self-check --state states/official-plugins.json --artifact-dir ${quoteShell(join(tmp, "official-plugin-blocked-artifacts"))} --timeout-ms 5000`;
+  const blocked = await runCommand(blockedCommand, { timeoutMs: 10000, maxOutputChars: 1000000 });
+
+  try {
+    if (success.status !== 0) {
+      throw new Error(`official plugin runner success path failed: ${success.stderr || success.stdout}`);
+    }
+    const successSummary = JSON.parse(success.stdout);
+    assertEqual(successSummary.schemaVersion, "kova.officialPluginInstall.v1", "official plugin runner schema");
+    assertEqual(successSummary.ok, true, "official plugin runner ok");
+    assertEqual(successSummary.pluginCount >= 1, true, "official plugin runner plugin count");
+    assertEqual(successSummary.pluginResults?.[0]?.package, "@openclaw/discord", "official plugin package");
+
+    if (blocked.status === 0) {
+      throw new Error("official plugin runner security-block path should fail");
+    }
+    const blockedSummary = JSON.parse(blocked.stdout);
+    assertEqual(blockedSummary.securityBlocked, true, "official plugin runner security blocked");
+    assertEqual(blockedSummary.securityBlockCount, 1, "official plugin runner security block count");
+    assertEqual(blockedSummary.failureEvidence?.length, 1, "official plugin runner failure evidence");
+    assertEqual(blockedSummary.failureEvidence?.[0]?.diagnostics?.some((step) => step.id === "diagnostic-logs:discord"), true, "official plugin runner diagnostic logs");
+    return {
+      id: "official-plugin-install-runner",
+      status: "PASS",
+      command: successCommand,
+      durationMs: success.durationMs + blocked.durationMs
+    };
+  } catch (error) {
+    return {
+      id: "official-plugin-install-runner",
+      status: "FAIL",
+      command: successCommand,
+      durationMs: success.durationMs + blocked.durationMs,
       message: error.message
     };
   }
