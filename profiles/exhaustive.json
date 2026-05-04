@@ -18,6 +18,7 @@
     { "scenario": "plugin-lifecycle", "state": "external-plugin" },
     { "scenario": "plugin-lifecycle", "state": "broken-plugin-deps" },
     { "scenario": "plugin-external-install", "state": "fresh" },
+    { "scenario": "official-plugin-install", "state": "official-plugins", "timeoutMs": 240000 },
     { "scenario": "plugin-remove", "state": "fresh" },
     { "scenario": "plugin-update", "state": "fresh" },
     { "scenario": "plugin-bad-manifest", "state": "fresh" },

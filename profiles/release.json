@@ -92,6 +92,16 @@
           "pluginLoadFailures": 0
         }
       },
+      "official-plugin-install": {
+        "thresholds": {
+          "pluginInstallMs": 120000,
+          "officialPluginInstallOk": 1,
+          "officialPluginSecurityBlocks": 0,
+          "pluginsListMs": 10000,
+          "missingDependencyErrors": 0,
+          "pluginLoadFailures": 0
+        }
+      },
       "soak": {
         "thresholds": {
           "soakMinDurationMs": 60000,
@@ -173,7 +183,8 @@
           "old-release-2026-4-20-user",
           "old-release-2026-4-24-user",
           "plugin-index",
-          "many-bundled-plugins"
+          "many-bundled-plugins",
+          "official-plugins"
         ]
       },
       "traits": {
@@ -191,6 +202,7 @@
           "bundled-runtime-deps:missing-plugin-index",
           "plugin-lifecycle:plugin-index",
           "plugin-lifecycle:external-plugin",
+          "official-plugin-install:official-plugins",
           "gateway-performance:many-bundled-plugins",
           "agent-cli-local-turn:mock-openai-provider",
           "agent-gateway-rpc-turn:mock-openai-provider",
@@ -220,6 +232,7 @@
           "bundled-runtime-deps",
           "plugin-lifecycle",
           "plugin-external-install",
+          "official-plugin-install",
           "plugin-remove",
           "plugin-update",
           "plugin-bad-manifest",
@@ -246,6 +259,7 @@
           "upgrade-from-2026-4-24",
           "bundled-runtime-deps",
           "plugin-lifecycle",
+          "official-plugin-install",
           "provider-models",
           "agent-cold-warm-message",
           "agent-gateway-rpc-turn",
@@ -275,6 +289,7 @@
       { "scenario": "bundled-runtime-deps", "state": "missing-plugin-index" },
       { "scenario": "plugin-lifecycle", "state": "plugin-index" },
       { "scenario": "plugin-external-install", "state": "fresh" },
+      { "scenario": "official-plugin-install", "state": "official-plugins" },
       { "scenario": "plugin-remove", "state": "fresh" },
       { "scenario": "plugin-update", "state": "fresh" },
       { "scenario": "plugin-bad-manifest", "state": "fresh" },
@@ -349,6 +364,11 @@
     {
       "scenario": "plugin-external-install",
       "state": "fresh"
+    },
+    {
+      "scenario": "official-plugin-install",
+      "state": "official-plugins",
+      "timeoutMs": 240000
     },
     {
       "scenario": "plugin-remove",

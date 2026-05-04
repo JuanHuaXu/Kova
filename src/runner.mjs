@@ -782,8 +782,22 @@ function stateSummary(state) {
     objective: state.objective,
     traits: state.traits ?? [],
     riskArea: state.riskArea ?? null,
-    ownerArea: state.ownerArea ?? null
+    ownerArea: state.ownerArea ?? null,
+    officialPlugins: summarizeOfficialPlugins(state.officialPlugins)
   };
+}
+
+function summarizeOfficialPlugins(plugins) {
+  if (!Array.isArray(plugins)) {
+    return [];
+  }
+  return plugins.map((plugin) => ({
+    id: plugin.id,
+    package: plugin.package,
+    title: plugin.title,
+    required: plugin.required !== false,
+    riskArea: plugin.riskArea ?? null
+  }));
 }
 
 function classifyCommandFailure(result) {

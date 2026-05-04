@@ -1,0 +1,36 @@
+{
+  "id": "official-plugins",
+  "title": "Official Plugin Matrix",
+  "objective": "Focused OpenClaw coverage for published official plugin install paths that users run from terminals.",
+  "gate": {
+    "id": "openclaw-official-plugins",
+    "coverage": {
+      "states": {
+        "blocking": ["official-plugins"]
+      },
+      "traits": {
+        "blocking": ["official-plugin", "plugin-pressure"]
+      },
+      "stateSurfaces": {
+        "blocking": ["official-plugin-install:official-plugins"]
+      },
+      "surfaces": {
+        "blocking": ["official-plugin-install"]
+      },
+      "scenarios": {
+        "blocking": ["official-plugin-install"]
+      }
+    },
+    "blocking": [
+      { "scenario": "official-plugin-install", "state": "official-plugins" }
+    ],
+    "warning": []
+  },
+  "entries": [
+    {
+      "scenario": "official-plugin-install",
+      "state": "official-plugins",
+      "timeoutMs": 240000
+    }
+  ]
+}

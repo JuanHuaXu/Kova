@@ -18,6 +18,7 @@ export const knownStateTraits = [
   "mock-provider",
   "old-release",
   "onboarded-user",
+  "official-plugin",
   "performance-pressure",
   "platform-specific",
   "plugin-pressure",
@@ -80,8 +81,47 @@ export function validateStateShape(state, sourceName = "state") {
   if (state.auth !== undefined) {
     validateAuth(state.auth, errors);
   }
+  if (state.officialPlugins !== undefined) {
+    validateOfficialPlugins(state.officialPlugins, errors);
+  }
 
   assertNoShapeErrors(errors, sourceName);
+}
+
+function validateOfficialPlugins(plugins, errors) {
+  if (!Array.isArray(plugins)) {
+    errors.push("officialPlugins must be an array");
+    return;
+  }
+  if (plugins.length === 0) {
+    errors.push("officialPlugins must not be empty");
+  }
+  const ids = new Set();
+  for (const [index, plugin] of plugins.entries()) {
+    const prefix = `officialPlugins[${index}]`;
+    requireObject({ plugin }, "plugin", errors, prefix);
+    if (!plugin || typeof plugin !== "object" || Array.isArray(plugin)) {
+      continue;
+    }
+    requireKebabId(plugin, "id", errors, prefix);
+    requireString(plugin, "package", errors, prefix);
+    requireString(plugin, "title", errors, prefix);
+    if (typeof plugin.id === "string") {
+      if (ids.has(plugin.id)) {
+        errors.push(`${prefix}.id duplicates official plugin id '${plugin.id}'`);
+      }
+      ids.add(plugin.id);
+    }
+    if (typeof plugin.package === "string" && !/^@openclaw\/[a-z0-9][a-z0-9-]*$/.test(plugin.package)) {
+      errors.push(`${prefix}.package must be a scoped @openclaw/<name> package`);
+    }
+    if (plugin.required !== undefined && typeof plugin.required !== "boolean") {
+      errors.push(`${prefix}.required must be a boolean when set`);
+    }
+    if (plugin.riskArea !== undefined && (typeof plugin.riskArea !== "string" || plugin.riskArea.length === 0)) {
+      errors.push(`${prefix}.riskArea must be a non-empty string when set`);
+    }
+  }
 }
 
 function validateAuth(auth, errors) {
