@@ -449,6 +449,7 @@ export async function runSelfCheck(flags = {}) {
     checks.push(gatePartialFailureCheck());
     checks.push(gatePartialPassCheck());
     checks.push(gatePlatformCoverageCheck());
+    checks.push(gateRequirementCoverageCheck());
     checks.push(gateSubsystemSummaryCheck());
     checks.push(safetyGuardCheck());
     checks.push(await failingCommandCheck(
@@ -825,6 +826,73 @@ function gatePlatformCoverageCheck() {
       id: "gate-platform-coverage",
       status: "FAIL",
       command: "evaluate synthetic release gate platform coverage",
+      durationMs: 0,
+      message: error.message
+    };
+  }
+}
+
+function gateRequirementCoverageCheck() {
+  try {
+    const profile = {
+      id: "release",
+      gate: {
+        id: "test-release-gate",
+        coverage: {
+          requirements: {
+            blocking: ["release-runtime-startup:baseline"],
+            warning: ["fresh-install:baseline"]
+          }
+        },
+        blocking: [
+          { scenario: "release-runtime-startup", state: "fresh" }
+        ]
+      }
+    };
+    const report = {
+      mode: "execution",
+      controls: {
+        include: [],
+        exclude: []
+      },
+      records: [
+        {
+          scenario: "release-runtime-startup",
+          surface: "release-runtime-startup",
+          state: { id: "fresh" },
+          status: "PASS",
+          title: "Release Runtime Startup",
+          likelyOwner: "OpenClaw",
+          phases: []
+        }
+      ]
+    };
+    const gate = evaluateGate(report, profile, {
+      resolvedCoverage: {
+        obligations: [{
+          surface: "release-runtime-startup",
+          requirement: "baseline",
+          scenario: "release-runtime-startup",
+          state: "fresh",
+          status: "planned"
+        }]
+      }
+    });
+
+    assertEqual(gate.verdict, "SHIP", "required requirement coverage should pass");
+    assertEqual(gate.cards.some((card) => card.coverage === "requirement" && card.expected === "requirement coverage release-runtime-startup:baseline"), false, "covered requirement should not be missing");
+    assertEqual(gate.cards.some((card) => card.coverage === "requirement" && card.expected === "requirement coverage fresh-install:baseline" && card.severity === "warning"), true, "missing warning requirement should remain visible");
+    return {
+      id: "gate-requirement-coverage",
+      status: "PASS",
+      command: "evaluate synthetic release gate requirement coverage",
+      durationMs: 0
+    };
+  } catch (error) {
+    return {
+      id: "gate-requirement-coverage",
+      status: "FAIL",
+      command: "evaluate synthetic release gate requirement coverage",
       durationMs: 0,
       message: error.message
     };

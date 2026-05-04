@@ -21,7 +21,7 @@ function scenarioUsesSourceEnv(scenario) {
   );
 }
 
-export function evaluateGate(report, profile) {
+export function evaluateGate(report, profile, options = {}) {
   const policy = normalizeGatePolicy(profile);
   const records = report.records ?? [];
   const cards = [];
@@ -68,7 +68,7 @@ export function evaluateGate(report, profile) {
     }
   }
 
-  for (const card of buildCoverageCards(report, policy, partial)) {
+  for (const card of buildCoverageCards(report, policy, partial, options)) {
     cards.push(card);
     if (card.severity === "blocking" || card.severity === "info") {
       missingRequired.push({
@@ -162,7 +162,8 @@ function normalizeCoveragePolicy(coverage) {
     states: normalizeCoverageSet(input.states),
     traits: normalizeCoverageSet(input.traits),
     scenarios: normalizeCoverageSet(input.scenarios),
-    stateSurfaces: normalizeCoverageSet(input.stateSurfaces)
+    stateSurfaces: normalizeCoverageSet(input.stateSurfaces),
+    requirements: normalizeCoverageSet(input.requirements)
   };
 }
 
@@ -178,9 +179,10 @@ function normalizeStringList(value) {
   return Array.isArray(value) ? value.filter((item) => typeof item === "string" && item.length > 0) : [];
 }
 
-function buildCoverageCards(report, policy, partial) {
+function buildCoverageCards(report, policy, partial, options = {}) {
   const cards = [];
   const records = report.records ?? [];
+  const resolvedCoverage = options.resolvedCoverage ?? null;
   const platformKeys = platformCoverageKeys(report.platform);
   const scenarioKeys = new Set(records.map((record) => record.scenario).filter(Boolean));
   const stateKeys = new Set(records.map((record) => record.state?.id).filter(Boolean));
@@ -193,6 +195,10 @@ function buildCoverageCards(report, policy, partial) {
       return surface && state ? `${surface}:${state}` : null;
     })
     .filter(Boolean));
+  const requirementKeys = new Set((resolvedCoverage?.obligations ?? [])
+    .filter((obligation) => obligation.status === "planned")
+    .map((obligation) => `${obligation.surface}:${obligation.requirement}`)
+    .filter((value) => !value.endsWith(":null")));
 
   addCoverageCards(cards, {
     kind: "surface",
@@ -236,6 +242,13 @@ function buildCoverageCards(report, policy, partial) {
     partial,
     statusText: `${stateSurfaceKeys.size} state/surface pair(s) present`
   });
+  addCoverageCards(cards, {
+    kind: "requirement",
+    expected: policy.coverage.requirements,
+    observed: requirementKeys,
+    partial,
+    statusText: `${requirementKeys.size} requirement obligation(s) present`
+  });
 
   return cards;
 }
@@ -263,6 +276,7 @@ function coverageCard({ severity, kind, value, partial, statusText }) {
     coverage: kind,
     scenario: kind === "scenario" ? value : null,
     state: kind === "state" ? value : stateFromCoverage(kind, value),
+    requirement: kind === "requirement" ? value : null,
     status: "MISSING",
     title: `Required ${kind} Coverage Missing`,
     summary: filtered

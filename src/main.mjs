@@ -310,6 +310,13 @@ async function matrixRun(flags) {
   validateProfileTarget(profile, targetPlan);
   const fromPlan = flags.from ? resolveTarget(flags.from, "from") : null;
   const entries = applyMatrixControls(await expandProfile(profile), flags, platformInfo());
+  const resolvedCoverage = resolveCoverageObligations({
+    profile,
+    entries,
+    surfaces: registry.surfaces,
+    targetPlan
+  });
+  assertResolvedCoverageIsRunnable(resolvedCoverage);
   const controls = matrixControlSummary(flags, targetPlan);
   const auth = await resolveRunAuthContext(flags);
   const regressionThresholds = await loadRegressionThresholds(flags);
@@ -416,7 +423,7 @@ async function matrixRun(flags) {
       baseline: reportBase.baseline,
       platform: reportBase.platform,
       records
-    }, profile)
+    }, profile, { resolvedCoverage })
     : null;
 
   await mkdir(reportRoot, { recursive: true });
