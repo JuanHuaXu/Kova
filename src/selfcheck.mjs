@@ -449,6 +449,7 @@ export async function runSelfCheck(flags = {}) {
     checks.push(gatePartialFailureCheck());
     checks.push(gatePartialPassCheck());
     checks.push(gatePlatformCoverageCheck());
+    checks.push(gateNonReleaseOutcomeCheck());
     checks.push(gateRequirementCoverageCheck());
     checks.push(gateSubsystemSummaryCheck());
     checks.push(safetyGuardCheck());
@@ -812,6 +813,7 @@ function gatePlatformCoverageCheck() {
     });
 
     assertEqual(gate.verdict, "SHIP", "current required platform coverage should pass");
+    assertEqual(gate.outcome, "SHIP", "release gate outcome matches ship verdict");
     assertEqual(gate.complete, true, "platform-covered gate completeness");
     assertEqual(gate.cards.some((card) => card.coverage === "platform" && card.expected === "platform coverage darwin-arm64"), false, "darwin-arm64 should not be missing");
     assertEqual(gate.cards.some((card) => card.coverage === "platform" && card.expected === "platform coverage linux-x64" && card.severity === "warning"), true, "linux warning platform should remain visible");
@@ -826,6 +828,56 @@ function gatePlatformCoverageCheck() {
       id: "gate-platform-coverage",
       status: "FAIL",
       command: "evaluate synthetic release gate platform coverage",
+      durationMs: 0,
+      message: error.message
+    };
+  }
+}
+
+function gateNonReleaseOutcomeCheck() {
+  try {
+    const gate = evaluateGate({
+      mode: "execution",
+      controls: {
+        include: [],
+        exclude: []
+      },
+      records: [
+        {
+          scenario: "gateway-performance",
+          surface: "gateway-performance",
+          state: { id: "many-bundled-plugins" },
+          status: "PASS",
+          title: "Gateway Performance",
+          likelyOwner: "OpenClaw",
+          phases: []
+        }
+      ]
+    }, {
+      id: "benchmark",
+      purpose: "performance",
+      gate: {
+        id: "test-performance-gate",
+        blocking: [
+          { scenario: "gateway-performance", state: "many-bundled-plugins" }
+        ]
+      }
+    });
+
+    assertEqual(gate.verdict, "SHIP", "non-release gate keeps compatibility verdict");
+    assertEqual(gate.outcome, "PASS", "non-release gate maps ship verdict to pass outcome");
+    assertEqual(gate.purpose, "performance", "non-release gate purpose");
+    return {
+      id: "gate-non-release-outcome",
+      status: "PASS",
+      command: "evaluate synthetic non-release gate outcome",
+      durationMs: 0
+    };
+  } catch (error) {
+    return {
+      id: "gate-non-release-outcome",
+      status: "FAIL",
+      command: "evaluate synthetic non-release gate outcome",
       durationMs: 0,
       message: error.message
     };

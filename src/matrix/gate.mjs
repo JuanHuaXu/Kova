@@ -23,6 +23,7 @@ function scenarioUsesSourceEnv(scenario) {
 
 export function evaluateGate(report, profile, options = {}) {
   const policy = normalizeGatePolicy(profile);
+  const purpose = profile?.purpose ?? "release";
   const records = report.records ?? [];
   const cards = [];
   const partial = isPartialGate(report);
@@ -114,9 +115,11 @@ export function evaluateGate(report, profile, options = {}) {
   return {
     schemaVersion: "kova.gate.v1",
     enabled: true,
+    purpose,
     profileId: profile?.id ?? null,
     policyId: policy.id,
     verdict,
+    outcome: outcomeForVerdict(verdict, purpose),
     ok: verdict === "SHIP",
     complete: !incomplete,
     partial,
@@ -132,6 +135,19 @@ export function evaluateGate(report, profile, options = {}) {
     fixerSummaries,
     cards
   };
+}
+
+function outcomeForVerdict(verdict, purpose) {
+  if (purpose === "release") {
+    return verdict;
+  }
+  if (verdict === "SHIP") {
+    return "PASS";
+  }
+  if (verdict === "DO_NOT_SHIP") {
+    return "FAIL";
+  }
+  return verdict;
 }
 
 function isPartialGate(report) {

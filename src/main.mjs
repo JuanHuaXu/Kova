@@ -475,7 +475,7 @@ async function matrixRun(flags) {
     console.log(`Kova failed gate artifacts retained: ${relative(process.cwd(), retainedGateArtifacts.outputDir)}`);
   }
   if (gate) {
-    console.log(`Kova gate verdict: ${gate.verdict}`);
+    console.log(`Kova gate outcome: ${gate.outcome ?? gate.verdict}`);
   }
   failGateIfNeeded(gate);
 }
@@ -664,7 +664,7 @@ async function buildRepeatRecords(entry, context, callback) {
 
 function failGateIfNeeded(gate) {
   if (gate && gate.verdict !== "SHIP") {
-    throw new Error(`release gate verdict: ${gate.verdict}`);
+    throw new Error(`gate outcome: ${gate.outcome ?? gate.verdict}`);
   }
 }
 
@@ -677,7 +677,9 @@ function summarizeGateReceipt(gate) {
     enabled: gate.enabled,
     profileId: gate.profileId,
     policyId: gate.policyId,
+    purpose: gate.purpose ?? null,
     verdict: gate.verdict,
+    outcome: gate.outcome ?? null,
     ok: gate.ok,
     complete: gate.complete,
     partial: gate.partial,

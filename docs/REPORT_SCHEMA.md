@@ -436,9 +436,11 @@ the existing matrix runner and adds:
 {
   "schemaVersion": "kova.gate.v1",
   "enabled": true,
+  "purpose": "release",
   "profileId": "release",
   "policyId": "openclaw-release",
   "verdict": "DO_NOT_SHIP",
+  "outcome": "DO_NOT_SHIP",
   "ok": false,
   "complete": true,
   "partial": false,
@@ -482,6 +484,11 @@ Verdicts:
   requirement was missing.
 - `BLOCKED`: Kova cannot make a ship/no-ship decision, usually because the run
   was not executed, skipped, or blocked by harness/provisioning behavior.
+
+`outcome` is purpose-aware. For `release` gates it matches `verdict`. For
+non-release purposes, a passing complete gate reports `PASS`, a blocking
+OpenClaw failure reports `FAIL`, and incomplete or harness-blocked gates report
+`PARTIAL` or `BLOCKED`.
 
 Filtered gate slices are partial. They can produce `DO_NOT_SHIP` when a selected
 blocking scenario fails, but they cannot produce `SHIP` because required gate
