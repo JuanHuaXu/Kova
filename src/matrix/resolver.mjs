@@ -48,6 +48,7 @@ export function resolveCoverageObligations({ profile, entries, surfaces, targetP
 
       const stateResult = stateSatisfiesRequirement(state, requirement);
       const targetResult = targetSatisfiesRequirement(targetPlan, requirement);
+      warnings.push(...legacyCompatibilityWarnings({ entry, surface, requirement }));
       const status = entry.skipReason
         ? "skipped"
         : !stateResult.ok
@@ -78,6 +79,49 @@ export function resolveCoverageObligations({ profile, entries, surfaces, targetP
     gaps,
     warnings
   };
+}
+
+function legacyCompatibilityWarnings({ entry, surface, requirement }) {
+  const warnings = [];
+  const scenario = entry.scenario;
+  const state = entry.state;
+  if (!scenario || !state || !surface || !requirement) {
+    return warnings;
+  }
+
+  if ((state.compatibleSurfaces ?? []).length > 0 && !state.compatibleSurfaces.includes(surface.id)) {
+    warnings.push({
+      kind: "legacy-compatibility-disagreement",
+      surface: surface.id,
+      scenario: scenario.id,
+      state: state.id,
+      requirement: requirement.id,
+      message: `state '${state.id}' does not list surface '${surface.id}' in compatibleSurfaces`
+    });
+  }
+  if ((state.incompatibleSurfaces ?? []).includes(surface.id)) {
+    warnings.push({
+      kind: "legacy-compatibility-disagreement",
+      surface: surface.id,
+      scenario: scenario.id,
+      state: state.id,
+      requirement: requirement.id,
+      message: `state '${state.id}' lists surface '${surface.id}' in incompatibleSurfaces`
+    });
+  }
+  if ((surface.requiredStates ?? []).length > 0 &&
+    (scenario.states ?? []).length === 0 &&
+    !surface.requiredStates.includes(state.id)) {
+    warnings.push({
+      kind: "legacy-compatibility-disagreement",
+      surface: surface.id,
+      scenario: scenario.id,
+      state: state.id,
+      requirement: requirement.id,
+      message: `surface '${surface.id}' requiredStates does not include state '${state.id}'`
+    });
+  }
+  return warnings;
 }
 
 export function assertResolvedCoverageIsRunnable(resolved) {

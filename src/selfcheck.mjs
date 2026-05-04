@@ -148,6 +148,7 @@ export async function runSelfCheck(flags = {}) {
       assertArrayNotEmpty(data.entries, "matrix entries");
       assertEqual(data.resolvedCoverage?.schemaVersion, "kova.resolvedCoverage.v1", "resolved coverage schema");
       assertEqual(data.resolvedCoverage?.statuses?.planned, 1, "resolved planned obligation count");
+      assertEqual(data.resolvedCoverage?.warnings?.length, 0, "resolved coverage migration warnings");
       assertEqual(data.resolvedCoverage?.obligations?.[0]?.surface, "fresh-install", "resolved obligation surface");
       assertEqual(data.resolvedCoverage?.obligations?.[0]?.requirement, "baseline", "resolved obligation requirement");
       assertEqual(data.entries.length, 1, "matrix include filter count");
@@ -5171,6 +5172,7 @@ function validateReport(report) {
     assertEqual(report.schemaVersion, "kova.report.v1", "report schema");
     assertEqual(report.mode, "dry-run", "report mode");
     assertEqual(report.summary?.statuses?.["DRY-RUN"], 2, "report dry-run count");
+    assertEqual(Object.hasOwn(report, "resolvedCoverage"), false, "report does not include planner-only resolved coverage");
     assertEqual(report.performance?.repeat, 2, "report repeat count");
     assertEqual(report.performance?.groupCount, 1, "report performance group count");
     assertArrayNotEmpty(report.records, "report records");
