@@ -98,6 +98,7 @@ export function evaluateRecord(record, scenario, options = {}) {
   const browserAutomationEvidence = collectBrowserAutomationEvidence(allResults);
   const mediaUnderstandingEvidence = collectMediaUnderstandingEvidence(allResults);
   const networkOfflineEvidence = collectNetworkOfflineEvidence(allResults);
+  const officialPluginEvidence = collectOfficialPluginEvidence(allResults);
   const listeningFailures = countListeningFailures(record);
   const tcpConnectMaxMs = collectTcpConnectMax(record);
   const timeToListeningMs = collectTimeToListening(record);
@@ -109,6 +110,7 @@ export function evaluateRecord(record, scenario, options = {}) {
   const upgradeMs = maxDurationWhere(allResults, (command) => command.startsWith("ocm upgrade "));
   const statusMs = maxDurationWhere(allResults, (command) => command.includes(" -- status"));
   const pluginsListMs = maxDurationWhere(allResults, (command) => command.includes(" -- plugins list"));
+  const pluginInstallMs = maxDurationWhere(allResults, (command) => command.includes("run-official-plugin-install.mjs") || command.includes(" -- plugins install"));
   const modelsListMs = maxDurationWhere(allResults, (command) => command.includes(" -- models list"));
   const rssGrowthMb = maxNullable(resourceSummary.maxTotalRssGrowthMb);
   const gatewayRssGrowthMb = maxNullable(resourceSummary.maxGatewayRssGrowthMb);
@@ -454,6 +456,30 @@ export function evaluateRecord(record, scenario, options = {}) {
     }
   }
 
+  if (officialPluginEvidence.available) {
+    checkEvidenceThreshold(violations, "plugins", "pluginInstallMs", officialPluginEvidence.durationMs, thresholds.pluginInstallMs, "Official plugin install");
+    if (typeof thresholds.officialPluginInstallOk === "number" && officialPluginEvidence.ok !== true) {
+      violations.push({
+        kind: "plugins",
+        metric: "officialPluginInstallOk",
+        expected: true,
+        actual: false,
+        message: officialPluginInstallFailureMessage(officialPluginEvidence)
+      });
+    }
+    const securityBlockLimit = typeof thresholds.officialPluginSecurityBlocks === "number" ? thresholds.officialPluginSecurityBlocks : 0;
+    const securityBlockExceeded = officialPluginEvidence.securityBlockCount > securityBlockLimit;
+    if (securityBlockExceeded) {
+      violations.push({
+        kind: "plugins",
+        metric: "officialPluginSecurityBlocks",
+        expected: `<= ${securityBlockLimit}`,
+        actual: officialPluginEvidence.securityBlockCount,
+        message: `official plugin security scanner signal observed: ${officialPluginEvidence.securityEvidence ?? "unknown plugin"}`
+      });
+    }
+  }
+
   if (typeof thresholds.providerRequestCountMin === "number") {
     const requestCount = record.providerEvidence?.requestCount ?? 0;
     if (requestCount < thresholds.providerRequestCountMin) {
@@ -668,6 +694,7 @@ export function evaluateRecord(record, scenario, options = {}) {
     upgradeMs,
     statusMs,
     pluginsListMs,
+    pluginInstallMs,
     modelsListMs,
     agentTurnMs,
     agentResponseOk,
@@ -761,6 +788,10 @@ export function evaluateRecord(record, scenario, options = {}) {
     mediaGatewayStatusWorks: mediaUnderstandingEvidence.gatewayStatusWorks,
     mediaErrors: mediaUnderstandingEvidence.errors,
     networkOfflineEvidence,
+    officialPluginEvidence,
+    officialPluginInstallOk: officialPluginEvidence.available ? officialPluginEvidence.ok : null,
+    officialPluginSecurityBlocks: officialPluginEvidence.available ? officialPluginEvidence.securityBlockCount : null,
+    officialPluginInstallMs: officialPluginEvidence.available ? officialPluginEvidence.durationMs : null,
     networkTurnMs: networkOfflineEvidence.networkTurnMs,
     networkFailureObserved: networkOfflineEvidence.networkFailureObserved,
     networkCommandTimedOut: networkOfflineEvidence.networkCommandTimedOut,
@@ -2163,6 +2194,124 @@ function parseNetworkOfflineOutput(result) {
   } catch {
     return null;
   }
+}
+
+function collectOfficialPluginEvidence(results) {
+  const runs = results
+    .filter((result) => result.command?.includes("run-official-plugin-install.mjs"))
+    .map((result) => parseOfficialPluginInstallOutput(result))
+    .filter(Boolean);
+
+  if (runs.length === 0) {
+    return {
+      schemaVersion: "kova.officialPluginEvidence.v1",
+      available: false,
+      ok: null,
+      pluginCount: 0,
+      requiredPluginCount: 0,
+      failedRequiredCount: 0,
+      durationMs: null,
+      installed: null,
+      listed: null,
+      registryRefreshed: null,
+      securityBlockCount: 0,
+      securityEvidence: null,
+      failureEvidence: [],
+      artifactPath: null,
+      runs: []
+    };
+  }
+
+  return {
+    schemaVersion: "kova.officialPluginEvidence.v1",
+    available: true,
+    ok: runs.every((run) => run.ok === true),
+    pluginCount: maxNullable(...runs.map((run) => run.pluginCount)),
+    requiredPluginCount: maxNullable(...runs.map((run) => run.requiredPluginCount)),
+    failedRequiredCount: runs.reduce((total, run) => total + (run.failedRequiredCount ?? 0), 0),
+    durationMs: maxNullable(...runs.map((run) => run.durationMs)),
+    installed: runs.every((run) => run.installed === true),
+    listed: runs.every((run) => run.listed === true),
+    registryRefreshed: runs.every((run) => run.registryRefreshed === true),
+    securityBlockCount: runs.reduce((total, run) => total + (run.securityBlockCount ?? (run.securityBlocked === true ? 1 : 0)), 0),
+    securityEvidence: runs.find((run) => run.securityBlocked === true)?.securityEvidence ?? null,
+    failureEvidence: runs.flatMap((run) => run.failureEvidence ?? []),
+    artifactPath: runs.find((run) => typeof run.artifactPath === "string" && run.artifactPath.length > 0)?.artifactPath ?? null,
+    runs: runs.map((run) => ({
+      ok: run.ok === true,
+      pluginCount: run.pluginCount ?? null,
+      requiredPluginCount: run.requiredPluginCount ?? null,
+      failedRequiredCount: run.failedRequiredCount ?? null,
+      durationMs: run.durationMs ?? null,
+      installed: run.installed === true,
+      listed: run.listed === true,
+      registryRefreshed: run.registryRefreshed === true,
+      securityBlocked: run.securityBlocked === true,
+      securityBlockCount: run.securityBlockCount ?? null,
+      securityEvidence: run.securityEvidence ?? null,
+      failureEvidence: run.failureEvidence ?? [],
+      artifactPath: run.artifactPath ?? null,
+      pluginResults: run.pluginResults ?? [],
+      commands: run.commands ?? []
+    }))
+  };
+}
+
+function parseOfficialPluginInstallOutput(result) {
+  const text = result.stdout ?? "";
+  const jsonStart = text.indexOf("{");
+  if (jsonStart < 0) {
+    return null;
+  }
+  try {
+    const parsed = JSON.parse(text.slice(jsonStart));
+    return parsed?.schemaVersion === "kova.officialPluginInstall.v1" ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
+function officialPluginInstallFailureMessage(evidence) {
+  const failure = firstOfficialPluginFailure(evidence);
+  if (failure) {
+    return failure;
+  }
+  if (evidence.securityBlockCount > 0) {
+    return `official plugin install was blocked by the OpenClaw security scanner: ${evidence.securityEvidence ?? "unknown plugin"}`;
+  }
+  if (evidence.installed === false) {
+    return "one or more official plugin install commands failed";
+  }
+  if (evidence.listed === false) {
+    return "one or more official plugins did not appear in plugins list after install";
+  }
+  if (evidence.registryRefreshed === false) {
+    return "official plugin registry refresh failed after installing one or more official plugins";
+  }
+  return "official plugin install validation failed";
+}
+
+function firstOfficialPluginFailure(evidence) {
+  const failure = evidence.failureEvidence?.[0];
+  const command = failure?.command;
+  if (!failure || !command) {
+    return null;
+  }
+  const plugin = failure.plugin ? `${failure.plugin} ` : "";
+  const timedOut = command.timedOut ? " timed out" : "";
+  const status = command.status !== null && command.status !== undefined ? ` exited ${command.status}` : " failed";
+  const response = firstNonEmptyLine(command.stderrSnippet, command.stdoutSnippet);
+  return `${plugin}official plugin command${timedOut || status}: ${command.command ?? command.id}${response ? `; ${response}` : ""}`;
+}
+
+function firstNonEmptyLine(...values) {
+  for (const value of values) {
+    const line = String(value ?? "").split(/\r?\n/).map((item) => item.trim()).find(Boolean);
+    if (line) {
+      return line;
+    }
+  }
+  return null;
 }
 
 function healthFailureCount(samples) {

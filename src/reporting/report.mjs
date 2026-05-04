@@ -122,6 +122,17 @@ export function renderMarkdownReport(report) {
       lines.push(`- Readiness failures: ${record.measurements.readinessFailures ?? "unknown"}`);
       lines.push(`- Gateway restarts: ${record.measurements.gatewayRestartCount ?? "unknown"}`);
       lines.push(`- Plugin load failures: ${record.measurements.pluginLoadFailures ?? "unknown"}`);
+      if (record.measurements.officialPluginEvidence?.available) {
+        const evidence = record.measurements.officialPluginEvidence;
+        lines.push(`- Official plugin install: ${evidence.ok ? "ok" : "failed"}; plugins ${evidence.pluginCount}; failed required ${evidence.failedRequiredCount}; security signals ${evidence.securityBlockCount}`);
+        if (evidence.artifactPath) {
+          lines.push(`- Official plugin artifact: ${evidence.artifactPath}`);
+        }
+        const failure = evidence.failureEvidence?.[0];
+        if (failure?.command) {
+          lines.push(`- Official plugin failed command: ${failure.command.command ?? failure.command.id} (status ${failure.command.status}${failure.command.timedOut ? ", timeout" : ""})`);
+        }
+      }
       lines.push(`- Metadata scan mentions: ${record.measurements.metadataScanMentions ?? "unknown"}`);
       lines.push(`- Config normalization mentions: ${record.measurements.configNormalizationMentions ?? "unknown"}`);
       lines.push(`- Provider/model timeout mentions: ${record.measurements.providerTimeoutMentions ?? "unknown"}`);
@@ -662,6 +673,10 @@ function summarizeMeasurements(measurements) {
     healthFailures: measurements.healthFailures ?? null,
     missingDependencyErrors: measurements.missingDependencyErrors ?? null,
     pluginLoadFailures: measurements.pluginLoadFailures ?? null,
+    officialPluginEvidence: measurements.officialPluginEvidence ?? null,
+    officialPluginInstallOk: measurements.officialPluginInstallOk ?? null,
+    officialPluginSecurityBlocks: measurements.officialPluginSecurityBlocks ?? null,
+    officialPluginInstallMs: measurements.officialPluginInstallMs ?? null,
     resourceSampleCount: measurements.resourceSampleCount ?? null,
     resourceByRole: measurements.resourceByRole ?? null,
     resourceTopRolesByRss: measurements.resourceTopRolesByRss ?? null,
@@ -1034,6 +1049,18 @@ function briefEvidence(measurements, violations) {
   if (measurements.pluginLoadFailures !== null && measurements.pluginLoadFailures !== undefined) {
     items.push(`pluginLoadFailures: ${measurements.pluginLoadFailures}`);
   }
+  if (measurements.officialPluginEvidence?.available) {
+    const evidence = measurements.officialPluginEvidence;
+    items.push(`officialPluginInstall: ${evidence.ok ? "ok" : "failed"}, required failures ${evidence.failedRequiredCount ?? "unknown"}`);
+    const failure = evidence.failureEvidence?.[0];
+    if (failure?.command) {
+      const response = firstNonEmptySnippetLine(failure.command.stderrSnippet, failure.command.stdoutSnippet);
+      items.push(`officialPluginFailedCommand: ${failure.command.command ?? failure.command.id}${response ? `; ${response}` : ""}`);
+    }
+    if (evidence.artifactPath) {
+      items.push(`officialPluginArtifact: ${evidence.artifactPath}`);
+    }
+  }
   if (measurements.warmRuntimeDepsRestageCount !== null && measurements.warmRuntimeDepsRestageCount !== undefined) {
     items.push(`warmRuntimeDepsRestageCount: ${measurements.warmRuntimeDepsRestageCount}`);
   }
@@ -1062,6 +1089,16 @@ function briefEvidence(measurements, violations) {
     }
   }
   return items.slice(0, 8);
+}
+
+function firstNonEmptySnippetLine(...values) {
+  for (const value of values) {
+    const line = String(value ?? "").split(/\r?\n/).map((item) => item.trim()).find(Boolean);
+    if (line) {
+      return line;
+    }
+  }
+  return null;
 }
 
 function compactKeySpans(keySpans) {
