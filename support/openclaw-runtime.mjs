@@ -1,21 +1,5 @@
-import { pathToFileURL } from "node:url";
-import path from "node:path";
 import { dirname } from "node:path";
 import { execFileSync } from "node:child_process";
-
-export async function importOpenClawDistModule(relativePath) {
-  const packageRoot = process.cwd();
-  const absolutePath = path.join(packageRoot, "dist", ...relativePath.split("/"));
-  try {
-    return await import(pathToFileURL(absolutePath).href);
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    throw new Error(
-      `failed to import OpenClaw runtime module ${relativePath} from ${packageRoot}: ${message}. ` +
-        "Kova user-message scenarios require a built/release-shaped OpenClaw runtime."
-    );
-  }
-}
 
 export function prepareOpenClawRuntimeFromOcmEnv(envName) {
   if (!envName) {
@@ -93,18 +77,6 @@ export function runOcmJson(args) {
     return JSON.parse(stdout);
   } catch {
     throw new Error(`ocm ${args.join(" ")} did not return JSON: ${stdout.slice(0, 1000)}`);
-  }
-}
-
-export function runOcmText(args) {
-  try {
-    return execFileSync("ocm", args, {
-      encoding: "utf8",
-      stdio: ["ignore", "pipe", "pipe"]
-    });
-  } catch (error) {
-    const stderr = error?.stderr ? String(error.stderr) : "";
-    throw new Error(`ocm ${args.join(" ")} failed: ${stderr.trim() || error.message}`);
   }
 }
 

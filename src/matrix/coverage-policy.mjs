@@ -8,7 +8,6 @@ export const coveragePolicyKeys = [
   "requirements"
 ];
 
-export const primaryCoveragePolicyKeys = ["platforms", "requirements"];
 export const derivedCoveragePolicyKeys = ["surfaces", "scenarios", "states", "traits", "stateSurfaces"];
 
 export function normalizeCoveragePolicy(coverage) {
