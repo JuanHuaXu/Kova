@@ -1,7 +1,7 @@
 import { buildAgentTurnBreakdown } from "./collectors/agent-turns.mjs";
 import { computeProviderTurnAttribution } from "./collectors/provider.mjs";
 import { summarizeRuntimeDepsLogs } from "./collectors/logs.mjs";
-import { buildHealthMeasurement, deriveHealthCompatibility } from "./health.mjs";
+import { buildHealthMeasurement, healthReadinessClassification } from "./health.mjs";
 import { resolveThresholdPolicy } from "./evaluation/thresholds.mjs";
 import {
   checkAggregateThreshold,
@@ -93,14 +93,11 @@ export function evaluateRecord(record, scenario, options = {}) {
   });
   const finalGatewayState = record.finalMetrics?.service?.gatewayState ?? null;
   const health = buildHealthMeasurement(record, scenario);
-  const healthCompatibility = deriveHealthCompatibility(health, record);
-  const healthFailures = healthCompatibility.healthFailures;
-  const healthP95Ms = healthCompatibility.healthP95Ms;
-  const startupHealthP95Ms = healthCompatibility.startupHealthP95Ms;
-  const postReadyHealthP95Ms = healthCompatibility.postReadyHealthP95Ms;
-  const startupHealthFailures = healthCompatibility.startupHealthFailures;
-  const postReadyHealthFailures = healthCompatibility.postReadyHealthFailures;
-  const finalHealthFailures = healthCompatibility.finalHealthFailures;
+  const startupHealthP95Ms = health.startupSamples?.p95Ms ?? null;
+  const postReadyHealthP95Ms = health.postReadySamples?.p95Ms ?? null;
+  const startupHealthFailures = health.startupSamples?.failureCount ?? 0;
+  const postReadyHealthFailures = health.postReadySamples?.failureCount ?? 0;
+  const finalHealthFailures = health.final?.failureCount ?? 0;
   const soakEvidence = collectSoakEvidence(allResults);
   const mcpBridgeEvidence = collectMcpBridgeEvidence(allResults);
   const browserAutomationEvidence = collectBrowserAutomationEvidence(allResults);
@@ -109,10 +106,9 @@ export function evaluateRecord(record, scenario, options = {}) {
   const officialPluginEvidence = collectOfficialPluginEvidence(allResults);
   const listeningFailures = countListeningFailures(record);
   const tcpConnectMaxMs = collectTcpConnectMax(record);
-  const timeToListeningMs = healthCompatibility.timeToListeningMs ?? collectTimeToListening(record);
-  const timeToHealthReadyMs = healthCompatibility.timeToHealthReadyMs ?? collectTimeToHealthReady(record);
+  const readinessHealthReadyMs = health.readiness?.healthReadyAtMs ?? null;
   const readinessFailures = countReadinessFailures(record);
-  const readinessClassification = healthCompatibility.readinessClassification ?? collectWorstReadinessClassification(record);
+  const readinessClassification = healthReadinessClassification(health);
   const coldReadyMs = maxDurationWhere(allResults, (command) => command.startsWith("ocm start "));
   const warmReadyMs = maxDurationWhere(allResults, (command) => command.startsWith("ocm service restart "));
   const upgradeMs = maxDurationWhere(allResults, (command) => command.startsWith("ocm upgrade "));
@@ -188,26 +184,6 @@ export function evaluateRecord(record, scenario, options = {}) {
       expected: "running",
       actual: finalGatewayState,
       message: `final gateway state was ${finalGatewayState}`
-    });
-  }
-
-  if (typeof thresholds.healthFailures === "number" && healthFailures > thresholds.healthFailures) {
-    violations.push({
-      kind: "health",
-      metric: "healthFailures",
-      expected: `<= ${thresholds.healthFailures}`,
-      actual: healthFailures,
-      message: `${healthFailures} gateway health checks failed, over threshold ${thresholds.healthFailures}`
-    });
-  }
-
-  if (typeof thresholds.healthP95Ms === "number" && healthP95Ms !== null && healthP95Ms > thresholds.healthP95Ms) {
-    violations.push({
-      kind: "health",
-      metric: "healthP95Ms",
-      expected: `<= ${thresholds.healthP95Ms}`,
-      actual: healthP95Ms,
-      message: `gateway health p95 ${healthP95Ms}ms exceeded threshold ${thresholds.healthP95Ms}ms`
     });
   }
 
@@ -574,7 +550,7 @@ export function evaluateRecord(record, scenario, options = {}) {
   if (readinessClassification?.state === "hard-failure") {
     violations.push({
       kind: "gateway",
-      metric: "readinessClassification",
+      metric: "readiness.classification",
       expected: "ready",
       actual: readinessClassification.state,
       message: `gateway hard failure: ${readinessClassification.reason}`
@@ -584,7 +560,7 @@ export function evaluateRecord(record, scenario, options = {}) {
   if (readinessClassification?.state === "unhealthy") {
     violations.push({
       kind: "gateway",
-      metric: "readinessClassification",
+      metric: "readiness.classification",
       expected: "ready",
       actual: readinessClassification.state,
       message: `gateway unhealthy: ${readinessClassification.reason}`
@@ -594,7 +570,7 @@ export function evaluateRecord(record, scenario, options = {}) {
   if (readinessClassification?.state === "slow-startup") {
     violations.push({
       kind: "gateway",
-      metric: "readinessClassification",
+      metric: "readiness.classification",
       expected: "ready within threshold",
       actual: readinessClassification.state,
       message: `gateway slow startup: ${readinessClassification.reason}`
@@ -605,15 +581,15 @@ export function evaluateRecord(record, scenario, options = {}) {
   if (
     readinessClassification?.state !== "slow-startup" &&
     typeof gatewayReadyThreshold === "number" &&
-    timeToHealthReadyMs !== null &&
-    timeToHealthReadyMs > gatewayReadyThreshold
+    readinessHealthReadyMs !== null &&
+    readinessHealthReadyMs > gatewayReadyThreshold
   ) {
     violations.push({
       kind: "gateway",
-      metric: "timeToHealthReadyMs",
+      metric: "readinessHealthReadyMs",
       expected: `<= ${gatewayReadyThreshold}`,
-      actual: timeToHealthReadyMs,
-      message: `gateway health ready took ${timeToHealthReadyMs}ms, over threshold ${gatewayReadyThreshold}ms`
+      actual: readinessHealthReadyMs,
+      message: `gateway health ready took ${readinessHealthReadyMs}ms, over threshold ${gatewayReadyThreshold}ms`
     });
   }
 
@@ -807,21 +783,8 @@ export function evaluateRecord(record, scenario, options = {}) {
     agentProviderAttribution: providerTurn,
     health,
     tcpConnectMaxMs,
-    timeToListeningMs,
-    timeToHealthReadyMs,
-    readinessClassification: readinessClassification?.state ?? null,
-    readinessClassificationReason: readinessClassification?.reason ?? null,
-    readinessThresholdMs: readinessClassification?.thresholdMs ?? null,
-    readinessHardDeadlineMs: readinessClassification?.deadlineMs ?? null,
     missingDependencyErrors,
     finalGatewayState,
-    healthFailures,
-    healthP95Ms,
-    startupHealthP95Ms,
-    postReadyHealthP95Ms,
-    startupHealthFailures,
-    postReadyHealthFailures,
-    finalHealthFailures,
     soakEvidence,
     mcpBridgeEvidence,
     mcpInitializeMs: mcpBridgeEvidence.initializeMs,
@@ -1847,54 +1810,6 @@ function countReadinessFailures(record) {
   return count;
 }
 
-function collectWorstReadinessClassification(record) {
-  const values = [];
-  for (const phase of record.phases ?? []) {
-    const readiness = phase.metrics?.readiness;
-    if (readiness?.classification && readiness.deadlineMs > 0) {
-      values.push(readinessClassificationValue(readiness, phase.id));
-    }
-  }
-  const finalReadiness = record.finalMetrics?.readiness;
-  if (finalReadiness?.classification && finalReadiness.deadlineMs > 0) {
-    values.push(readinessClassificationValue(finalReadiness, "final"));
-  }
-  if (values.length === 0) {
-    return null;
-  }
-  values.sort((left, right) => readinessRank(right.state) - readinessRank(left.state));
-  return values[0];
-}
-
-function readinessClassificationValue(readiness, phaseId) {
-  return {
-    phaseId,
-    state: readiness.classification.state,
-    severity: readiness.classification.severity,
-    reason: readiness.classification.reason,
-    thresholdMs: readiness.thresholdMs,
-    deadlineMs: readiness.deadlineMs,
-    listeningReadyAtMs: readiness.listeningReadyAtMs,
-    healthReadyAtMs: readiness.healthReadyAtMs
-  };
-}
-
-function readinessRank(state) {
-  if (state === "hard-failure") {
-    return 4;
-  }
-  if (state === "unhealthy") {
-    return 3;
-  }
-  if (state === "slow-startup") {
-    return 2;
-  }
-  if (state === "ready") {
-    return 1;
-  }
-  return 0;
-}
-
 function collectTcpConnectMax(record) {
   const durations = [];
   for (const phase of record.phases ?? []) {
@@ -1908,36 +1823,6 @@ function collectTcpConnectMax(record) {
     durations.push(finalDuration);
   }
   return durations.length === 0 ? null : Math.max(...durations);
-}
-
-function collectTimeToListening(record) {
-  const values = [];
-  for (const phase of record.phases ?? []) {
-    const value = phase.metrics?.readiness?.listeningReadyAtMs;
-    if (typeof value === "number") {
-      values.push(value);
-    }
-  }
-  const finalValue = record.finalMetrics?.readiness?.listeningReadyAtMs;
-  if (typeof finalValue === "number") {
-    values.push(finalValue);
-  }
-  return values.length === 0 ? null : Math.max(...values);
-}
-
-function collectTimeToHealthReady(record) {
-  const values = [];
-  for (const phase of record.phases ?? []) {
-    const value = phase.metrics?.readiness?.healthReadyAtMs;
-    if (typeof value === "number") {
-      values.push(value);
-    }
-  }
-  const finalValue = record.finalMetrics?.readiness?.healthReadyAtMs;
-  if (typeof finalValue === "number") {
-    values.push(finalValue);
-  }
-  return values.length === 0 ? null : Math.max(...values);
 }
 
 function countGatewayRestarts(record) {

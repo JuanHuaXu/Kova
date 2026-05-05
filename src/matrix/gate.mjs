@@ -363,9 +363,12 @@ function summarizeGateMeasurements(measurements) {
   if (!measurements) {
     return null;
   }
+  const readiness = measurements.health?.readiness ?? null;
   return {
-    readinessClassification: measurements.readinessClassification ?? null,
-    timeToHealthReadyMs: measurements.timeToHealthReadyMs ?? null,
+    readiness: readiness ? {
+      classification: readiness.classification ?? null,
+      healthReadyAtMs: readiness.healthReadyAtMs ?? null
+    } : null,
     peakRssMb: measurements.peakRssMb ?? null,
     cpuPercentMax: measurements.cpuPercentMax ?? null,
     missingDependencyErrors: measurements.missingDependencyErrors ?? null,

@@ -1,4 +1,5 @@
 import { summarizeAgentTurnBreakdownForMarkdown } from "../collectors/agent-turns.mjs";
+import { healthTotalFailures } from "../health.mjs";
 
 export function summarizeRecords(records) {
   const statuses = {};
@@ -105,11 +106,12 @@ export function renderMarkdownReport(report) {
       }
       lines.push(`- Cold ready: ${record.measurements.coldReadyMs ?? "unknown"} ms`);
       lines.push(`- Warm ready: ${record.measurements.warmReadyMs ?? "unknown"} ms`);
-      lines.push(`- Time to listening: ${record.measurements.timeToListeningMs ?? "unknown"} ms`);
-      lines.push(`- Time to health ready: ${record.measurements.timeToHealthReadyMs ?? "unknown"} ms`);
-      lines.push(`- Readiness classification: ${record.measurements.readinessClassification ?? "unknown"}`);
-      if (record.measurements.readinessClassificationReason) {
-        lines.push(`- Readiness reason: ${record.measurements.readinessClassificationReason}`);
+      const readiness = record.measurements.health?.readiness ?? null;
+      lines.push(`- Time to listening: ${readiness?.listeningReadyAtMs ?? "unknown"} ms`);
+      lines.push(`- Time to health ready: ${readiness?.healthReadyAtMs ?? "unknown"} ms`);
+      lines.push(`- Readiness classification: ${readiness?.classification ?? "unknown"}`);
+      if (readiness?.reason) {
+        lines.push(`- Readiness reason: ${readiness.reason}`);
       }
       lines.push(`- TCP connect max: ${record.measurements.tcpConnectMaxMs ?? "unknown"} ms`);
       lines.push(`- Missing dependency errors: ${record.measurements.missingDependencyErrors ?? "unknown"}`);
@@ -500,11 +502,12 @@ function formatMetrics(metrics) {
 
 function formatHealthMeasurementLines(measurements) {
   const health = measurements.health;
+  const totalFailures = health ? healthTotalFailures(health) : null;
   const lines = [
-    `- Health failures: ${measurements.healthFailures ?? "unknown"}`,
-    `- Startup health p95: ${measurements.startupHealthP95Ms ?? health?.startupSamples?.p95Ms ?? "unknown"} ms`,
-    `- Post-ready liveness p95: ${measurements.postReadyHealthP95Ms ?? health?.postReadySamples?.p95Ms ?? "unknown"} ms`,
-    `- Final health failures: ${measurements.finalHealthFailures ?? health?.final?.failureCount ?? "unknown"}`
+    `- Health failures: ${totalFailures ?? "unknown"}`,
+    `- Startup health p95: ${health?.startupSamples?.p95Ms ?? "unknown"} ms`,
+    `- Post-ready liveness p95: ${health?.postReadySamples?.p95Ms ?? "unknown"} ms`,
+    `- Final health failures: ${health?.final?.failureCount ?? "unknown"}`
   ];
   if (health?.final) {
     const healthState = health.final.healthOk === null ? "unknown" : health.final.healthOk ? "ok" : "not-ok";
@@ -512,8 +515,6 @@ function formatHealthMeasurementLines(measurements) {
   }
   if (health?.slowestSample) {
     lines.push(`- Slowest health sample: ${health.slowestSample.scope} ${health.slowestSample.phaseId ?? "unknown"} ${health.slowestSample.durationMs} ms`);
-  } else if (measurements.healthP95Ms !== null && measurements.healthP95Ms !== undefined) {
-    lines.push(`- Compatibility health p95: ${measurements.healthP95Ms} ms`);
   }
   return lines;
 }
@@ -685,18 +686,7 @@ function summarizeMeasurements(measurements) {
   return {
     peakRssMb: measurements.peakRssMb ?? null,
     cpuPercentMax: measurements.cpuPercentMax ?? null,
-    timeToListeningMs: measurements.timeToListeningMs ?? null,
-    timeToHealthReadyMs: measurements.timeToHealthReadyMs ?? null,
-    readinessClassification: measurements.readinessClassification ?? null,
-    readinessClassificationReason: measurements.readinessClassificationReason ?? null,
     health: measurements.health ?? null,
-    healthFailures: measurements.healthFailures ?? null,
-    healthP95Ms: measurements.healthP95Ms ?? null,
-    startupHealthP95Ms: measurements.startupHealthP95Ms ?? null,
-    postReadyHealthP95Ms: measurements.postReadyHealthP95Ms ?? null,
-    startupHealthFailures: measurements.startupHealthFailures ?? null,
-    postReadyHealthFailures: measurements.postReadyHealthFailures ?? null,
-    finalHealthFailures: measurements.finalHealthFailures ?? null,
     missingDependencyErrors: measurements.missingDependencyErrors ?? null,
     pluginLoadFailures: measurements.pluginLoadFailures ?? null,
     officialPluginEvidence: measurements.officialPluginEvidence ?? null,
@@ -1033,11 +1023,12 @@ function quoteCliValue(value) {
 
 function briefEvidence(measurements, violations) {
   const items = [];
-  if (measurements.timeToHealthReadyMs !== null && measurements.timeToHealthReadyMs !== undefined) {
-    items.push(`timeToHealthReadyMs: ${measurements.timeToHealthReadyMs}`);
+  const readiness = measurements.health?.readiness ?? null;
+  if (readiness?.healthReadyAtMs !== null && readiness?.healthReadyAtMs !== undefined) {
+    items.push(`readinessHealthReadyMs: ${readiness.healthReadyAtMs}`);
   }
-  if (measurements.timeToListeningMs !== null && measurements.timeToListeningMs !== undefined) {
-    items.push(`timeToListeningMs: ${measurements.timeToListeningMs}`);
+  if (readiness?.listeningReadyAtMs !== null && readiness?.listeningReadyAtMs !== undefined) {
+    items.push(`readinessListeningMs: ${readiness.listeningReadyAtMs}`);
   }
   if (measurements.peakRssMb !== null && measurements.peakRssMb !== undefined) {
     items.push(`peakRssMb: ${measurements.peakRssMb}`);
@@ -1135,7 +1126,7 @@ function compactKeySpans(keySpans) {
 
 function compactPerformanceMetrics(metrics = {}) {
   const preferred = [
-    "timeToHealthReadyMs",
+    "readinessHealthReadyMs",
     "peakRssMb",
     "cpuPercentMax",
     "openclawEventLoopMaxMs",
@@ -1174,9 +1165,11 @@ function compactRolePeaks(measurements) {
 }
 
 function pushMeasurementBrief(lines, measurements, { compact }) {
+  const readiness = measurements.health?.readiness ?? null;
+  const totalHealthFailures = measurements.health ? healthTotalFailures(measurements.health) : null;
   lines.push("Measurements:");
-  lines.push(`- startup: listening ${valueMs(measurements.timeToListeningMs)}; health ${valueMs(measurements.timeToHealthReadyMs)}; readiness ${measurements.readinessClassification ?? "unknown"}; gateway ${measurements.finalGatewayState ?? "unknown"}; restarts ${measurements.gatewayRestartCount ?? "unknown"}`);
-  lines.push(`- health: startup p95 ${valueMs(measurements.startupHealthP95Ms)}; post-ready p95 ${valueMs(measurements.postReadyHealthP95Ms)}; failures ${measurements.healthFailures ?? "unknown"}; final failures ${measurements.finalHealthFailures ?? "unknown"}${healthSlowestText(measurements)}`);
+  lines.push(`- startup: listening ${valueMs(readiness?.listeningReadyAtMs)}; health ${valueMs(readiness?.healthReadyAtMs)}; readiness ${readiness?.classification ?? "unknown"}; gateway ${measurements.finalGatewayState ?? "unknown"}; restarts ${measurements.gatewayRestartCount ?? "unknown"}`);
+  lines.push(`- health: startup p95 ${valueMs(measurements.health?.startupSamples?.p95Ms)}; post-ready p95 ${valueMs(measurements.health?.postReadySamples?.p95Ms)}; failures ${totalHealthFailures ?? "unknown"}; final failures ${measurements.health?.final?.failureCount ?? "unknown"}${healthSlowestText(measurements)}`);
   lines.push(`- resources: peak RSS ${valueMb(measurements.peakRssMb)}; max CPU ${valuePercent(measurements.cpuPercentMax)}; samples ${measurements.resourceSampleCount ?? "unknown"}; roles ${rolePeakText(measurements)}`);
   lines.push(`- agent: turn ${valueMs(measurements.agentTurnMs, "not-run")}; cold/warm ${valueMs(measurements.coldAgentTurnMs)}/${valueMs(measurements.warmAgentTurnMs)}; cold-warm delta ${valueMs(measurements.agentColdWarmDeltaMs)}; pre-provider ${valueMs(measurements.agentPreProviderMs)}; provider ${valueMs(measurements.agentProviderFinalMs)}; cleanup ${valueMs(measurements.agentCleanupMaxMs)}; diagnosis ${measurements.agentLatencyDiagnosis?.kind ?? "unknown"}; leaks ${measurements.agentProcessLeakCount ?? "unknown"}`);
   lines.push(`- plugins/runtime: missing deps ${measurements.missingDependencyErrors ?? "unknown"}; plugin failures ${measurements.pluginLoadFailures ?? "unknown"}; runtime deps ${valueMs(measurements.runtimeDepsStagingMs)}${runtimeDepsPluginText(measurements)}; warm restages ${measurements.warmRuntimeDepsRestageCount ?? "unknown"}; warm reuse ${measurements.runtimeDepsWarmReuseOk ?? "unknown"}`);

@@ -53,39 +53,51 @@ export function buildHealthMeasurement(record, scenario = null) {
   };
 }
 
-export function deriveHealthCompatibility(health, record = null) {
-  const startupHealthP95Ms = health?.startupSamples?.p95Ms ?? null;
-  const postReadyHealthP95Ms = health?.postReadySamples?.p95Ms ?? null;
-  const scopedP95Ms = maxNullable(startupHealthP95Ms, postReadyHealthP95Ms);
-  const oldP95Ms = record ? collectOldHealthP95(record) : null;
-  const startupFailures = health?.startupSamples?.failureCount ?? 0;
-  const postReadyFailures = health?.postReadySamples?.failureCount ?? 0;
-  const unknownFailures = health?.unknownSamples?.failureCount ?? 0;
-  const finalFailures = health?.final?.failureCount ?? 0;
-
+export function healthReadinessClassification(health) {
+  if (!health?.readiness) {
+    return null;
+  }
   return {
-    timeToListeningMs: health?.readiness?.listeningReadyAtMs ?? null,
-    timeToHealthReadyMs: health?.readiness?.healthReadyAtMs ?? null,
-    readinessClassification: health?.readiness
-      ? {
-          phaseId: health.readiness.phaseId,
-          state: health.readiness.classification,
-          severity: health.readiness.severity,
-          reason: health.readiness.reason,
-          thresholdMs: health.readiness.thresholdMs,
-          deadlineMs: health.readiness.deadlineMs,
-          listeningReadyAtMs: health.readiness.listeningReadyAtMs,
-          healthReadyAtMs: health.readiness.healthReadyAtMs
-        }
-      : null,
-    healthFailures: startupFailures + postReadyFailures + unknownFailures + finalFailures,
-    healthP95Ms: scopedP95Ms ?? oldP95Ms,
-    startupHealthP95Ms,
-    postReadyHealthP95Ms,
-    startupHealthFailures: startupFailures,
-    postReadyHealthFailures: postReadyFailures,
-    finalHealthFailures: finalFailures
+    phaseId: health.readiness.phaseId,
+    state: health.readiness.classification,
+    severity: health.readiness.severity,
+    reason: health.readiness.reason,
+    thresholdMs: health.readiness.thresholdMs,
+    deadlineMs: health.readiness.deadlineMs,
+    listeningReadyAtMs: health.readiness.listeningReadyAtMs,
+    healthReadyAtMs: health.readiness.healthReadyAtMs
   };
+}
+
+export function healthTotalFailures(health) {
+  return (health?.startupSamples?.failureCount ?? 0) +
+    (health?.postReadySamples?.failureCount ?? 0) +
+    (health?.unknownSamples?.failureCount ?? 0) +
+    (health?.final?.failureCount ?? 0);
+}
+
+export function measurementMetricValue(measurements, metric) {
+  if (!measurements) {
+    return null;
+  }
+  switch (metric) {
+    case "readinessListeningMs":
+      return measurements.health?.readiness?.listeningReadyAtMs ?? null;
+    case "readinessHealthReadyMs":
+      return measurements.health?.readiness?.healthReadyAtMs ?? null;
+    case "startupHealthP95Ms":
+      return measurements.health?.startupSamples?.p95Ms ?? null;
+    case "postReadyHealthP95Ms":
+      return measurements.health?.postReadySamples?.p95Ms ?? null;
+    case "startupHealthFailures":
+      return measurements.health?.startupSamples?.failureCount ?? null;
+    case "postReadyHealthFailures":
+      return measurements.health?.postReadySamples?.failureCount ?? null;
+    case "finalHealthFailures":
+      return measurements.health?.final?.failureCount ?? null;
+    default:
+      return measurements[metric] ?? null;
+  }
 }
 
 function normalizeHealthScope(scope) {
@@ -277,19 +289,6 @@ function selectSlowestSample(summaries) {
     }
   }
   return slowest;
-}
-
-function collectOldHealthP95(record) {
-  const values = [];
-  for (const phase of record?.phases ?? []) {
-    if (typeof phase.metrics?.healthSummary?.p95Ms === "number") {
-      values.push(phase.metrics.healthSummary.p95Ms);
-    }
-  }
-  if (typeof record?.finalMetrics?.healthSummary?.p95Ms === "number") {
-    values.push(record.finalMetrics.healthSummary.p95Ms);
-  }
-  return values.length === 0 ? null : Math.max(...values);
 }
 
 function healthFailureCount(samples) {

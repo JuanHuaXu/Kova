@@ -226,9 +226,7 @@ Current metrics include:
 
 ## Health And Readiness
 
-Records keep existing compatibility fields such as `timeToListeningMs`,
-`timeToHealthReadyMs`, `readinessClassification`, `healthFailures`, and
-`healthP95Ms`. New readers should use `records[*].measurements.health`:
+Health/readiness data lives under `records[*].measurements.health`:
 
 ```json
 {
@@ -291,19 +289,8 @@ Records keep existing compatibility fields such as `timeToListeningMs`,
 
 Scenario phases declare `healthScope` so the evaluator does not infer meaning
 from phase ids. Allowed values are `readiness`, `startup-sample`, `post-ready`,
-`final`, and `none`. Old or externally produced reports without phase scope are
-treated as `unknown` when summarized for compatibility.
-
-Compatibility derivation:
-
-- `timeToListeningMs`: `measurements.health.readiness.listeningReadyAtMs`
-- `timeToHealthReadyMs`: `measurements.health.readiness.healthReadyAtMs`
-- `readinessClassification`: `measurements.health.readiness.classification`
-- `healthFailures`: startup + post-ready + unknown + final health failures
-- `healthP95Ms`: max startup/post-ready p95, falling back to old aggregate p95
-  for old reports
-- `startupHealthP95Ms`: `measurements.health.startupSamples.p95Ms`
-- `postReadyHealthP95Ms`: `measurements.health.postReadySamples.p95Ms`
+`final`, and `none`. Reports do not emit old top-level readiness or health p95
+fields; readers should use the scoped health object directly.
 
 Role-specific thresholds can fail a scenario separately from total process-tree
 thresholds. For example, a report can show that `gateway` exceeded memory while
@@ -357,8 +344,8 @@ Aggregate metric fields include:
 - `samples`
 
 Current aggregate metrics include startup readiness, TCP listening, RSS, CPU,
-event-loop delay, agent turn latency, compatibility health p95, startup health
-p95, post-ready health p95, and runtime dependency staging.
+event-loop delay, agent turn latency, startup health p95, post-ready health
+p95, and runtime dependency staging.
 
 Baseline stores use schema `kova.baselines.v1`. Baseline read/write requires
 `--execute` so stored evidence comes from real OpenClaw runs, not dry-run plans.

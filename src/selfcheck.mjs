@@ -357,7 +357,6 @@ export async function runSelfCheck(flags = {}) {
     checks.push(reportRecommendedNextScenarioCheck());
     checks.push(readinessClassificationCheck());
     checks.push(healthReadinessModelCheck());
-    checks.push(oldHealthReportCompatibilityCheck());
     checks.push(await resourceRoleAttributionCheck(tmp));
     checks.push(await resourceRootCommandRoleBoundaryCheck());
     checks.push(await resourceRolePollutionCheck());
@@ -1026,9 +1025,9 @@ async function performanceBaselineCheck(tmp) {
       platform,
       target: "local-build:/tmp/openclaw",
       records: [
-        syntheticPerformanceRecord(1, { timeToHealthReadyMs: 1000, peakRssMb: 400, cpuPercentMax: 20, eventLoopDelayMs: 100, agentTurnMs: 2000 }),
-        syntheticPerformanceRecord(2, { timeToHealthReadyMs: 1200, peakRssMb: 420, cpuPercentMax: 22, eventLoopDelayMs: 110, agentTurnMs: 2200 }),
-        syntheticPerformanceRecord(3, { timeToHealthReadyMs: 1100, peakRssMb: 410, cpuPercentMax: 21, eventLoopDelayMs: 105, agentTurnMs: 2100 })
+        syntheticPerformanceRecord(1, { health: syntheticHealthMeasurement({ healthReadyAtMs: 1000 }), peakRssMb: 400, cpuPercentMax: 20, eventLoopDelayMs: 100, agentTurnMs: 2000 }),
+        syntheticPerformanceRecord(2, { health: syntheticHealthMeasurement({ healthReadyAtMs: 1200 }), peakRssMb: 420, cpuPercentMax: 22, eventLoopDelayMs: 110, agentTurnMs: 2200 }),
+        syntheticPerformanceRecord(3, { health: syntheticHealthMeasurement({ healthReadyAtMs: 1100 }), peakRssMb: 410, cpuPercentMax: 21, eventLoopDelayMs: 105, agentTurnMs: 2100 })
       ]
     });
     baselineReport.performance = buildPerformanceSummary(baselineReport.records, { repeat: 3 });
@@ -1044,7 +1043,7 @@ async function performanceBaselineCheck(tmp) {
       target: "local-build:/tmp/openclaw",
       records: [
         {
-          ...syntheticPerformanceRecord(1, { timeToHealthReadyMs: 1000, peakRssMb: 400 }),
+          ...syntheticPerformanceRecord(1, { health: syntheticHealthMeasurement({ healthReadyAtMs: 1000 }), peakRssMb: 400 }),
           status: "FAIL",
           violations: [{ message: "gateway readiness exceeded threshold" }]
         }
@@ -1061,7 +1060,7 @@ async function performanceBaselineCheck(tmp) {
       target: "local-build:/tmp/openclaw",
       records: [
         {
-          ...syntheticPerformanceRecord(1, { timeToHealthReadyMs: 1000, peakRssMb: 400 }),
+          ...syntheticPerformanceRecord(1, { health: syntheticHealthMeasurement({ healthReadyAtMs: 1000 }), peakRssMb: 400 }),
           profiling: { enabled: true, interpretation: "instrumented run", baselineEligible: false }
         }
       ]
@@ -1081,14 +1080,14 @@ async function performanceBaselineCheck(tmp) {
       platform,
       target: "local-build:/tmp/openclaw",
       records: [
-        syntheticPerformanceRecord(1, { timeToHealthReadyMs: 1800, peakRssMb: 500, cpuPercentMax: 30, eventLoopDelayMs: 180, agentTurnMs: 3000 }),
-        syntheticPerformanceRecord(2, { timeToHealthReadyMs: 1900, peakRssMb: 510, cpuPercentMax: 31, eventLoopDelayMs: 190, agentTurnMs: 3100 }),
-        syntheticPerformanceRecord(3, { timeToHealthReadyMs: 2000, peakRssMb: 520, cpuPercentMax: 32, eventLoopDelayMs: 200, agentTurnMs: 3200 })
+        syntheticPerformanceRecord(1, { health: syntheticHealthMeasurement({ healthReadyAtMs: 1800 }), peakRssMb: 500, cpuPercentMax: 30, eventLoopDelayMs: 180, agentTurnMs: 3000 }),
+        syntheticPerformanceRecord(2, { health: syntheticHealthMeasurement({ healthReadyAtMs: 1900 }), peakRssMb: 510, cpuPercentMax: 31, eventLoopDelayMs: 190, agentTurnMs: 3100 }),
+        syntheticPerformanceRecord(3, { health: syntheticHealthMeasurement({ healthReadyAtMs: 2000 }), peakRssMb: 520, cpuPercentMax: 32, eventLoopDelayMs: 200, agentTurnMs: 3200 })
       ]
     });
     currentReport.performance = buildPerformanceSummary(currentReport.records, { repeat: 3 });
-    assertEqual(currentReport.performance.groups[0].metrics.timeToHealthReadyMs.median, 1900, "performance median");
-    assertEqual(currentReport.performance.groups[0].metrics.timeToHealthReadyMs.p95, 1990, "performance p95");
+    assertEqual(currentReport.performance.groups[0].metrics.readinessHealthReadyMs.median, 1900, "performance median");
+    assertEqual(currentReport.performance.groups[0].metrics.readinessHealthReadyMs.p95, 1990, "performance p95");
 
     const comparison = comparePerformanceToBaseline(currentReport, loadedStore, {
       targetPlan,
@@ -1101,7 +1100,7 @@ async function performanceBaselineCheck(tmp) {
       }
     });
     assertEqual(comparison.ok, false, "baseline comparison regression");
-    assertEqual(comparison.regressions.some((regression) => regression.metric === "timeToHealthReadyMs"), true, "startup regression present");
+    assertEqual(comparison.regressions.some((regression) => regression.metric === "readinessHealthReadyMs"), true, "startup regression present");
     const regressedReview = reviewBaselineUpdate({
       ...currentReport,
       baseline: { path: baselinePath, comparison }
@@ -1168,6 +1167,47 @@ function syntheticPerformanceRecord(index, measurements) {
     envName: `kova-fresh-install-r${index}`,
     measurements,
     phases: []
+  };
+}
+
+function syntheticHealthMeasurement({ listeningReadyAtMs = null, healthReadyAtMs = null } = {}) {
+  return {
+    schemaVersion: "kova.health.v1",
+    readiness: {
+      phaseId: "start",
+      listeningReadyAtMs,
+      healthReadyAtMs,
+      classification: "ready",
+      severity: "pass",
+      reason: "synthetic readiness",
+      thresholdMs: 30000,
+      deadlineMs: 90000,
+      attempts: 1
+    },
+    startupSamples: emptySyntheticHealthSummary("startup-sample"),
+    postReadySamples: emptySyntheticHealthSummary("post-ready"),
+    unknownSamples: emptySyntheticHealthSummary("unknown"),
+    final: {
+      ...emptySyntheticHealthSummary("final"),
+      gatewayState: "running",
+      ok: true,
+      healthOk: true
+    },
+    slowestSample: null
+  };
+}
+
+function emptySyntheticHealthSummary(scope) {
+  return {
+    scope,
+    count: 0,
+    okCount: 0,
+    failureCount: 0,
+    minMs: null,
+    p50Ms: null,
+    p95Ms: null,
+    maxMs: null,
+    slowestPhaseId: null
   };
 }
 
@@ -3932,9 +3972,9 @@ function readinessClassificationCheck() {
     };
     evaluateRecord(record, { thresholds: { gatewayReadyMs: 30000 } });
     assertEqual(record.status, "FAIL", "slow readiness status");
-    assertEqual(record.measurements.readinessClassification, "slow-startup", "readiness classification");
+    assertEqual(record.measurements.health.readiness.classification, "slow-startup", "readiness classification");
     assertEqual(
-      record.violations.some((violation) => violation.metric === "readinessClassification"),
+      record.violations.some((violation) => violation.metric === "readiness.classification"),
       true,
       "readiness violation"
     );
@@ -4046,10 +4086,9 @@ function healthReadinessModelCheck() {
     evaluateRecord(record, scenario);
     assertEqual(record.status, "FAIL", "post-ready health threshold fails");
     assertEqual(record.measurements.health.schemaVersion, "kova.health.v1", "health schema");
-    assertEqual(record.measurements.timeToHealthReadyMs, 200, "readiness health ready derived");
-    assertEqual(record.measurements.startupHealthP95Ms, 30, "startup health p95 derived from readiness attempts");
-    assertEqual(record.measurements.postReadyHealthP95Ms, 1500, "post-ready health p95 derived from post-ready samples");
-    assertEqual(record.measurements.healthP95Ms, 1500, "compatibility health p95 derived");
+    assertEqual(record.measurements.health.readiness.healthReadyAtMs, 200, "readiness health ready captured");
+    assertEqual(record.measurements.health.startupSamples.p95Ms, 30, "startup health p95 derived from readiness attempts");
+    assertEqual(record.measurements.health.postReadySamples.p95Ms, 1500, "post-ready health p95 derived from post-ready samples");
     assertEqual(record.measurements.health.slowestSample.scope, "post-ready", "slowest health scope");
     assertEqual(
       record.violations.some((violation) => violation.metric === "postReadyHealthP95Ms"),
@@ -4057,7 +4096,7 @@ function healthReadinessModelCheck() {
       "post-ready health violation"
     );
     assertEqual(
-      record.violations.some((violation) => violation.metric === "timeToHealthReadyMs"),
+      record.violations.some((violation) => violation.metric === "readinessHealthReadyMs"),
       false,
       "post-ready liveness does not masquerade as readiness"
     );
@@ -4072,63 +4111,6 @@ function healthReadinessModelCheck() {
       id: "health-readiness-model",
       status: "FAIL",
       command: "evaluate synthetic scoped health record",
-      durationMs: 0,
-      message: error.message
-    };
-  }
-}
-
-function oldHealthReportCompatibilityCheck() {
-  try {
-    const report = {
-      schemaVersion: "kova.report.v1",
-      generatedAt: "2026-05-05T00:00:00.000Z",
-      runId: "old-health-report",
-      mode: "execution",
-      target: "runtime:stable",
-      platform: { os: "darwin", release: "25.0.0", arch: "arm64", node: process.version },
-      summary: { total: 1, statuses: { PASS: 1 } },
-      records: [{
-        scenario: "fresh-install",
-        title: "Fresh Install",
-        status: "PASS",
-        target: "runtime:stable",
-        state: { id: "fresh", title: "Fresh" },
-        envName: "kova-old-health",
-        likelyOwner: "OpenClaw",
-        objective: "Old report compatibility.",
-        measurements: {
-          peakRssMb: 100,
-          cpuPercentMax: 10,
-          timeToListeningMs: 100,
-          timeToHealthReadyMs: 200,
-          readinessClassification: "ready",
-          healthFailures: 0,
-          healthP95Ms: 900,
-          finalGatewayState: "running"
-        },
-        phases: [],
-        violations: []
-      }]
-    };
-    const summary = renderReportSummary(report, { structured: true });
-    assertEqual(summary.scenarios[0].measurements.health, null, "old report health object absent");
-    assertEqual(summary.scenarios[0].measurements.healthP95Ms, 900, "old report health p95 summarized");
-    const markdown = renderMarkdownReport(report);
-    assertEqual(markdown.includes("Compatibility health p95: 900 ms"), true, "old report markdown compatibility p95");
-    const comparison = compareReports(report, report, { thresholds: { healthP95Ms: 0 } });
-    assertEqual(comparison.ok, true, "old report compare remains ok");
-    return {
-      id: "old-health-report-compatibility",
-      status: "PASS",
-      command: "summarize and compare legacy health report shape",
-      durationMs: 0
-    };
-  } catch (error) {
-    return {
-      id: "old-health-report-compatibility",
-      status: "FAIL",
-      command: "summarize and compare legacy health report shape",
       durationMs: 0,
       message: error.message
     };
@@ -4545,7 +4527,7 @@ function markdownFailureCardsCheck() {
           }]
         }],
         measurements: {
-          timeToHealthReadyMs: 45000,
+          health: syntheticHealthMeasurement({ healthReadyAtMs: 45000 }),
           peakRssMb: 1100,
           resourceTopRolesByRss: [{ role: "gateway", peakRssMb: 1100, maxCpuPercent: 220 }]
         },
@@ -4555,7 +4537,7 @@ function markdownFailureCardsCheck() {
     assertEqual(rendered.includes("## Failure Cards"), true, "markdown failure cards section");
     assertEqual(rendered.includes("FAIL gateway-performance: gateway readiness exceeded threshold"), true, "failure card summary");
     assertEqual(rendered.includes("likely owner: gateway-runtime"), true, "failure card owner");
-    assertEqual(rendered.includes("evidence: timeToHealthReadyMs: 45000"), true, "failure card evidence");
+    assertEqual(rendered.includes("evidence: readinessHealthReadyMs: 45000"), true, "failure card evidence");
     assertEqual(rendered.includes("## Resource Roles"), true, "markdown resource roles section");
     assertEqual(rendered.includes("gateway: RSS 1100 MB; CPU 220%"), true, "markdown resource role summary");
     return {

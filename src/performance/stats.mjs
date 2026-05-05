@@ -1,8 +1,10 @@
+import { measurementMetricValue } from "../health.mjs";
+
 export const PERFORMANCE_SCHEMA = "kova.performance.v1";
 
 export const PERFORMANCE_METRICS = [
-  { id: "timeToHealthReadyMs", title: "Health Ready", unit: "ms", regressionKey: "startupRegressionPercent" },
-  { id: "timeToListeningMs", title: "TCP Listening", unit: "ms", regressionKey: "startupRegressionPercent" },
+  { id: "readinessHealthReadyMs", title: "Health Ready", unit: "ms", regressionKey: "startupRegressionPercent" },
+  { id: "readinessListeningMs", title: "TCP Listening", unit: "ms", regressionKey: "startupRegressionPercent" },
   { id: "peakRssMb", title: "Peak RSS", unit: "MB", regressionKey: "rssRegressionPercent" },
   { id: "resourcePeakGatewayRssMb", title: "Gateway RSS", unit: "MB", regressionKey: "rssRegressionPercent" },
   { id: "cpuPercentMax", title: "Max CPU", unit: "%", regressionKey: "cpuRegressionPercent" },
@@ -19,7 +21,6 @@ export const PERFORMANCE_METRICS = [
   { id: "agentCleanupMaxMs", title: "Agent Cleanup Max", unit: "ms", regressionKey: "agentLatencyRegressionPercent" },
   { id: "coldPreProviderMs", title: "Cold Pre-Provider", unit: "ms", regressionKey: "agentLatencyRegressionPercent" },
   { id: "warmPreProviderMs", title: "Warm Pre-Provider", unit: "ms", regressionKey: "agentLatencyRegressionPercent" },
-  { id: "healthP95Ms", title: "Health p95", unit: "ms", regressionKey: "startupRegressionPercent" },
   { id: "startupHealthP95Ms", title: "Startup Health p95", unit: "ms", regressionKey: "startupRegressionPercent" },
   { id: "postReadyHealthP95Ms", title: "Post-Ready Health p95", unit: "ms", regressionKey: "startupRegressionPercent" },
   { id: "runtimeDepsStagingMs", title: "Runtime Deps Staging", unit: "ms", regressionKey: "startupRegressionPercent" }
@@ -141,7 +142,7 @@ function summarizeGroup(records, options) {
   const metrics = {};
   for (const metric of PERFORMANCE_METRICS) {
     const values = records
-      .map((record) => record.measurements?.[metric.id])
+      .map((record) => measurementMetricValue(record.measurements, metric.id))
       .filter(isFiniteNumber);
     const summary = summarizeMetricValues(values, options.regressionThresholds);
     if (summary) {

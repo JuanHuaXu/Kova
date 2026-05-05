@@ -115,7 +115,7 @@
       "gateway-performance": {
         "thresholds": {
           "gatewayReadyMs": 60000,
-          "healthP95Ms": 1000,
+          "postReadyHealthP95Ms": 1000,
           "peakRssMb": 1000,
           "openclawSlowestSpanMs": 45000
         }

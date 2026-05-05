@@ -1,7 +1,8 @@
+import { measurementMetricValue } from "../health.mjs";
+
 const defaultThresholds = {
   missingDependencyErrors: 0,
   pluginLoadFailures: 0,
-  healthFailures: 0,
   peakRssMb: 100,
   cpuPercentMax: 25,
   coldReadyMs: 5000,
@@ -17,10 +18,9 @@ const defaultThresholds = {
   coldPreProviderMs: 5000,
   warmPreProviderMs: 2500,
   tcpConnectMaxMs: 250,
-  timeToListeningMs: 3000,
-  timeToHealthReadyMs: 5000,
+  readinessListeningMs: 3000,
+  readinessHealthReadyMs: 5000,
   readinessFailures: 0,
-  healthP95Ms: 1000,
   startupHealthFailures: 0,
   postReadyHealthFailures: 0,
   finalHealthFailures: 0,
@@ -321,9 +321,9 @@ function diagnosticRecordSummary(record) {
     agentPreProviderMs: measurements.agentPreProviderMs ?? measurements.coldPreProviderMs ?? null,
     providerFinalMs: measurements.agentProviderFinalMs ?? measurements.coldProviderFinalMs ?? null,
     runtimeDepsStagingMs: measurements.runtimeDepsStagingMs ?? null,
-    timeToHealthReadyMs: measurements.timeToHealthReadyMs ?? null,
-    startupHealthP95Ms: measurements.startupHealthP95Ms ?? null,
-    postReadyHealthP95Ms: measurements.postReadyHealthP95Ms ?? null,
+    readinessHealthReadyMs: measurementMetricValue(measurements, "readinessHealthReadyMs"),
+    startupHealthP95Ms: measurementMetricValue(measurements, "startupHealthP95Ms"),
+    postReadyHealthP95Ms: measurementMetricValue(measurements, "postReadyHealthP95Ms"),
     peakRssMb: measurements.peakRssMb ?? null
   };
 }
@@ -366,8 +366,8 @@ function metricRegressions(baseline, current, thresholds) {
 }
 
 function addIncreaseRegression(regressions, baseline, current, metric, tolerance) {
-  const baselineValue = baseline[metric];
-  const currentValue = current[metric];
+  const baselineValue = measurementMetricValue(baseline, metric);
+  const currentValue = measurementMetricValue(current, metric);
   if (typeof baselineValue !== "number" || typeof currentValue !== "number") {
     return;
   }
@@ -409,10 +409,8 @@ function metricDeltas(baseline, current) {
     "coldProviderFinalMs",
     "warmProviderFinalMs",
     "tcpConnectMaxMs",
-    "timeToListeningMs",
-    "timeToHealthReadyMs",
-    "healthP95Ms",
-    "healthFailures",
+    "readinessListeningMs",
+    "readinessHealthReadyMs",
     "startupHealthP95Ms",
     "postReadyHealthP95Ms",
     "startupHealthFailures",
@@ -453,8 +451,8 @@ function metricDeltas(baseline, current) {
     "eventLoopDelayMs",
     "providerModelTimingMs"
   ]) {
-    const currentValue = current?.[metric] ?? null;
-    const baselineValue = baseline?.[metric] ?? null;
+    const currentValue = measurementMetricValue(current, metric);
+    const baselineValue = measurementMetricValue(baseline, metric);
     metrics[metric] = {
       baseline: baselineValue,
       current: currentValue,
