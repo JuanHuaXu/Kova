@@ -2324,21 +2324,22 @@ function dashboardPreProviderAttributionCheck() {
       timelineEvent({ type: "span.end", name: "auto_reply.finalize_context", timestamp: base + 1160, spanId: "cold-finalize", durationMs: 100 }),
       timelineEvent({ type: "span.start", name: "reply.ensure_workspace", timestamp: base + 1180, spanId: "cold-workspace" }),
       timelineEvent({ type: "span.error", name: "reply.ensure_workspace", timestamp: base + 1230, spanId: "cold-workspace", durationMs: 50, errorName: "SyntheticError" }),
-      timelineEvent({ type: "span.end", name: "plugins.metadata.scan", timestamp: base + 1150, spanId: "cold-scan", durationMs: 33 }),
+      timelineEvent({ type: "span.end", name: "plugins.metadata.scan", timestamp: base + 1150, spanId: "cold-scan", durationMs: 33, phase: "startup" }),
+      timelineEvent({ type: "span.end", name: "plugins.metadata.scan", timestamp: base + 1175, spanId: "cold-scan-gap", durationMs: 10, phase: "agent-turn" }),
       timelineEvent({ type: "provider.request", name: "provider.request", timestamp: base + 1200, receivedAtEpochMs: base + 1200, respondedAtEpochMs: base + 1800, durationMs: 600 }),
       timelineEvent({ type: "eventLoop.sample", name: "eventLoop.sample", timestamp: base + 1250, maxMs: 9 }),
       timelineEvent({ type: "span.start", name: "gateway.chat_send.dispatch_inbound", timestamp: base + 11025, spanId: "warm-dispatch" }),
       timelineEvent({ type: "span.end", name: "gateway.chat_send.dispatch_inbound", timestamp: base + 11125, spanId: "warm-dispatch", durationMs: 100 }),
       timelineEvent({ type: "span.start", name: "reply.load_runtime_plugins", timestamp: base + 11120, spanId: "warm-plugins" }),
       timelineEvent({ type: "span.end", name: "reply.load_runtime_plugins", timestamp: base + 11220, spanId: "warm-plugins", durationMs: 100 }),
-      timelineEvent({ type: "span.end", name: "plugins.metadata.scan", timestamp: base + 11100, spanId: "warm-scan", durationMs: 11 }),
+      timelineEvent({ type: "span.end", name: "plugins.metadata.scan", timestamp: base + 11100, spanId: "warm-scan", durationMs: 11, phase: "agent-turn" }),
       timelineEvent({ type: "provider.request", name: "provider.request", timestamp: base + 11250, receivedAtEpochMs: base + 11250, respondedAtEpochMs: base + 11600, durationMs: 350 }),
       timelineEvent({ type: "eventLoop.sample", name: "eventLoop.sample", timestamp: base + 11200, maxMs: 7 })
     ].join("\n");
     const parsed = parseTimelineText(timelineText);
-    assertEqual(parsed.turnAttributionEvents.length, 16, "turn attribution events retained");
+    assertEqual(parsed.turnAttributionEvents.length, 17, "turn attribution events retained");
     const parsedIntervals = attributedSpanIntervals(parsed.turnAttributionEvents);
-    assertEqual(parsedIntervals.length, 5, "span parser includes error terminal");
+    assertEqual(parsedIntervals.length, 8, "span parser includes error terminal and metadata scans");
     assertEqual(parsedIntervals.some((span) => span.type === "span.error" && span.name === "reply.ensure_workspace"), true, "span error included");
 
     const coldAttribution = buildDashboardPreProviderAttribution({
@@ -2360,8 +2361,12 @@ function dashboardPreProviderAttributionCheck() {
       }
     });
     assertEqual(coldAttribution.available, true, "cold attribution available");
-    assertEqual(coldAttribution.knownAttributedMs, 170, "overlap-safe cold known attribution");
-    assertEqual(coldAttribution.unattributedMs, 30, "cold unattributed remainder");
+    assertEqual(coldAttribution.knownAttributedMs, 180, "overlap-safe cold known attribution includes active-turn metadata scan");
+    assertEqual(coldAttribution.unattributedMs, 20, "cold unattributed remainder");
+    const coldScanSummary = coldAttribution.spanSummaries.find((span) => span.name === "plugins.metadata.scan");
+    assertEqual(coldScanSummary?.count, 2, "dashboard attribution includes active-turn metadata scans");
+    assertEqual(coldScanSummary?.phases?.some((phase) => phase.phase === "startup"), true, "startup phase scan inside active window is counted");
+    assertEqual(coldScanSummary?.phases?.some((phase) => phase.phase === "agent-turn"), true, "agent-turn phase scan inside active window is counted");
     assertEqual(coldAttribution.spanSummaries.find((span) => span.name === "reply.ensure_workspace")?.errorCount, 1, "error span summary");
     assertEqual(coldAttribution.provider.totalDurationMs, 600, "provider duration stays separate");
     assertEqual(coldAttribution.timelineArtifacts[0], "/tmp/kova/openclaw/timeline.jsonl", "timeline artifact path");
@@ -2383,7 +2388,7 @@ function dashboardPreProviderAttributionCheck() {
       agent: { expectedText: "KOVA_AGENT_OK" },
       thresholds: { agentTurnMs: 2000, coldAgentTurnMs: 2000, warmAgentTurnMs: 1000 }
     }, { surface: { thresholds: {} }, targetPlan: { kind: "runtime" } });
-    assertEqual(record.measurements.coldPreProviderAttributedMs, 170, "record cold attributed metric");
+    assertEqual(record.measurements.coldPreProviderAttributedMs, 180, "record cold attributed metric");
     assertEqual(record.measurements.warmPreProviderAttributedMs, 195, "record warm attributed metric");
     assertEqual(record.measurements.warmPreProviderUnattributedMs, 55, "record warm unattributed metric");
     assertEqual(record.measurements.dashboardPreProviderAttribution.timelineArtifacts[0], "/tmp/kova/openclaw/timeline.jsonl", "record timeline artifact");
@@ -2398,6 +2403,8 @@ function dashboardPreProviderAttributionCheck() {
       summary: { statuses: { PASS: 1 } }
     });
     assertEqual(rendered.includes("Dashboard pre-provider attribution:"), true, "markdown includes dashboard attribution table");
+    assertEqual(rendered.includes("Spans are selected by active turn timestamp window"), true, "markdown describes timestamp-window attribution");
+    assertEqual(rendered.includes("`agent-turn`"), true, "markdown includes metadata scan phase as descriptive context");
     assertEqual(rendered.includes("`reply.ensure_workspace`"), true, "markdown includes span table");
 
     return {

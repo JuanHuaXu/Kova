@@ -7,6 +7,7 @@ export function buildPreProviderAttribution({
   attribution,
   timelineSummary,
   isAttributedSpanName,
+  shouldIncludeSpan,
   missingEventsError
 }) {
   const artifacts = timelineArtifacts(timelineSummary);
@@ -72,6 +73,7 @@ export function buildPreProviderAttribution({
   }
 
   const intervals = attributedSpanIntervals(events, isAttributedSpanName)
+    .filter((span) => shouldIncludeSpan ? shouldIncludeSpan(span, { windowStartEpochMs, windowEndEpochMs }) : true)
     .map((span) => clipSpanToWindow(span, windowStartEpochMs, windowEndEpochMs))
     .filter(Boolean);
   const spanSummaries = summarizeAttributedSpans(intervals);
@@ -116,6 +118,7 @@ export function preProviderMarkdownRows({ title, turns, fieldName }) {
 
   const lines = [
     `- ${title}:`,
+    "  - Spans are selected by active turn timestamp window; timeline phase is descriptive, not a startup/turn classifier.",
     "",
     "  | turn | pre-provider | known | unattributed | provider | timeline |",
     "  |---|---:|---:|---:|---:|---|"
@@ -132,11 +135,11 @@ export function preProviderMarkdownRows({ title, turns, fieldName }) {
   );
   if (spanRows.length > 0) {
     lines.push("");
-    lines.push("  | turn | span | count | errors | clipped | max |");
-    lines.push("  |---|---|---:|---:|---:|---:|");
+    lines.push("  | turn | span | phase(s) | count | errors | clipped | max |");
+    lines.push("  |---|---|---|---:|---:|---:|---:|");
     for (const span of spanRows.slice(0, 12)) {
       lines.push(
-        `  | ${span.turn} | \`${span.name}\` | ${span.count} | ${span.errorCount} | ${formatMs(span.totalClippedDurationMs)} | ${formatMs(span.maxClippedDurationMs)} |`
+        `  | ${span.turn} | \`${span.name}\` | ${formatPhases(span.phases)} | ${span.count} | ${span.errorCount} | ${formatMs(span.totalClippedDurationMs)} | ${formatMs(span.maxClippedDurationMs)} |`
       );
     }
   }
@@ -212,7 +215,8 @@ function summarizeAttributedSpans(intervals) {
       totalClippedDurationMs: 0,
       maxClippedDurationMs: null,
       totalRawDurationMs: 0,
-      maxRawDurationMs: null
+      maxRawDurationMs: null,
+      phases: []
     };
     current.count += 1;
     if (interval.type === "span.error") {
@@ -224,11 +228,33 @@ function summarizeAttributedSpans(intervals) {
       current.totalRawDurationMs = round(current.totalRawDurationMs + interval.rawDurationMs);
       current.maxRawDurationMs = maxNullable(current.maxRawDurationMs, interval.rawDurationMs);
     }
+    current.phases = mergePhaseSummary(current.phases, interval.phase, interval.clippedDurationMs);
     byName.set(interval.name, current);
   }
   return [...byName.values()].toSorted((left, right) =>
     (right.totalClippedDurationMs - left.totalClippedDurationMs) ||
     left.name.localeCompare(right.name)
+  );
+}
+
+function mergePhaseSummary(phases, phase, clippedDurationMs) {
+  const label = String(phase ?? "unknown");
+  const existing = phases.find((item) => item.phase === label);
+  if (existing) {
+    existing.count += 1;
+    existing.totalClippedDurationMs = round(existing.totalClippedDurationMs + clippedDurationMs);
+    return phases;
+  }
+  return [
+    ...phases,
+    {
+      phase: label,
+      count: 1,
+      totalClippedDurationMs: round(clippedDurationMs)
+    }
+  ].toSorted((left, right) =>
+    (right.totalClippedDurationMs - left.totalClippedDurationMs) ||
+    left.phase.localeCompare(right.phase)
   );
 }
 
@@ -397,6 +423,16 @@ function isoOrNull(epochMs) {
 
 function formatMs(value) {
   return isNumber(value) ? `${value} ms` : "unknown";
+}
+
+function formatPhases(phases) {
+  if (!Array.isArray(phases) || phases.length === 0) {
+    return "unknown";
+  }
+  return phases
+    .slice(0, 3)
+    .map((item) => `\`${item.phase}\`${item.count > 1 ? ` x${item.count}` : ""}`)
+    .join(", ");
 }
 
 function unique(values) {

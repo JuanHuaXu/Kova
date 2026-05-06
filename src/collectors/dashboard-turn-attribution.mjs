@@ -25,6 +25,7 @@ export function buildDashboardPreProviderAttribution({
     attribution,
     timelineSummary,
     isAttributedSpanName: isDashboardAttributedSpanName,
+    shouldIncludeSpan: includeDashboardSpanInWindow,
     missingEventsError: "timeline contains no dashboard turn attribution events"
   });
 }
@@ -51,7 +52,15 @@ export function attributedSpanIntervals(events) {
 
 function isDashboardAttributedSpanName(name) {
   const text = String(name ?? "");
-  return text.startsWith("gateway.chat_send") ||
+  return text === "plugins.metadata.scan" ||
+    text.startsWith("gateway.chat_send") ||
     text.startsWith("auto_reply") ||
     text.startsWith("reply.");
+}
+
+function includeDashboardSpanInWindow(span, { windowStartEpochMs, windowEndEpochMs }) {
+  if (span.name !== "plugins.metadata.scan") {
+    return true;
+  }
+  return span.endEpochMs >= windowStartEpochMs && span.endEpochMs <= windowEndEpochMs;
 }
