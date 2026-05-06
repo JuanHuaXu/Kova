@@ -93,8 +93,9 @@ export function evaluateRecord(record, scenario, options = {}) {
   );
   const agentTurnMs = maxTurnDuration(agentTurns);
   const agentResponseOk = agentTurns.length === 0 ? null : agentTurns.every((turn) => turn.responseOk === true);
-  const agentProviderSimulation = evaluateProviderSimulation({ turns: agentTurns, scenario, record, thresholds });
-  const agentFailureContainment = evaluateAgentFailureContainment({ turns: agentTurns, record, thresholds, gatewayExpected });
+  const health = buildHealthMeasurement(record, scenario);
+  const agentProviderSimulation = evaluateProviderSimulation({ turns: agentTurns, scenario, record, thresholds, health });
+  const agentFailureContainment = evaluateAgentFailureContainment({ turns: agentTurns, record, thresholds, gatewayExpected, health });
   const agentCleanupDiagnosis = diagnoseAgentCleanup(agentTurns, agentTurnStats, thresholds);
   const agentLatencyDiagnosis = diagnoseAgentLatency({
     coldAgentTurn,
@@ -107,7 +108,6 @@ export function evaluateRecord(record, scenario, options = {}) {
     providerSimulation: agentProviderSimulation
   });
   const finalGatewayState = record.finalMetrics?.service?.gatewayState ?? null;
-  const health = buildHealthMeasurement(record, scenario);
   const startupHealthP95Ms = health.startupSamples?.p95Ms ?? null;
   const postReadyHealthP95Ms = health.postReadySamples?.p95Ms ?? null;
   const startupHealthFailures = health.startupSamples?.failureCount ?? 0;
@@ -1231,7 +1231,9 @@ function parseJsonObject(text) {
   }
 }
 
-function evaluateAgentFailureContainment({ turns, record, thresholds, gatewayExpected = true }) {
+function evaluateAgentFailureContainment({ turns, record, thresholds, gatewayExpected = true, health = null }) {
+  const healthFailures = countPostStartupHealthFailures(record, health);
+  const healthFailureBreakdown = postStartupHealthFailureBreakdown(health);
   if (turns.length === 0) {
     return {
       schemaVersion: "kova.agentFailureContainment.v1",
@@ -1241,7 +1243,9 @@ function evaluateAgentFailureContainment({ turns, record, thresholds, gatewayExp
       processLeaksOk: true,
       finalGatewayState: record.finalMetrics?.service?.gatewayState ?? null,
       gatewayHealthy: gatewayExpected ? null : true,
-      healthFailures: countHealthFailures(record),
+      healthFailures,
+      healthFailureScope: "post-startup",
+      healthFailureBreakdown,
       healthLimit: 0,
       statusWorks: null,
       dashboardResponsive: null,
@@ -1258,7 +1262,6 @@ function evaluateAgentFailureContainment({ turns, record, thresholds, gatewayExp
   const healthLimit = typeof thresholds.agentContainmentHealthFailures === "number"
     ? thresholds.agentContainmentHealthFailures
     : (typeof thresholds.providerFailureHealthFailures === "number" ? thresholds.providerFailureHealthFailures : 0);
-  const healthFailures = countHealthFailures(record);
   const finalGatewayState = record.finalMetrics?.service?.gatewayState ?? null;
   const statusCommands = collectResults(record).filter((result) => /\s--\sstatus\b|@\S+\s+--\s+status\b/.test(result.command) || result.command.includes(" -- status"));
   const statusWorks = statusCommands.length === 0 ? null : statusCommands.some((result) => result.status === 0 && result.timedOut !== true);
@@ -1272,6 +1275,8 @@ function evaluateAgentFailureContainment({ turns, record, thresholds, gatewayExp
     finalGatewayState,
     gatewayHealthy: gatewayExpected ? finalGatewayState === "running" && healthFailures <= healthLimit : true,
     healthFailures,
+    healthFailureScope: "post-startup",
+    healthFailureBreakdown,
     healthLimit,
     statusWorks,
     dashboardResponsive: null,
@@ -1294,9 +1299,9 @@ function checkAgentFailureContainment(violations, containment) {
     violations.push({
       kind: "agent-containment",
       metric: "agentGatewayHealthy",
-      expected: `gateway running and health failures <= ${containment.healthLimit}`,
+      expected: `gateway running and post-startup health failures <= ${containment.healthLimit}`,
       actual: `gateway=${containment.finalGatewayState ?? "unknown"} healthFailures=${containment.healthFailures}`,
-      message: `gateway was not healthy after agent command; gateway=${containment.finalGatewayState ?? "unknown"}, health failures=${containment.healthFailures}`
+      message: `gateway was not healthy after agent command; gateway=${containment.finalGatewayState ?? "unknown"}, post-startup health failures=${containment.healthFailures}`
     });
   }
   if (containment.statusWorks === false) {
@@ -1454,14 +1459,15 @@ function checkAgentTurnCorrectness(violations, turns, expectedText) {
   }
 }
 
-function evaluateProviderSimulation({ turns, scenario, record, thresholds }) {
+function evaluateProviderSimulation({ turns, scenario, record, thresholds, health = null }) {
   const mode = scenario.mockProvider?.mode ?? "normal";
   const expected = mode !== "normal" && scenario.agent !== undefined;
   const issue = classifyProviderIssue(turns);
   const expectedFailureTurns = turns.filter((turn) => turn.expectedFailure === true);
   const normalTurns = turns.filter((turn) => turn.expectedFailure !== true);
   const healthLimit = typeof thresholds.providerFailureHealthFailures === "number" ? thresholds.providerFailureHealthFailures : 0;
-  const healthFailures = countHealthFailures(record);
+  const healthFailures = countPostStartupHealthFailures(record, health);
+  const healthFailureBreakdown = postStartupHealthFailureBreakdown(health);
   const finalGatewayState = record.finalMetrics?.service?.gatewayState ?? null;
   const containmentOk = !expected || (
     finalGatewayState === "running" &&
@@ -1499,6 +1505,8 @@ function evaluateProviderSimulation({ turns, scenario, record, thresholds }) {
     successfulTurnCount: normalTurns.filter((turn) => turn.responseOk === true).length,
     finalGatewayState,
     healthFailures,
+    healthFailureScope: "post-startup",
+    healthFailureBreakdown,
     healthLimit,
     providerSlowMinMs,
     providerRequestCount,
@@ -1573,9 +1581,9 @@ function checkProviderSimulation(violations, simulation) {
     violations.push({
       kind: "provider-containment",
       metric: "providerFailureContainmentOk",
-      expected: `gateway running and health failures <= ${simulation.healthLimit}`,
+      expected: `gateway running and post-startup health failures <= ${simulation.healthLimit}`,
       actual: `gateway=${simulation.finalGatewayState ?? "unknown"} healthFailures=${simulation.healthFailures}`,
-      message: `provider ${simulation.mode} failure was not contained; gateway=${simulation.finalGatewayState ?? "unknown"}, health failures=${simulation.healthFailures}`
+      message: `provider ${simulation.mode} failure was not contained; gateway=${simulation.finalGatewayState ?? "unknown"}, post-startup health failures=${simulation.healthFailures}`
     });
   }
 }
@@ -1677,7 +1685,7 @@ function buildAgentFailureFixerSummary(latencyDiagnosis, cleanupDiagnosis, provi
   if (containment?.gatewayHealthy === false) {
     items.push({
       kind: "gateway-after-agent-unhealthy",
-      summary: `Gateway was not healthy after agent command; gateway=${containment.finalGatewayState ?? "unknown"}, health failures=${containment.healthFailures}.`,
+      summary: `Gateway was not healthy after agent command; gateway=${containment.finalGatewayState ?? "unknown"}, post-startup health failures=${containment.healthFailures}.`,
       likelyOwner: "gateway supervision / agent failure containment"
     });
   }
@@ -2014,6 +2022,23 @@ function countHealthFailures(record) {
 
   count += record.finalMetrics?.healthSummary?.failureCount ?? healthFailureCount([record.finalMetrics?.health]);
   return count;
+}
+
+function countPostStartupHealthFailures(record, health = null) {
+  if (health?.schemaVersion === "kova.health.v1") {
+    const breakdown = postStartupHealthFailureBreakdown(health);
+    return breakdown.postReady + breakdown.unknown + breakdown.final;
+  }
+  return countHealthFailures(record);
+}
+
+function postStartupHealthFailureBreakdown(health) {
+  return {
+    startup: health?.startupSamples?.failureCount ?? 0,
+    postReady: health?.postReadySamples?.failureCount ?? 0,
+    unknown: health?.unknownSamples?.failureCount ?? 0,
+    final: health?.final?.failureCount ?? 0
+  };
 }
 
 function countListeningFailures(record) {

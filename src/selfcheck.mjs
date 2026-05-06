@@ -363,6 +363,7 @@ export async function runSelfCheck(flags = {}) {
     checks.push(reportRecommendedNextScenarioCheck());
     checks.push(readinessClassificationCheck());
     checks.push(healthReadinessModelCheck());
+    checks.push(agentContainmentHealthScopeCheck());
     checks.push(await resourceRoleAttributionCheck(tmp));
     checks.push(await resourceRootCommandRoleBoundaryCheck());
     checks.push(await resourceRolePollutionCheck());
@@ -4746,6 +4747,158 @@ function healthReadinessModelCheck() {
       id: "health-readiness-model",
       status: "FAIL",
       command: "evaluate synthetic scoped health record",
+      durationMs: 0,
+      message: error.message
+    };
+  }
+}
+
+function agentContainmentHealthScopeCheck() {
+  try {
+    const record = {
+      scenario: "dashboard-session-send-turn",
+      status: "PASS",
+      auth: { mode: "mock", source: "mock", providerId: "openai" },
+      phases: [
+        {
+          id: "gateway-start",
+          results: [],
+          metrics: {
+            logs: zeroLogMetrics(),
+            readiness: {
+              listeningReadyAtMs: 100,
+              healthReadyAtMs: 300,
+              thresholdMs: 30000,
+              deadlineMs: 90000,
+              attempts: 3,
+              classification: {
+                state: "ready",
+                severity: "pass",
+                reason: "synthetic startup recovered"
+              },
+              healthAttempts: [
+                { ok: false, durationMs: 0 },
+                { ok: false, durationMs: 1 },
+                { ok: true, durationMs: 10 }
+              ]
+            },
+            healthSummary: {
+              count: 3,
+              okCount: 1,
+              failureCount: 2,
+              minMs: 0,
+              p50Ms: 1,
+              p95Ms: 10,
+              maxMs: 10
+            }
+          }
+        },
+        {
+          id: "cold-dashboard-session-turn",
+          results: [{
+            command: "ocm @kova -- agent --local --agent main --session-id kova --message hi --json",
+            status: 0,
+            timedOut: false,
+            startedAt: "2026-05-06T10:00:01.000Z",
+            startedAtEpochMs: 1778061601000,
+            finishedAt: "2026-05-06T10:00:01.400Z",
+            finishedAtEpochMs: 1778061601400,
+            durationMs: 400,
+            stdout: "{\"finalAssistantVisibleText\":\"KOVA_AGENT_OK\"}",
+            stderr: "",
+            processSnapshots: {
+              leaks: {
+                schemaVersion: "kova.processLeakSummary.v1",
+                leakCount: 0,
+                leakedProcesses: [],
+                leaksByRole: {}
+              }
+            }
+          }],
+          metrics: {
+            logs: zeroLogMetrics(),
+            health: { ok: true, durationMs: 2 },
+            healthSummary: {
+              count: 1,
+              okCount: 1,
+              failureCount: 0,
+              minMs: 2,
+              p50Ms: 2,
+              p95Ms: 2,
+              maxMs: 2
+            }
+          }
+        }
+      ],
+      providerEvidence: {
+        available: true,
+        requestCount: 1,
+        requests: [{
+          requestId: "provider",
+          receivedAt: "2026-05-06T10:00:01.100Z",
+          receivedAtEpochMs: 1778061601100,
+          respondedAt: "2026-05-06T10:00:01.200Z",
+          respondedAtEpochMs: 1778061601200,
+          firstByteLatencyMs: 5,
+          firstChunkLatencyMs: 5,
+          route: "/v1/responses",
+          model: "gpt-5.5",
+          status: 200,
+          statusClass: "2xx"
+        }]
+      },
+      finalMetrics: {
+        service: { gatewayState: "running" },
+        logs: zeroLogMetrics(),
+        health: { ok: true, durationMs: 1 },
+        healthSummary: {
+          count: 1,
+          okCount: 1,
+          failureCount: 0,
+          minMs: 1,
+          p50Ms: 1,
+          p95Ms: 1,
+          maxMs: 1
+        }
+      }
+    };
+
+    evaluateRecord(record, {
+      id: "dashboard-session-send-turn",
+      phases: [
+        { id: "gateway-start", healthScope: "readiness" },
+        { id: "cold-dashboard-session-turn", healthScope: "post-ready" }
+      ],
+      agent: { expectedText: "KOVA_AGENT_OK" },
+      thresholds: {
+        agentContainmentHealthFailures: 0,
+        agentProcessLeaks: 0
+      }
+    }, { surface: { thresholds: {} }, targetPlan: { kind: "runtime" } });
+
+    assertEqual(record.status, "PASS", "startup health failures should not fail post-agent containment");
+    assertEqual(record.measurements.health.startupSamples.failureCount, 2, "startup failures retained");
+    assertEqual(record.measurements.health.postReadySamples.failureCount, 0, "post-ready failures absent");
+    assertEqual(record.measurements.agentFailureContainment.healthFailures, 0, "containment excludes startup failures");
+    assertEqual(record.measurements.agentFailureContainment.healthFailureBreakdown.startup, 2, "containment reports startup failures separately");
+    assertEqual(record.measurements.agentFailureContainment.gatewayHealthy, true, "gateway containment healthy");
+    assertEqual(
+      (record.violations ?? []).some((violation) => violation.metric === "agentGatewayHealthy"),
+      false,
+      "startup readiness failures do not create agentGatewayHealthy violation"
+    );
+
+    return {
+      id: "agent-containment-health-scope",
+      status: "PASS",
+      command: "evaluate agent containment scoped health failures",
+      durationMs: 0
+    };
+  } catch (error) {
+    return {
+      id: "agent-containment-health-scope",
+      status: "FAIL",
+      command: "evaluate agent containment scoped health failures",
       durationMs: 0,
       message: error.message
     };
