@@ -1,8 +1,8 @@
 {
   "id": "dashboard-session-send-turn",
-  "title": "Dashboard Session Send Turn",
+  "title": "Gateway Session Cold/Warm Turns",
   "ownerArea": "gateway-chat-session-runtime",
-  "description": "Create a dashboard session, call Gateway `sessions.send`, and wait for the assistant response in chat history to validate the same path dashboard users exercise.",
+  "description": "Create or reuse a real Gateway session, call Gateway `sessions.send` for cold and warm turns, and validate the same session API path dashboard and channel users exercise.",
   "processRoles": [
     "gateway",
     "command-tree",
@@ -12,7 +12,12 @@
   ],
   "thresholds": {
     "agentTurnMs": 45000,
+    "coldAgentTurnMs": 45000,
+    "warmAgentTurnMs": 15000,
+    "coldWarmDeltaMs": 30000,
     "preProviderMs": 10000,
+    "coldPreProviderMs": 10000,
+    "warmPreProviderMs": 10000,
     "providerFinalMs": 3000,
     "peakRssMb": 900,
     "postReadyHealthP95Ms": 1000
@@ -60,7 +65,15 @@
       "metrics": [
         "agentTurnMs",
         "agentTurnP95Ms",
+        "coldAgentTurnMs",
+        "warmAgentTurnMs",
+        "agentColdWarmDeltaMs",
         "coldPreProviderMs",
+        "warmPreProviderMs",
+        "agentMetadataScanCount",
+        "agentMetadataScanTotalMs",
+        "agentEventLoopMaxMs",
+        "agentSessionPollCount",
         "postReadyHealthP95Ms",
         "peakRssMb",
         "pluginLoadFailures"

@@ -372,6 +372,7 @@ export async function runSelfCheck(flags = {}) {
     checks.push(await heapProfileParserCheck());
     checks.push(await providerEvidenceParserCheck());
     checks.push(agentTurnBreakdownCheck());
+    checks.push(gatewaySessionTurnEvaluationCheck());
     checks.push(await mockProviderBehaviorCheck(tmp));
     checks.push(providerFailureEvaluationCheck());
     checks.push(agentColdWarmEvaluationCheck());
@@ -2098,6 +2099,206 @@ function agentTurnBreakdownCheck() {
       id: "agent-turn-breakdown",
       status: "FAIL",
       command: "evaluate synthetic agent turn phase breakdowns",
+      durationMs: 0,
+      message: error.message
+    };
+  }
+}
+
+function gatewaySessionTurnEvaluationCheck() {
+  try {
+    const base = 1777536000000;
+    const coldPayload = {
+      ok: true,
+      surface: "dashboard-session-send-turn",
+      method: "sessions.send",
+      createSession: true,
+      minAssistantCount: 1,
+      sessionKey: "kova-dashboard-session-send",
+      runId: "cold-run",
+      activeStartedAtEpochMs: base + 1000,
+      activeFinishedAtEpochMs: base + 2500,
+      activeTurnMs: 1500,
+      sessionCreateDurationMs: 100,
+      sendStartedAtEpochMs: base + 1000,
+      sendFinishedAtEpochMs: base + 1040,
+      sendDurationMs: 40,
+      assistantFirstSeenAtEpochMs: base + 2200,
+      assistantMatchedAtEpochMs: base + 2500,
+      timeToFirstAssistantMs: 1200,
+      timeToMatchedAssistantMs: 1500,
+      historyPollCount: 3,
+      historyErrorCount: 0,
+      assistantMessageCount: 1,
+      finalAssistantVisibleText: "KOVA_AGENT_OK",
+      expectedTextPresent: true
+    };
+    const warmPayload = {
+      ok: true,
+      surface: "dashboard-session-send-turn",
+      method: "sessions.send",
+      createSession: false,
+      minAssistantCount: 2,
+      sessionKey: "kova-dashboard-session-send",
+      runId: "warm-run",
+      activeStartedAtEpochMs: base + 11000,
+      activeFinishedAtEpochMs: base + 11800,
+      activeTurnMs: 800,
+      sessionCreateDurationMs: null,
+      sendStartedAtEpochMs: base + 11000,
+      sendFinishedAtEpochMs: base + 11050,
+      sendDurationMs: 50,
+      assistantFirstSeenAtEpochMs: base + 11600,
+      assistantMatchedAtEpochMs: base + 11800,
+      timeToFirstAssistantMs: 600,
+      timeToMatchedAssistantMs: 800,
+      historyPollCount: 2,
+      historyErrorCount: 0,
+      assistantMessageCount: 2,
+      finalAssistantVisibleText: "KOVA_AGENT_OK",
+      expectedTextPresent: true
+    };
+    const record = {
+      scenario: "dashboard-session-send-turn",
+      surface: "dashboard-session-send-turn",
+      title: "Gateway session cold/warm",
+      status: "PASS",
+      cleanup: "done",
+      auth: { mode: "mock" },
+      phases: [
+        {
+          id: "cold-dashboard-session-turn",
+          title: "Cold Gateway Session Turn",
+          intent: "Synthetic cold Gateway session turn",
+          commands: ["node support/run-dashboard-session-send-turn.mjs --create-session true"],
+          evidence: [],
+          results: [{
+            command: "node support/run-dashboard-session-send-turn.mjs --create-session true",
+            status: 0,
+            timedOut: false,
+            startedAt: new Date(base).toISOString(),
+            startedAtEpochMs: base,
+            finishedAt: new Date(base + 5000).toISOString(),
+            finishedAtEpochMs: base + 5000,
+            durationMs: 5000,
+            stdout: JSON.stringify(coldPayload),
+            stderr: ""
+          }],
+          metrics: { logs: zeroLogMetrics(), health: { ok: true } }
+        },
+        {
+          id: "warm-dashboard-session-turn",
+          title: "Warm Gateway Session Turn",
+          intent: "Synthetic warm Gateway session turn",
+          commands: ["node support/run-dashboard-session-send-turn.mjs --create-session false"],
+          evidence: [],
+          results: [{
+            command: "node support/run-dashboard-session-send-turn.mjs --create-session false",
+            status: 0,
+            timedOut: false,
+            startedAt: new Date(base + 10000).toISOString(),
+            startedAtEpochMs: base + 10000,
+            finishedAt: new Date(base + 14000).toISOString(),
+            finishedAtEpochMs: base + 14000,
+            durationMs: 4000,
+            stdout: JSON.stringify(warmPayload),
+            stderr: ""
+          }],
+          metrics: { logs: zeroLogMetrics(), health: { ok: true } }
+        }
+      ],
+      providerEvidence: {
+        available: true,
+        requestCount: 2,
+        requests: [
+          {
+            requestId: "cold-provider",
+            receivedAt: new Date(base + 1200).toISOString(),
+            receivedAtEpochMs: base + 1200,
+            respondedAt: new Date(base + 1800).toISOString(),
+            respondedAtEpochMs: base + 1800,
+            firstByteLatencyMs: 25,
+            firstChunkLatencyMs: 30,
+            route: "/v1/responses",
+            model: "gpt-5.5",
+            status: 200
+          },
+          {
+            requestId: "warm-provider",
+            receivedAt: new Date(base + 11250).toISOString(),
+            receivedAtEpochMs: base + 11250,
+            respondedAt: new Date(base + 11600).toISOString(),
+            respondedAtEpochMs: base + 11600,
+            firstByteLatencyMs: 20,
+            firstChunkLatencyMs: 22,
+            route: "/v1/responses",
+            model: "gpt-5.5",
+            status: 200
+          }
+        ]
+      },
+      finalMetrics: {
+        service: { gatewayState: "running" },
+        logs: zeroLogMetrics(),
+        timeline: {
+          available: true,
+          eventCount: 5,
+          parseErrorCount: 0,
+          events: [
+            { type: "span.end", name: "plugins.metadata.scan", timestamp: new Date(base + 700).toISOString(), durationMs: 99 },
+            { type: "span.end", name: "plugins.metadata.scan", timestamp: new Date(base + 1150).toISOString(), durationMs: 33 },
+            { type: "eventLoop.sample", name: "eventLoop.sample", timestamp: new Date(base + 1250).toISOString(), maxMs: 9 },
+            { type: "span.end", name: "plugins.metadata.scan", timestamp: new Date(base + 11100).toISOString(), durationMs: 11 },
+            { type: "eventLoop.sample", name: "eventLoop.sample", timestamp: new Date(base + 11200).toISOString(), maxMs: 7 }
+          ],
+          spanTotals: {},
+          keySpans: {}
+        }
+      }
+    };
+
+    evaluateRecord(record, {
+      id: "dashboard-session-send-turn",
+      agent: { expectedText: "KOVA_AGENT_OK" },
+      thresholds: { agentTurnMs: 2000, coldAgentTurnMs: 2000, warmAgentTurnMs: 1000 }
+    }, { surface: { thresholds: {} }, targetPlan: { kind: "runtime" } });
+
+    assertEqual(record.status, "PASS", "gateway session active-window scenario status");
+    assertEqual(record.measurements.coldAgentTurnMs, 1500, "cold gateway session active turn duration");
+    assertEqual(record.measurements.warmAgentTurnMs, 800, "warm gateway session active turn duration");
+    assertEqual(record.measurements.agentTurnMs, 1500, "agent turn max uses active turn duration");
+    assertEqual(record.measurements.agentTurns[0].rawCommandDurationMs, 5000, "raw support command duration preserved");
+    assertEqual(record.measurements.coldPreProviderMs, 200, "cold pre-provider uses active window");
+    assertEqual(record.measurements.coldProviderFinalMs, 600, "cold provider duration");
+    assertEqual(record.measurements.agentMetadataScanCount, 2, "active-window metadata scans");
+    assertEqual(record.measurements.agentMetadataScanTotalMs, 44, "active-window metadata scan total");
+    assertEqual(record.measurements.agentEventLoopMaxMs, 9, "active-window event-loop max");
+    assertEqual(record.measurements.agentSessionPollCount, 5, "session polling total");
+    assertEqual(record.measurements.agentTurns[1].gatewaySession.createSession, false, "warm turn reuses session");
+
+    const rendered = renderMarkdownReport({
+      generatedAt: "2026-05-01T00:00:00.000Z",
+      runId: "self-check-gateway-session-turn",
+      mode: "self-check",
+      target: "runtime:stable",
+      platform: { os: "test", release: "test", arch: "test", node: "test" },
+      records: [record],
+      summary: { statuses: { PASS: 1 } }
+    });
+    assertEqual(rendered.includes("gateway session:"), true, "markdown includes gateway session detail");
+    assertEqual(rendered.includes("active window:"), true, "markdown includes active turn diagnostics");
+
+    return {
+      id: "gateway-session-turn-evaluation",
+      status: "PASS",
+      command: "evaluate synthetic Gateway session cold/warm active-turn attribution",
+      durationMs: 0
+    };
+  } catch (error) {
+    return {
+      id: "gateway-session-turn-evaluation",
+      status: "FAIL",
+      command: "evaluate synthetic Gateway session cold/warm active-turn attribution",
       durationMs: 0,
       message: error.message
     };

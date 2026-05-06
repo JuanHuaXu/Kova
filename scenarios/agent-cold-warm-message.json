@@ -2,7 +2,7 @@
   "id": "agent-cold-warm-message",
   "surface": "agent-cli-local-turn",
   "title": "Agent CLI Local Cold/Warm Message",
-  "objective": "Send cold and warm simple messages through `openclaw agent --local`, verify mock-provider responses, and attribute latency before, during, and after provider work.",
+  "objective": "Send cold and warm simple messages through short-lived `openclaw agent --local` CLI processes, verify mock-provider responses, and attribute latency before, during, and after provider work.",
   "tags": [
     "agent",
     "message",

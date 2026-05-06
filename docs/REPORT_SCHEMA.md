@@ -224,6 +224,68 @@ Current metrics include:
 - runtime dependency staging grouped by bundled plugin when OpenClaw emits
   `runtimeDeps.stage` spans with `pluginId` attributes
 
+## Agent Turn Evidence
+
+Agent turns are reported under `records[*].measurements.agentTurns`. Gateway
+session turns use the active `sessions.send` window for `totalTurnMs`,
+`preProviderMs`, `providerFinalMs`, `postProviderMs`, cold/warm metrics, and
+threshold checks. The raw support-command duration is still preserved as
+`rawCommandDurationMs` so readers can separate runner/session setup overhead
+from the OpenClaw turn path.
+
+Gateway/session turn entries include:
+
+```json
+{
+  "schemaVersion": "kova.agentTurnEvidence.v1",
+  "label": "cold",
+  "totalTurnMs": 1260,
+  "rawCommandDurationMs": 2100,
+  "gatewaySession": {
+    "schemaVersion": "kova.gatewaySessionTurn.v1",
+    "method": "sessions.send",
+    "createSession": true,
+    "sessionKey": "kova-dashboard-session-send",
+    "activeStartedAtEpochMs": 1777536000000,
+    "activeFinishedAtEpochMs": 1777536001260,
+    "activeTurnMs": 1260,
+    "sessionCreateDurationMs": 120,
+    "sendDurationMs": 80,
+    "timeToFirstAssistantMs": 900,
+    "timeToMatchedAssistantMs": 1260,
+    "historyPollCount": 3,
+    "historyErrorCount": 0
+  },
+  "turnDiagnostics": {
+    "schemaVersion": "kova.activeTurnDiagnostics.v1",
+    "metadataScan": {
+      "count": 1,
+      "totalDurationMs": 45,
+      "maxDurationMs": 45
+    },
+    "eventLoop": {
+      "sampleCount": 1,
+      "maxMs": 12
+    },
+    "sessionPolling": {
+      "pollCount": 3,
+      "errorCount": 0
+    }
+  }
+}
+```
+
+Aggregate fields are also exposed on `measurements` for comparison and
+performance summaries:
+
+- `agentMetadataScanCount`
+- `agentMetadataScanTotalMs`
+- `agentMetadataScanMaxMs`
+- `agentEventLoopMaxMs`
+- `agentEventLoopSampleCount`
+- `agentSessionPollCount`
+- `agentSessionPollErrorCount`
+
 ## Health And Readiness
 
 Health/readiness data lives under `records[*].measurements.health`:
@@ -344,7 +406,8 @@ Aggregate metric fields include:
 - `samples`
 
 Current aggregate metrics include startup readiness, TCP listening, RSS, CPU,
-event-loop delay, agent turn latency, startup health p95, post-ready health
+event-loop delay, agent turn latency, agent metadata scan count/time, active
+turn event-loop max, session poll count, startup health p95, post-ready health
 p95, and runtime dependency staging.
 
 Baseline stores use schema `kova.baselines.v1`. Baseline read/write requires

@@ -76,7 +76,8 @@ export function evaluateRecord(record, scenario, options = {}) {
   const warmAgentTurn = selectAgentTurn(agentTurns, "warm") ?? agentTurns[1] ?? null;
   const providerTurn = collectSlowestProviderTurn(agentTurns);
   const agentTurnStats = summarizeAgentTurnStats(agentTurns);
-  const agentTurnMs = maxNullable(maxDurationWhere(allResults, isAgentMessageCommand), maxTurnDuration(agentTurns));
+  const agentTurnDiagnostics = summarizeAgentTurnDiagnostics(agentTurns);
+  const agentTurnMs = maxTurnDuration(agentTurns);
   const agentResponseOk = agentTurns.length === 0 ? null : agentTurns.every((turn) => turn.responseOk === true);
   const agentProviderSimulation = evaluateProviderSimulation({ turns: agentTurns, scenario, record, thresholds });
   const agentFailureContainment = evaluateAgentFailureContainment({ turns: agentTurns, record, thresholds, gatewayExpected });
@@ -119,7 +120,6 @@ export function evaluateRecord(record, scenario, options = {}) {
   const rssGrowthMb = maxNullable(resourceSummary.maxTotalRssGrowthMb);
   const gatewayRssGrowthMb = maxNullable(resourceSummary.maxGatewayRssGrowthMb);
 
-  checkDuration(violations, allResults, "agentTurnMs", thresholds.agentTurnMs, isAgentMessageCommand);
   checkDuration(violations, allResults, "statusMs", thresholds.statusMs, (command) => command.includes(" -- status"));
   checkDuration(violations, allResults, "pluginsListMs", thresholds.pluginsListMs, (command) => command.includes(" -- plugins list"));
   checkDuration(violations, allResults, "pluginUpdateDryRunMs", thresholds.pluginUpdateDryRunMs, (command) =>
@@ -747,6 +747,13 @@ export function evaluateRecord(record, scenario, options = {}) {
     agentCleanupMedianMs: agentTurnStats.cleanupMs.median,
     agentCleanupP95Ms: agentTurnStats.cleanupMs.p95,
     agentCleanupMaxMs: agentTurnStats.cleanupMs.max,
+    agentMetadataScanCount: agentTurnDiagnostics.metadataScanCount,
+    agentMetadataScanTotalMs: agentTurnDiagnostics.metadataScanTotalMs,
+    agentMetadataScanMaxMs: agentTurnDiagnostics.metadataScanMaxMs,
+    agentEventLoopMaxMs: agentTurnDiagnostics.eventLoopMaxMs,
+    agentEventLoopSampleCount: agentTurnDiagnostics.eventLoopSampleCount,
+    agentSessionPollCount: agentTurnDiagnostics.sessionPollCount,
+    agentSessionPollErrorCount: agentTurnDiagnostics.sessionPollErrorCount,
     coldAgentTurnMs: coldAgentTurn?.totalTurnMs ?? null,
     warmAgentTurnMs: warmAgentTurn?.totalTurnMs ?? null,
     agentColdWarmDeltaMs: delta(coldAgentTurn?.totalTurnMs, warmAgentTurn?.totalTurnMs),
@@ -953,14 +960,22 @@ function collectAgentTurns(record, providerEvidence, scenario, timelineSummary, 
       }
       index += 1;
       const expectedFailure = phase.expectedAgentFailure === true || scenario.agent?.expectedFailure === true;
-      const attribution = computeProviderTurnAttribution(result, providerEvidence);
+      const gatewaySession = extractGatewaySessionTurn(result);
+      const timingResult = gatewaySession ? resultForActiveTurnWindow(result, gatewaySession) : result;
+      const attribution = computeProviderTurnAttribution(timingResult, providerEvidence);
       const response = extractAgentResponse(result);
       const expectedTextPresent = typeof expectedText === "string" && expectedText.length > 0
         ? responseContainsExpectedText(response, result, expectedText)
         : null;
       const expectedFailureObserved = expectedFailure === true && result.status === 0 && result.timedOut !== true;
       const normalResponseOk = result.status === 0 && result.timedOut !== true && response.usable === true && (expectedTextPresent !== false);
-      const phaseBreakdown = buildAgentTurnBreakdown({ result, attribution, timelineSummary, logSummary });
+      const phaseBreakdown = buildAgentTurnBreakdown({ result: timingResult, attribution, timelineSummary, logSummary });
+      const turnDiagnostics = summarizeActiveTurnDiagnostics({
+        timelineSummary,
+        activeStartedAtEpochMs: timingResult.startedAtEpochMs,
+        activeFinishedAtEpochMs: timingResult.finishedAtEpochMs,
+        gatewaySession
+      });
       turns.push({
         schemaVersion: "kova.agentTurnEvidence.v1",
         index,
@@ -971,11 +986,17 @@ function collectAgentTurns(record, providerEvidence, scenario, timelineSummary, 
         command: result.command,
         status: result.status,
         timedOut: result.timedOut === true,
-        totalTurnMs: result.durationMs ?? attribution?.totalTurnMs ?? null,
-        commandStartedAt: result.startedAt ?? null,
-        commandStartedAtEpochMs: result.startedAtEpochMs ?? null,
-        commandFinishedAt: result.finishedAt ?? null,
-        commandFinishedAtEpochMs: result.finishedAtEpochMs ?? null,
+        totalTurnMs: timingResult.durationMs ?? attribution?.totalTurnMs ?? null,
+        commandStartedAt: timingResult.startedAt ?? null,
+        commandStartedAtEpochMs: timingResult.startedAtEpochMs ?? null,
+        commandFinishedAt: timingResult.finishedAt ?? null,
+        commandFinishedAtEpochMs: timingResult.finishedAtEpochMs ?? null,
+        rawCommandStartedAt: result.startedAt ?? null,
+        rawCommandStartedAtEpochMs: result.startedAtEpochMs ?? null,
+        rawCommandFinishedAt: result.finishedAt ?? null,
+        rawCommandFinishedAtEpochMs: result.finishedAtEpochMs ?? null,
+        rawCommandDurationMs: result.durationMs ?? null,
+        gatewaySession,
         responseText: response.text,
         responseOk: expectedFailure ? expectedFailureObserved : normalResponseOk,
         assistantResponseOk: normalResponseOk,
@@ -1000,6 +1021,12 @@ function collectAgentTurns(record, providerEvidence, scenario, timelineSummary, 
         providerAfterCommandEnd: attribution?.providerAfterCommandEnd ?? false,
         providerLateByMs: attribution?.providerLateByMs ?? null,
         phaseBreakdown,
+        turnDiagnostics,
+        metadataScanCount: turnDiagnostics.metadataScan.count,
+        metadataScanTotalMs: turnDiagnostics.metadataScan.totalDurationMs,
+        metadataScanMaxMs: turnDiagnostics.metadataScan.maxDurationMs,
+        eventLoopMaxMs: turnDiagnostics.eventLoop.maxMs,
+        sessionPollCount: turnDiagnostics.sessionPolling.pollCount,
         cleanupMs: phaseBreakdown?.buckets?.cleanupMs ?? null,
         processLeaks: result.processSnapshots?.leaks ?? null,
         processLeakCount: result.processSnapshots?.leaks?.leakCount ?? null,
@@ -1011,6 +1038,146 @@ function collectAgentTurns(record, providerEvidence, scenario, timelineSummary, 
     }
   }
   return turns;
+}
+
+function extractGatewaySessionTurn(result) {
+  if (!result?.command?.includes("run-dashboard-session-send-turn.mjs")) {
+    return null;
+  }
+  const payload = parseJsonObject(result.stdout);
+  if (!payload || payload.surface !== "dashboard-session-send-turn") {
+    return null;
+  }
+  const activeStartedAtEpochMs = numberOrNull(payload.activeStartedAtEpochMs ?? payload.sendStartedAtEpochMs);
+  const activeFinishedAtEpochMs = numberOrNull(
+    payload.activeFinishedAtEpochMs ??
+    payload.assistantMatchedAtEpochMs ??
+    payload.finishedAtEpochMs
+  );
+  if (activeStartedAtEpochMs === null || activeFinishedAtEpochMs === null || activeFinishedAtEpochMs < activeStartedAtEpochMs) {
+    return null;
+  }
+  const activeTurnMs = numberOrNull(payload.activeTurnMs) ?? Math.max(0, activeFinishedAtEpochMs - activeStartedAtEpochMs);
+  return {
+    schemaVersion: "kova.gatewaySessionTurn.v1",
+    method: payload.method ?? "sessions.send",
+    surface: payload.surface,
+    createSession: typeof payload.createSession === "boolean" ? payload.createSession : null,
+    minAssistantCount: numberOrNull(payload.minAssistantCount),
+    sessionKey: payload.sessionKey ?? null,
+    runId: payload.runId ?? null,
+    activeStartedAtEpochMs,
+    activeFinishedAtEpochMs,
+    activeTurnMs,
+    sessionCreateDurationMs: numberOrNull(payload.sessionCreateDurationMs),
+    sendDurationMs: numberOrNull(payload.sendDurationMs),
+    timeToFirstAssistantMs: numberOrNull(payload.timeToFirstAssistantMs),
+    timeToMatchedAssistantMs: numberOrNull(payload.timeToMatchedAssistantMs),
+    assistantMessageCount: numberOrNull(payload.assistantMessageCount),
+    historyPollCount: numberOrNull(payload.historyPollCount),
+    historyErrorCount: numberOrNull(payload.historyErrorCount),
+    expectedTextPresent: typeof payload.expectedTextPresent === "boolean" ? payload.expectedTextPresent : null
+  };
+}
+
+function resultForActiveTurnWindow(result, gatewaySession) {
+  return {
+    ...result,
+    startedAt: isoOrNull(gatewaySession.activeStartedAtEpochMs),
+    startedAtEpochMs: gatewaySession.activeStartedAtEpochMs,
+    finishedAt: isoOrNull(gatewaySession.activeFinishedAtEpochMs),
+    finishedAtEpochMs: gatewaySession.activeFinishedAtEpochMs,
+    durationMs: gatewaySession.activeTurnMs
+  };
+}
+
+function summarizeActiveTurnDiagnostics({ timelineSummary, activeStartedAtEpochMs, activeFinishedAtEpochMs, gatewaySession }) {
+  const events = Array.isArray(timelineSummary?.events) ? timelineSummary.events : [];
+  const windowEvents = events.filter((event) =>
+    eventEpochMs(event) !== null &&
+    eventEpochMs(event) >= activeStartedAtEpochMs &&
+    eventEpochMs(event) <= activeFinishedAtEpochMs
+  );
+  const metadataScans = windowEvents.filter((event) =>
+    (event.type === "span.end" || event.type === "span.error" || event.type === "mark") &&
+    event.name === "plugins.metadata.scan"
+  );
+  const eventLoopSamples = windowEvents.filter((event) => event.type === "eventLoop.sample");
+  const eventLoopMaxValues = eventLoopSamples
+    .map((event) => numberOrNull(event.maxMs ?? event.eventLoopDelayMs))
+    .filter((value) => value !== null);
+
+  return {
+    schemaVersion: "kova.activeTurnDiagnostics.v1",
+    activeStartedAtEpochMs,
+    activeFinishedAtEpochMs,
+    metadataScan: summarizeTimedEvents(metadataScans),
+    eventLoop: {
+      sampleCount: eventLoopSamples.length,
+      maxMs: eventLoopMaxValues.length > 0 ? Math.max(...eventLoopMaxValues) : null,
+      slowestSample: selectSlowestEventLoopSample(eventLoopSamples)
+    },
+    sessionPolling: {
+      pollCount: gatewaySession?.historyPollCount ?? null,
+      errorCount: gatewaySession?.historyErrorCount ?? null
+    }
+  };
+}
+
+function summarizeTimedEvents(events) {
+  const durations = events.map((event) => numberOrNull(event.durationMs)).filter((value) => value !== null);
+  return {
+    count: events.length,
+    totalDurationMs: roundNumber(durations.reduce((total, value) => total + value, 0)),
+    maxDurationMs: durations.length > 0 ? Math.max(...durations) : null,
+    slowest: events
+      .filter((event) => typeof event.durationMs === "number")
+      .toSorted((left, right) => right.durationMs - left.durationMs)
+      .map(compactTimelineEvent)
+      .at(0) ?? null
+  };
+}
+
+function selectSlowestEventLoopSample(samples) {
+  return samples
+    .map((event) => ({
+      timestamp: event.timestamp ?? null,
+      maxMs: numberOrNull(event.maxMs ?? event.eventLoopDelayMs),
+      p95Ms: numberOrNull(event.p95Ms),
+      p99Ms: numberOrNull(event.p99Ms),
+      activeSpanName: event.activeSpanName ?? event.spanName ?? null
+    }))
+    .filter((sample) => sample.maxMs !== null)
+    .toSorted((left, right) => right.maxMs - left.maxMs)
+    .at(0) ?? null;
+}
+
+function compactTimelineEvent(event) {
+  return {
+    type: event.type ?? null,
+    name: event.name ?? null,
+    timestamp: event.timestamp ?? null,
+    durationMs: event.durationMs ?? null,
+    pluginId: event.pluginId ?? event.attributes?.pluginId ?? null
+  };
+}
+
+function eventEpochMs(event) {
+  const direct = numberOrNull(event?.timestampEpochMs ?? event?.timeEpochMs);
+  if (direct !== null) {
+    return direct;
+  }
+  const parsed = Date.parse(event?.timestamp ?? event?.time ?? "");
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function parseJsonObject(text) {
+  try {
+    const parsed = JSON.parse(String(text ?? ""));
+    return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : null;
+  } catch {
+    return null;
+  }
 }
 
 function evaluateAgentFailureContainment({ turns, record, thresholds, gatewayExpected = true }) {
@@ -1121,6 +1288,19 @@ function summarizeAgentTurnStats(turns) {
     processLeakCount: turns.reduce((sum, turn) => sum + (turn.processLeakCount ?? 0), 0),
     missingProviderRequestCount: turns.filter((turn) => turn.missingProviderRequest === true).length,
     responseOkCount: turns.filter((turn) => turn.responseOk === true).length
+  };
+}
+
+function summarizeAgentTurnDiagnostics(turns) {
+  return {
+    schemaVersion: "kova.agentTurnDiagnosticsSummary.v1",
+    metadataScanCount: turns.reduce((sum, turn) => sum + (turn.metadataScanCount ?? 0), 0),
+    metadataScanTotalMs: roundNumber(turns.reduce((sum, turn) => sum + (turn.metadataScanTotalMs ?? 0), 0)),
+    metadataScanMaxMs: maxNullable(...turns.map((turn) => turn.metadataScanMaxMs)),
+    eventLoopMaxMs: maxNullable(...turns.map((turn) => turn.eventLoopMaxMs)),
+    eventLoopSampleCount: turns.reduce((sum, turn) => sum + (turn.turnDiagnostics?.eventLoop?.sampleCount ?? 0), 0),
+    sessionPollCount: turns.reduce((sum, turn) => sum + (turn.sessionPollCount ?? 0), 0),
+    sessionPollErrorCount: turns.reduce((sum, turn) => sum + (turn.gatewaySession?.historyErrorCount ?? 0), 0)
   };
 }
 
@@ -1491,6 +1671,7 @@ function checkAgentTurnThresholds(violations, turns, selected, thresholds, recor
       });
       continue;
     }
+    checkTurnThreshold(violations, turn, "totalTurnMs", thresholds.agentTurnMs, `${turn.label} agent turn took ${turn.totalTurnMs}ms`);
     checkTurnThreshold(violations, turn, "preProviderMs", thresholds.preProviderMs, `${turn.label} agent spent ${turn.preProviderMs}ms before provider work`);
     checkTurnThreshold(violations, turn, "providerFinalMs", thresholds.providerFinalMs, `${turn.label} provider work took ${turn.providerFinalMs}ms`);
     checkTurnThreshold(violations, turn, "cleanupMs", thresholds.agentCleanupMs, `${turn.label} agent cleanup took ${turn.cleanupMs}ms`);
@@ -2454,10 +2635,16 @@ function collectTimelineSummary(record) {
   let slowestRuntimeDepsPlugin = null;
   let openSpanCount = 0;
   let openSpans = [];
+  let latestEventCount = -1;
+  let events = [];
   const keySpans = {};
   const spanTotals = {};
 
   for (const timeline of timelines) {
+    if ((timeline.eventCount ?? 0) >= latestEventCount && Array.isArray(timeline.events)) {
+      latestEventCount = timeline.eventCount ?? 0;
+      events = timeline.events;
+    }
     eventCount = Math.max(eventCount, timeline.eventCount ?? 0);
     parseErrorCount = Math.max(parseErrorCount, timeline.parseErrorCount ?? 0);
     childProcessFailedCount = Math.max(childProcessFailedCount, timeline.childProcesses?.failedCount ?? 0);
@@ -2497,6 +2684,7 @@ function collectTimelineSummary(record) {
     repeatedSpanCount,
     openSpanCount,
     openSpans,
+    events,
     keySpans,
     spanTotals,
     eventLoopMaxMs,
@@ -2583,6 +2771,18 @@ function collectCpuPercentMax(record) {
 function maxNullable(...values) {
   const numbers = values.filter((value) => typeof value === "number");
   return numbers.length === 0 ? null : Math.max(...numbers);
+}
+
+function numberOrNull(value) {
+  if (value === null || value === undefined || value === "") {
+    return null;
+  }
+  const number = Number(value);
+  return Number.isFinite(number) ? number : null;
+}
+
+function isoOrNull(epochMs) {
+  return typeof epochMs === "number" && Number.isFinite(epochMs) ? new Date(epochMs).toISOString() : null;
 }
 
 function delta(left, right) {

@@ -21,6 +21,10 @@ export const PERFORMANCE_METRICS = [
   { id: "agentCleanupMaxMs", title: "Agent Cleanup Max", unit: "ms", regressionKey: "agentLatencyRegressionPercent" },
   { id: "coldPreProviderMs", title: "Cold Pre-Provider", unit: "ms", regressionKey: "agentLatencyRegressionPercent" },
   { id: "warmPreProviderMs", title: "Warm Pre-Provider", unit: "ms", regressionKey: "agentLatencyRegressionPercent" },
+  { id: "agentMetadataScanCount", title: "Agent Metadata Scans", unit: "count", regressionKey: "agentLatencyRegressionPercent" },
+  { id: "agentMetadataScanTotalMs", title: "Agent Metadata Scan Total", unit: "ms", regressionKey: "agentLatencyRegressionPercent" },
+  { id: "agentEventLoopMaxMs", title: "Agent Event Loop Max", unit: "ms", regressionKey: "eventLoopRegressionPercent" },
+  { id: "agentSessionPollCount", title: "Agent Session Polls", unit: "count", regressionKey: "agentLatencyRegressionPercent" },
   { id: "startupHealthP95Ms", title: "Startup Health p95", unit: "ms", regressionKey: "startupRegressionPercent" },
   { id: "postReadyHealthP95Ms", title: "Post-Ready Health p95", unit: "ms", regressionKey: "startupRegressionPercent" },
   { id: "runtimeDepsStagingMs", title: "Runtime Deps Staging", unit: "ms", regressionKey: "startupRegressionPercent" }

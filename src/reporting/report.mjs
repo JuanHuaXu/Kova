@@ -184,6 +184,7 @@ export function renderMarkdownReport(report) {
         lines.push(`- Agent pre-provider: cold ${record.measurements.coldPreProviderMs ?? "unknown"} ms; warm ${record.measurements.warmPreProviderMs ?? "unknown"} ms; delta ${record.measurements.agentColdWarmPreProviderDeltaMs ?? "unknown"} ms`);
         lines.push(`- Agent provider final: cold ${record.measurements.coldProviderFinalMs ?? "unknown"} ms; warm ${record.measurements.warmProviderFinalMs ?? "unknown"} ms`);
         lines.push(`- Agent turn stats: count ${record.measurements.agentTurnCount}; p95 ${record.measurements.agentTurnP95Ms ?? "unknown"} ms; max ${record.measurements.agentTurnMaxMs ?? "unknown"} ms; pre-provider p95 ${record.measurements.agentPreProviderP95Ms ?? "unknown"} ms`);
+        lines.push(`- Agent active-turn diagnostics: metadata scans ${record.measurements.agentMetadataScanCount ?? "unknown"} (${record.measurements.agentMetadataScanTotalMs ?? "unknown"} ms total); event-loop max ${record.measurements.agentEventLoopMaxMs ?? "unknown"} ms; session polls ${record.measurements.agentSessionPollCount ?? "unknown"} (${record.measurements.agentSessionPollErrorCount ?? "unknown"} errors)`);
       }
       if (record.measurements.agentProviderAttribution) {
         lines.push(`- Provider evidence: ${record.measurements.agentProviderRequestCount ?? 0} request(s); provider work ${record.measurements.agentProviderFinalMs ?? "unknown"} ms; pre-provider ${record.measurements.agentPreProviderMs ?? "unknown"} ms; post-provider ${record.measurements.agentPostProviderMs ?? "unknown"} ms`);
@@ -227,6 +228,12 @@ export function renderMarkdownReport(report) {
           const providerTiming = turn.providerAfterCommandEnd ? `; provider late ${turn.providerLateByMs} ms` : "";
           const expectedFailure = turn.expectedFailure ? "; expected failure observed " + turn.expectedFailureObserved : "";
           lines.push(`  - ${turn.label}: total ${turn.totalTurnMs ?? "unknown"} ms; pre-provider ${turn.preProviderMs ?? "unknown"} ms; provider ${turn.providerFinalMs ?? "unknown"} ms; post-provider ${turn.postProviderMs ?? "unknown"} ms; route ${route}; status ${status}; issue ${issue}; response ${turn.responseOk}; leaks ${turn.processLeakCount ?? "unknown"}${providerTiming}${expectedFailure}`);
+          if (turn.gatewaySession) {
+            lines.push(`    - gateway session: create ${turn.gatewaySession.createSession}; session create ${turn.gatewaySession.sessionCreateDurationMs ?? "n/a"} ms; send ${turn.gatewaySession.sendDurationMs ?? "unknown"} ms; first assistant ${turn.gatewaySession.timeToFirstAssistantMs ?? "unknown"} ms; matched assistant ${turn.gatewaySession.timeToMatchedAssistantMs ?? "unknown"} ms; polls ${turn.gatewaySession.historyPollCount ?? "unknown"} (${turn.gatewaySession.historyErrorCount ?? "unknown"} errors)`);
+          }
+          if (turn.turnDiagnostics) {
+            lines.push(`    - active window: metadata scans ${turn.metadataScanCount ?? "unknown"} (${turn.metadataScanTotalMs ?? "unknown"} ms total, max ${turn.metadataScanMaxMs ?? "unknown"} ms); event-loop samples ${turn.turnDiagnostics.eventLoop?.sampleCount ?? "unknown"} max ${turn.eventLoopMaxMs ?? "unknown"} ms`);
+          }
           const breakdown = summarizeAgentTurnBreakdownForMarkdown(turn.phaseBreakdown);
           if (breakdown) {
             lines.push(`    - breakdown: ${breakdown}`);
@@ -716,6 +723,13 @@ function summarizeMeasurements(measurements) {
     agentPreProviderMaxMs: measurements.agentPreProviderMaxMs ?? null,
     agentProviderFinalP95Ms: measurements.agentProviderFinalP95Ms ?? null,
     agentProviderFinalMaxMs: measurements.agentProviderFinalMaxMs ?? null,
+    agentMetadataScanCount: measurements.agentMetadataScanCount ?? null,
+    agentMetadataScanTotalMs: measurements.agentMetadataScanTotalMs ?? null,
+    agentMetadataScanMaxMs: measurements.agentMetadataScanMaxMs ?? null,
+    agentEventLoopMaxMs: measurements.agentEventLoopMaxMs ?? null,
+    agentEventLoopSampleCount: measurements.agentEventLoopSampleCount ?? null,
+    agentSessionPollCount: measurements.agentSessionPollCount ?? null,
+    agentSessionPollErrorCount: measurements.agentSessionPollErrorCount ?? null,
     coldAgentTurnMs: measurements.coldAgentTurnMs ?? null,
     warmAgentTurnMs: measurements.warmAgentTurnMs ?? null,
     agentColdWarmDeltaMs: measurements.agentColdWarmDeltaMs ?? null,
@@ -1171,7 +1185,7 @@ function pushMeasurementBrief(lines, measurements, { compact }) {
   lines.push(`- startup: listening ${valueMs(readiness?.listeningReadyAtMs)}; health ${valueMs(readiness?.healthReadyAtMs)}; readiness ${readiness?.classification ?? "unknown"}; gateway ${measurements.finalGatewayState ?? "unknown"}; restarts ${measurements.gatewayRestartCount ?? "unknown"}`);
   lines.push(`- health: startup p95 ${valueMs(measurements.health?.startupSamples?.p95Ms)}; post-ready p95 ${valueMs(measurements.health?.postReadySamples?.p95Ms)}; failures ${totalHealthFailures ?? "unknown"}; final failures ${measurements.health?.final?.failureCount ?? "unknown"}${healthSlowestText(measurements)}`);
   lines.push(`- resources: peak RSS ${valueMb(measurements.peakRssMb)}; max CPU ${valuePercent(measurements.cpuPercentMax)}; samples ${measurements.resourceSampleCount ?? "unknown"}; roles ${rolePeakText(measurements)}`);
-  lines.push(`- agent: turn ${valueMs(measurements.agentTurnMs, "not-run")}; cold/warm ${valueMs(measurements.coldAgentTurnMs)}/${valueMs(measurements.warmAgentTurnMs)}; cold-warm delta ${valueMs(measurements.agentColdWarmDeltaMs)}; pre-provider ${valueMs(measurements.agentPreProviderMs)}; provider ${valueMs(measurements.agentProviderFinalMs)}; cleanup ${valueMs(measurements.agentCleanupMaxMs)}; diagnosis ${measurements.agentLatencyDiagnosis?.kind ?? "unknown"}; leaks ${measurements.agentProcessLeakCount ?? "unknown"}`);
+  lines.push(`- agent: turn ${valueMs(measurements.agentTurnMs, "not-run")}; cold/warm ${valueMs(measurements.coldAgentTurnMs)}/${valueMs(measurements.warmAgentTurnMs)}; cold-warm delta ${valueMs(measurements.agentColdWarmDeltaMs)}; pre-provider ${valueMs(measurements.agentPreProviderMs)}; provider ${valueMs(measurements.agentProviderFinalMs)}; metadata scans ${measurements.agentMetadataScanCount ?? "unknown"} (${valueMs(measurements.agentMetadataScanTotalMs)}); event-loop ${valueMs(measurements.agentEventLoopMaxMs)}; polls ${measurements.agentSessionPollCount ?? "unknown"}; cleanup ${valueMs(measurements.agentCleanupMaxMs)}; diagnosis ${measurements.agentLatencyDiagnosis?.kind ?? "unknown"}; leaks ${measurements.agentProcessLeakCount ?? "unknown"}`);
   lines.push(`- plugins/runtime: missing deps ${measurements.missingDependencyErrors ?? "unknown"}; plugin failures ${measurements.pluginLoadFailures ?? "unknown"}; runtime deps ${valueMs(measurements.runtimeDepsStagingMs)}${runtimeDepsPluginText(measurements)}; warm restages ${measurements.warmRuntimeDepsRestageCount ?? "unknown"}; warm reuse ${measurements.runtimeDepsWarmReuseOk ?? "unknown"}`);
 
   if (!compact || hasDiagnosticSignal(measurements)) {

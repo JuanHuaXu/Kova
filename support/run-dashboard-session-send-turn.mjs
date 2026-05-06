@@ -21,14 +21,21 @@ try {
   const expectedText = args["expected-text"] ?? "KOVA_AGENT_OK";
   const timeoutMs = readTimeoutMs(args.timeout, 120000);
   const sessionKey = args["session-key"] ?? `kova-dashboard-${randomUUID()}`;
+  const createSession = readBoolean(args["create-session"], true);
+  const minAssistantCount = readPositiveInteger(args["min-assistant-count"], 1);
 
-  const sessionCreateStartedAtEpochMs = Date.now();
-  const created = gatewayCall(runtimeContext.envName, "sessions.create", {
+  let created = null;
+  let sessionCreateStartedAtEpochMs = null;
+  let sessionCreateFinishedAtEpochMs = null;
+  if (createSession) {
+    sessionCreateStartedAtEpochMs = Date.now();
+    created = gatewayCall(runtimeContext.envName, "sessions.create", {
       agentId: "main",
       key: sessionKey,
       label: "Kova Dashboard Session Send"
     }, Math.min(timeoutMs, 60000));
-  const sessionCreateFinishedAtEpochMs = Date.now();
+    sessionCreateFinishedAtEpochMs = Date.now();
+  }
   const canonicalKey = created?.key ?? sessionKey;
   const sendStartedAtEpochMs = Date.now();
   const sent = gatewayCall(runtimeContext.envName, "sessions.send", {
@@ -46,13 +53,17 @@ try {
     sessionKey: canonicalKey,
     expectedText,
     timeoutMs,
-    minAssistantCount: 1
+    minAssistantCount
   });
+  const finishedAtEpochMs = Date.now();
+  const activeFinishedAtEpochMs = history.assistantMatchedAtEpochMs ?? finishedAtEpochMs;
 
   finishJson({
     ok: true,
     surface: "dashboard-session-send-turn",
     method: "sessions.send",
+    createSession,
+    minAssistantCount,
     envName: runtimeContext.envName,
     runtime: runtimeContext.runtime,
     sessionKey: canonicalKey,
@@ -60,11 +71,16 @@ try {
     startedAtEpochMs,
     sessionCreateStartedAtEpochMs,
     sessionCreateFinishedAtEpochMs,
-    sessionCreateDurationMs: sessionCreateFinishedAtEpochMs - sessionCreateStartedAtEpochMs,
+    sessionCreateDurationMs: sessionCreateStartedAtEpochMs === null || sessionCreateFinishedAtEpochMs === null
+      ? null
+      : sessionCreateFinishedAtEpochMs - sessionCreateStartedAtEpochMs,
     sendStartedAtEpochMs,
     sendFinishedAtEpochMs,
     sendDurationMs: sendFinishedAtEpochMs - sendStartedAtEpochMs,
-    finishedAtEpochMs: Date.now(),
+    activeStartedAtEpochMs: sendStartedAtEpochMs,
+    activeFinishedAtEpochMs,
+    activeTurnMs: activeFinishedAtEpochMs - sendStartedAtEpochMs,
+    finishedAtEpochMs,
     assistantFirstSeenAtEpochMs: history.assistantFirstSeenAtEpochMs,
     assistantMatchedAtEpochMs: history.assistantMatchedAtEpochMs,
     timeToFirstAssistantMs: history.assistantFirstSeenAtEpochMs === null ? null : history.assistantFirstSeenAtEpochMs - sendStartedAtEpochMs,
@@ -96,12 +112,11 @@ async function waitForAssistantText({ envName, sessionKey, expectedText, timeout
       lastHistoryError = null;
       assistantTexts = extractAssistantTexts(history?.messages ?? []);
       lastAssistantText = assistantTexts.at(-1) ?? "";
-      if (assistantFirstSeenAtEpochMs === null && assistantTexts.length > 0) {
+      const eligibleAssistantTexts = assistantTexts.slice(Math.max(0, minAssistantCount - 1));
+      if (assistantFirstSeenAtEpochMs === null && eligibleAssistantTexts.length > 0) {
         assistantFirstSeenAtEpochMs = Date.now();
       }
-      const matchedAssistantText = assistantTexts
-        .slice(Math.max(0, minAssistantCount - 1))
-        .find((text) => text.includes(expectedText));
+      const matchedAssistantText = eligibleAssistantTexts.find((text) => text.includes(expectedText));
       if (matchedAssistantText) {
         return {
           assistantTexts,
@@ -138,6 +153,30 @@ function gatewayCall(envName, method, params, timeoutMs) {
     String(timeoutMs),
     "--json"
   ]);
+}
+
+function readBoolean(value, fallback) {
+  if (value === undefined) {
+    return fallback;
+  }
+  if (value === "true") {
+    return true;
+  }
+  if (value === "false") {
+    return false;
+  }
+  throw new Error(`invalid boolean value: ${value}`);
+}
+
+function readPositiveInteger(value, fallback) {
+  if (value === undefined) {
+    return fallback;
+  }
+  const parsed = Number(value);
+  if (!Number.isInteger(parsed) || parsed <= 0) {
+    throw new Error(`invalid positive integer: ${value}`);
+  }
+  return parsed;
 }
 
 function extractAssistantTexts(messages) {

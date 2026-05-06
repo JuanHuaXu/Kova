@@ -2,7 +2,7 @@
   "id": "agent-cli-local-turn",
   "title": "Agent CLI Local Turn",
   "ownerArea": "agent-runtime",
-  "description": "Send cold, warm, repeated, and failure-mode messages through `openclaw agent --local`, then verify response latency, provider routing, gateway health, memory, and process containment.",
+  "description": "Send cold, warm, repeated, and failure-mode messages through short-lived `openclaw agent --local` CLI processes, then verify response latency, provider routing, gateway health, memory, and process containment. This is local CLI coverage, not the primary Gateway/session user-path benchmark.",
   "processRoles": [
     "gateway",
     "command-tree",
