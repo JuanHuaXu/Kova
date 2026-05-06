@@ -275,6 +275,51 @@ Gateway/session turn entries include:
 }
 ```
 
+Dashboard session turns also include pre-provider attribution when an OpenClaw
+diagnostics timeline is available. Kova clips `gateway.chat_send*`,
+`auto_reply*`, and `reply.*` spans to the active `sessions.send` pre-provider
+window and reports the unioned known time so overlapping spans are not counted
+twice. Provider work remains separate.
+
+```json
+{
+  "dashboardPreProviderAttribution": {
+    "schemaVersion": "kova.dashboardPreProviderAttribution.v1",
+    "available": true,
+    "label": "cold",
+    "timelineArtifacts": ["/tmp/kova/openclaw/timeline.jsonl"],
+    "window": {
+      "startEpochMs": 1777536000000,
+      "endEpochMs": 1777536000200,
+      "durationMs": 200
+    },
+    "provider": {
+      "totalDurationMs": 600,
+      "firstByteLatencyMs": 25,
+      "firstChunkLatencyMs": 30
+    },
+    "knownAttributedMs": 170,
+    "unattributedMs": 30,
+    "coverageRatio": 0.85,
+    "spanSummaries": [
+      {
+        "name": "auto_reply.finalize_context",
+        "count": 1,
+        "errorCount": 0,
+        "totalClippedDurationMs": 100,
+        "maxClippedDurationMs": 100
+      }
+    ]
+  }
+}
+```
+
+Repeat summaries expose machine-readable medians at
+`records[*].measurements.dashboardPreProviderAttribution` plus flat comparison
+metrics such as `coldPreProviderAttributedMs`,
+`coldPreProviderUnattributedMs`, `warmPreProviderAttributedMs`, and
+`warmPreProviderUnattributedMs`.
+
 Aggregate fields are also exposed on `measurements` for comparison and
 performance summaries:
 

@@ -1,4 +1,8 @@
 import { buildAgentTurnBreakdown } from "./collectors/agent-turns.mjs";
+import {
+  buildDashboardPreProviderAttribution,
+  summarizeDashboardPreProviderAttributions
+} from "./collectors/dashboard-turn-attribution.mjs";
 import { computeProviderTurnAttribution } from "./collectors/provider.mjs";
 import { summarizeRuntimeDepsLogs } from "./collectors/logs.mjs";
 import { buildHealthMeasurement, healthReadinessClassification } from "./health.mjs";
@@ -77,6 +81,7 @@ export function evaluateRecord(record, scenario, options = {}) {
   const providerTurn = collectSlowestProviderTurn(agentTurns);
   const agentTurnStats = summarizeAgentTurnStats(agentTurns);
   const agentTurnDiagnostics = summarizeAgentTurnDiagnostics(agentTurns);
+  const dashboardPreProviderAttribution = summarizeDashboardPreProviderAttributions(agentTurns);
   const agentTurnMs = maxTurnDuration(agentTurns);
   const agentResponseOk = agentTurns.length === 0 ? null : agentTurns.every((turn) => turn.responseOk === true);
   const agentProviderSimulation = evaluateProviderSimulation({ turns: agentTurns, scenario, record, thresholds });
@@ -754,6 +759,13 @@ export function evaluateRecord(record, scenario, options = {}) {
     agentEventLoopSampleCount: agentTurnDiagnostics.eventLoopSampleCount,
     agentSessionPollCount: agentTurnDiagnostics.sessionPollCount,
     agentSessionPollErrorCount: agentTurnDiagnostics.sessionPollErrorCount,
+    dashboardPreProviderAttribution,
+    coldPreProviderAttributedMs: dashboardPreProviderAttribution.cold.knownAttributedMs.median,
+    warmPreProviderAttributedMs: dashboardPreProviderAttribution.warm.knownAttributedMs.median,
+    coldPreProviderUnattributedMs: dashboardPreProviderAttribution.cold.unattributedMs.median,
+    warmPreProviderUnattributedMs: dashboardPreProviderAttribution.warm.unattributedMs.median,
+    coldPreProviderAttributionCoverage: dashboardPreProviderAttribution.cold.coverageRatio.median,
+    warmPreProviderAttributionCoverage: dashboardPreProviderAttribution.warm.coverageRatio.median,
     coldAgentTurnMs: coldAgentTurn?.totalTurnMs ?? null,
     warmAgentTurnMs: warmAgentTurn?.totalTurnMs ?? null,
     agentColdWarmDeltaMs: delta(coldAgentTurn?.totalTurnMs, warmAgentTurn?.totalTurnMs),
@@ -976,6 +988,16 @@ function collectAgentTurns(record, providerEvidence, scenario, timelineSummary, 
         activeFinishedAtEpochMs: timingResult.finishedAtEpochMs,
         gatewaySession
       });
+      const dashboardPreProviderAttribution = gatewaySession
+        ? buildDashboardPreProviderAttribution({
+            label: agentTurnLabel(phase.id, index),
+            phaseId: phase.id,
+            activeStartedAtEpochMs: timingResult.startedAtEpochMs,
+            activeFinishedAtEpochMs: timingResult.finishedAtEpochMs,
+            attribution,
+            timelineSummary
+          })
+        : null;
       turns.push({
         schemaVersion: "kova.agentTurnEvidence.v1",
         index,
@@ -1022,6 +1044,7 @@ function collectAgentTurns(record, providerEvidence, scenario, timelineSummary, 
         providerLateByMs: attribution?.providerLateByMs ?? null,
         phaseBreakdown,
         turnDiagnostics,
+        dashboardPreProviderAttribution,
         metadataScanCount: turnDiagnostics.metadataScan.count,
         metadataScanTotalMs: turnDiagnostics.metadataScan.totalDurationMs,
         metadataScanMaxMs: turnDiagnostics.metadataScan.maxDurationMs,
@@ -1092,7 +1115,9 @@ function resultForActiveTurnWindow(result, gatewaySession) {
 }
 
 function summarizeActiveTurnDiagnostics({ timelineSummary, activeStartedAtEpochMs, activeFinishedAtEpochMs, gatewaySession }) {
-  const events = Array.isArray(timelineSummary?.events) ? timelineSummary.events : [];
+  const events = Array.isArray(timelineSummary?.turnAttributionEvents) && timelineSummary.turnAttributionEvents.length > 0
+    ? timelineSummary.turnAttributionEvents
+    : (Array.isArray(timelineSummary?.events) ? timelineSummary.events : []);
   const windowEvents = events.filter((event) =>
     eventEpochMs(event) !== null &&
     eventEpochMs(event) >= activeStartedAtEpochMs &&
@@ -2637,6 +2662,8 @@ function collectTimelineSummary(record) {
   let openSpans = [];
   let latestEventCount = -1;
   let events = [];
+  let turnAttributionEvents = [];
+  const artifacts = new Set();
   const keySpans = {};
   const spanTotals = {};
 
@@ -2644,6 +2671,10 @@ function collectTimelineSummary(record) {
     if ((timeline.eventCount ?? 0) >= latestEventCount && Array.isArray(timeline.events)) {
       latestEventCount = timeline.eventCount ?? 0;
       events = timeline.events;
+      turnAttributionEvents = Array.isArray(timeline.turnAttributionEvents) ? timeline.turnAttributionEvents : [];
+    }
+    for (const artifact of timeline.artifacts ?? []) {
+      artifacts.add(artifact);
     }
     eventCount = Math.max(eventCount, timeline.eventCount ?? 0);
     parseErrorCount = Math.max(parseErrorCount, timeline.parseErrorCount ?? 0);
@@ -2684,7 +2715,10 @@ function collectTimelineSummary(record) {
     repeatedSpanCount,
     openSpanCount,
     openSpans,
+    artifacts: [...artifacts],
+    timelineArtifacts: [...artifacts],
     events,
+    turnAttributionEvents,
     keySpans,
     spanTotals,
     eventLoopMaxMs,

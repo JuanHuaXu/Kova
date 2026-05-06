@@ -6,6 +6,7 @@ export const TIMELINE_COLLECTOR_SCHEMA = "kova.timelineCollector.v1";
 export const KEY_OPENCLAW_SPANS = [
   "gateway.startup",
   "gateway.ready",
+  "gateway.chat_send",
   "config.normalize",
   "plugins.metadata.scan",
   "runtimeDeps.stage",
@@ -19,7 +20,9 @@ export const KEY_OPENCLAW_SPANS = [
   "channel.plugin.load",
   "agent.prepare",
   "agent.turn",
-  "agent.cleanup"
+  "agent.cleanup",
+  "auto_reply",
+  "reply"
 ];
 
 export async function collectTimelineMetrics(artifactDir) {
@@ -59,6 +62,7 @@ export async function collectTimelineMetrics(artifactDir) {
     eventLoop: timeline.eventLoop,
     providers: timeline.providers,
     childProcesses: timeline.childProcesses,
+    turnAttributionEvents: timeline.turnAttributionEvents,
     events: timeline.events,
     artifacts: timeline.available ? [timelinePath] : [],
     error: timeline.available ? null : (timeline.error ?? (timeline.missing ? "OpenClaw timeline not emitted" : null))
@@ -141,6 +145,7 @@ export function summarizeTimeline(events, parseErrors = []) {
     eventLoop: summarizeEventLoop(eventLoopSamples),
     providers: summarizeTimedCollection(providerRequests),
     childProcesses: summarizeChildProcesses(childProcesses),
+    turnAttributionEvents: events.filter(isTurnAttributionEvent).map(compactAttributionEvent),
     events: events.slice(0, 200)
   };
 }
@@ -184,6 +189,7 @@ function emptyTimeline(extra = {}) {
       maxDurationMs: null,
       slowest: null
     },
+    turnAttributionEvents: [],
     events: [],
     ...extra
   };
@@ -318,8 +324,8 @@ function summarizeOpenSpans({ starts, terminals, events }) {
 function summarizeKeySpans({ spanEvents, openSpans }) {
   const byName = {};
   for (const name of KEY_OPENCLAW_SPANS) {
-    const spans = spanEvents.filter((event) => event.name === name);
-    const open = openSpans.filter((event) => event.name === name);
+    const spans = spanEvents.filter((event) => keySpanMatches(name, event.name));
+    const open = openSpans.filter((event) => keySpanMatches(name, event.name));
     const durations = spans.map((event) => event.durationMs).filter(isNumber);
     const slowest = spans
       .filter((event) => typeof event.durationMs === "number")
@@ -337,6 +343,19 @@ function summarizeKeySpans({ spanEvents, openSpans }) {
     };
   }
   return byName;
+}
+
+function keySpanMatches(keyName, eventName) {
+  if (keyName === "gateway.chat_send") {
+    return eventName === keyName || eventName.startsWith("gateway.chat_send.");
+  }
+  if (keyName === "auto_reply") {
+    return eventName === keyName || eventName.startsWith("auto_reply.");
+  }
+  if (keyName === "reply") {
+    return eventName === keyName || eventName.startsWith("reply.");
+  }
+  return eventName === keyName;
 }
 
 function emptyKeySpans() {
@@ -414,6 +433,56 @@ function compactTimedEvent(event) {
     errorName: event.errorName ?? event.attributes?.errorName ?? null,
     errorMessage: event.errorMessage ?? event.attributes?.errorMessage ?? null
   };
+}
+
+function isTurnAttributionEvent(event) {
+  if (event.type === "eventLoop.sample") {
+    return true;
+  }
+  if (event.type === "provider.request" || event.name === "provider.request") {
+    return true;
+  }
+  if (event.type !== "span.start" && event.type !== "span.end" && event.type !== "span.error") {
+    return false;
+  }
+  return event.name === "plugins.metadata.scan" ||
+    event.name === "provider.request" ||
+    event.name === "auto_reply" ||
+    event.name.startsWith("auto_reply.") ||
+    event.name.startsWith("gateway.chat_send") ||
+    event.name.startsWith("reply.");
+}
+
+function compactAttributionEvent(event) {
+  return {
+    type: event.type,
+    name: event.name,
+    timestamp: event.timestamp ?? null,
+    timestampEpochMs: numberOrNull(event.timestampEpochMs ?? event.timeEpochMs) ?? parsedTimestampMs(event.timestamp ?? event.time),
+    durationMs: event.durationMs ?? null,
+    spanId: event.spanId ?? null,
+    parentSpanId: event.parentSpanId ?? null,
+    phase: event.phase ?? null,
+    pid: event.pid ?? null,
+    provider: event.provider ?? event.attributes?.provider ?? null,
+    operation: event.operation ?? event.attributes?.operation ?? null,
+    pluginId: event.pluginId ?? event.attributes?.pluginId ?? null,
+    errorName: event.errorName ?? event.attributes?.errorName ?? null,
+    errorMessage: event.errorMessage ?? event.attributes?.errorMessage ?? null,
+    maxMs: numberOrNull(event.maxMs ?? event.eventLoopDelayMs),
+    p95Ms: numberOrNull(event.p95Ms),
+    p99Ms: numberOrNull(event.p99Ms),
+    receivedAtEpochMs: numberOrNull(event.receivedAtEpochMs),
+    respondedAtEpochMs: numberOrNull(event.respondedAtEpochMs),
+    status: numberOrNull(event.status),
+    route: event.route ?? event.path ?? null,
+    model: event.model ?? event.modelId ?? event.attributes?.model ?? null
+  };
+}
+
+function parsedTimestampMs(value) {
+  const parsed = Date.parse(value ?? "");
+  return Number.isFinite(parsed) ? parsed : null;
 }
 
 function spanIdentity(event) {

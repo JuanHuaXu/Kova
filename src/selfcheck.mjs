@@ -32,6 +32,10 @@ import {
   summarizeAgentTurnBreakdownForMarkdown
 } from "./collectors/agent-turns.mjs";
 import {
+  attributedSpanIntervals,
+  buildDashboardPreProviderAttribution
+} from "./collectors/dashboard-turn-attribution.mjs";
+import {
   computeProviderTurnAttribution,
   parseProviderRequestLog,
   parseTimelineProviderRequestLog
@@ -373,6 +377,7 @@ export async function runSelfCheck(flags = {}) {
     checks.push(await providerEvidenceParserCheck());
     checks.push(agentTurnBreakdownCheck());
     checks.push(gatewaySessionTurnEvaluationCheck());
+    checks.push(dashboardPreProviderAttributionCheck());
     checks.push(await mockProviderBehaviorCheck(tmp));
     checks.push(providerFailureEvaluationCheck());
     checks.push(agentColdWarmEvaluationCheck());
@@ -2303,6 +2308,248 @@ function gatewaySessionTurnEvaluationCheck() {
       message: error.message
     };
   }
+}
+
+function dashboardPreProviderAttributionCheck() {
+  try {
+    const base = 1777536000000;
+    const timelineText = [
+      timelineEvent({ type: "span.start", name: "gateway.chat_send.load_session", timestamp: base + 1010, spanId: "cold-load" }),
+      timelineEvent({ type: "span.end", name: "gateway.chat_send.load_session", timestamp: base + 1070, spanId: "cold-load", durationMs: 60 }),
+      timelineEvent({ type: "span.start", name: "auto_reply.finalize_context", timestamp: base + 1060, spanId: "cold-finalize" }),
+      timelineEvent({ type: "span.end", name: "auto_reply.finalize_context", timestamp: base + 1160, spanId: "cold-finalize", durationMs: 100 }),
+      timelineEvent({ type: "span.start", name: "reply.ensure_workspace", timestamp: base + 1180, spanId: "cold-workspace" }),
+      timelineEvent({ type: "span.error", name: "reply.ensure_workspace", timestamp: base + 1230, spanId: "cold-workspace", durationMs: 50, errorName: "SyntheticError" }),
+      timelineEvent({ type: "span.end", name: "plugins.metadata.scan", timestamp: base + 1150, spanId: "cold-scan", durationMs: 33 }),
+      timelineEvent({ type: "provider.request", name: "provider.request", timestamp: base + 1200, receivedAtEpochMs: base + 1200, respondedAtEpochMs: base + 1800, durationMs: 600 }),
+      timelineEvent({ type: "eventLoop.sample", name: "eventLoop.sample", timestamp: base + 1250, maxMs: 9 }),
+      timelineEvent({ type: "span.start", name: "gateway.chat_send.dispatch_inbound", timestamp: base + 11025, spanId: "warm-dispatch" }),
+      timelineEvent({ type: "span.end", name: "gateway.chat_send.dispatch_inbound", timestamp: base + 11125, spanId: "warm-dispatch", durationMs: 100 }),
+      timelineEvent({ type: "span.start", name: "reply.load_runtime_plugins", timestamp: base + 11120, spanId: "warm-plugins" }),
+      timelineEvent({ type: "span.end", name: "reply.load_runtime_plugins", timestamp: base + 11220, spanId: "warm-plugins", durationMs: 100 }),
+      timelineEvent({ type: "span.end", name: "plugins.metadata.scan", timestamp: base + 11100, spanId: "warm-scan", durationMs: 11 }),
+      timelineEvent({ type: "provider.request", name: "provider.request", timestamp: base + 11250, receivedAtEpochMs: base + 11250, respondedAtEpochMs: base + 11600, durationMs: 350 }),
+      timelineEvent({ type: "eventLoop.sample", name: "eventLoop.sample", timestamp: base + 11200, maxMs: 7 })
+    ].join("\n");
+    const parsed = parseTimelineText(timelineText);
+    assertEqual(parsed.turnAttributionEvents.length, 16, "turn attribution events retained");
+    const parsedIntervals = attributedSpanIntervals(parsed.turnAttributionEvents);
+    assertEqual(parsedIntervals.length, 5, "span parser includes error terminal");
+    assertEqual(parsedIntervals.some((span) => span.type === "span.error" && span.name === "reply.ensure_workspace"), true, "span error included");
+
+    const coldAttribution = buildDashboardPreProviderAttribution({
+      label: "cold",
+      phaseId: "cold-dashboard-session-turn",
+      activeStartedAtEpochMs: base + 1000,
+      activeFinishedAtEpochMs: base + 2500,
+      attribution: {
+        firstProviderRequestAtEpochMs: base + 1200,
+        preProviderMs: 200,
+        providerFinalMs: 600,
+        firstByteLatencyMs: 25,
+        firstChunkLatencyMs: 30
+      },
+      timelineSummary: {
+        available: true,
+        turnAttributionEvents: parsed.turnAttributionEvents,
+        artifacts: ["/tmp/kova/openclaw/timeline.jsonl"]
+      }
+    });
+    assertEqual(coldAttribution.available, true, "cold attribution available");
+    assertEqual(coldAttribution.knownAttributedMs, 170, "overlap-safe cold known attribution");
+    assertEqual(coldAttribution.unattributedMs, 30, "cold unattributed remainder");
+    assertEqual(coldAttribution.spanSummaries.find((span) => span.name === "reply.ensure_workspace")?.errorCount, 1, "error span summary");
+    assertEqual(coldAttribution.provider.totalDurationMs, 600, "provider duration stays separate");
+    assertEqual(coldAttribution.timelineArtifacts[0], "/tmp/kova/openclaw/timeline.jsonl", "timeline artifact path");
+
+    const missingAttribution = buildDashboardPreProviderAttribution({
+      label: "cold",
+      phaseId: "cold-dashboard-session-turn",
+      activeStartedAtEpochMs: base + 1000,
+      activeFinishedAtEpochMs: base + 2500,
+      attribution: { firstProviderRequestAtEpochMs: base + 1200, preProviderMs: 200 },
+      timelineSummary: { available: false, artifacts: [] }
+    });
+    assertEqual(missingAttribution.available, false, "missing timeline unavailable");
+    assertEqual(missingAttribution.unattributedMs, 200, "missing timeline preserves full remainder");
+
+    const record = syntheticDashboardSessionRecord({ base, timeline: parsed });
+    evaluateRecord(record, {
+      id: "dashboard-session-send-turn",
+      agent: { expectedText: "KOVA_AGENT_OK" },
+      thresholds: { agentTurnMs: 2000, coldAgentTurnMs: 2000, warmAgentTurnMs: 1000 }
+    }, { surface: { thresholds: {} }, targetPlan: { kind: "runtime" } });
+    assertEqual(record.measurements.coldPreProviderAttributedMs, 170, "record cold attributed metric");
+    assertEqual(record.measurements.warmPreProviderAttributedMs, 195, "record warm attributed metric");
+    assertEqual(record.measurements.warmPreProviderUnattributedMs, 55, "record warm unattributed metric");
+    assertEqual(record.measurements.dashboardPreProviderAttribution.timelineArtifacts[0], "/tmp/kova/openclaw/timeline.jsonl", "record timeline artifact");
+
+    const rendered = renderMarkdownReport({
+      generatedAt: "2026-05-01T00:00:00.000Z",
+      runId: "self-check-dashboard-pre-provider",
+      mode: "self-check",
+      target: "runtime:stable",
+      platform: { os: "test", release: "test", arch: "test", node: "test" },
+      records: [record],
+      summary: { statuses: { PASS: 1 } }
+    });
+    assertEqual(rendered.includes("Dashboard pre-provider attribution:"), true, "markdown includes dashboard attribution table");
+    assertEqual(rendered.includes("`reply.ensure_workspace`"), true, "markdown includes span table");
+
+    return {
+      id: "dashboard-pre-provider-attribution",
+      status: "PASS",
+      command: "evaluate synthetic dashboard pre-provider timeline attribution",
+      durationMs: 0
+    };
+  } catch (error) {
+    return {
+      id: "dashboard-pre-provider-attribution",
+      status: "FAIL",
+      command: "evaluate synthetic dashboard pre-provider timeline attribution",
+      durationMs: 0,
+      message: error.message
+    };
+  }
+}
+
+function timelineEvent(event) {
+  const timestamp = typeof event.timestamp === "number" ? new Date(event.timestamp).toISOString() : event.timestamp;
+  return JSON.stringify({
+    schemaVersion: "openclaw.diagnostics.v1",
+    ...event,
+    timestamp
+  });
+}
+
+function syntheticDashboardSessionRecord({ base, timeline }) {
+  const coldPayload = {
+    ok: true,
+    surface: "dashboard-session-send-turn",
+    method: "sessions.send",
+    createSession: true,
+    minAssistantCount: 1,
+    sessionKey: "kova-dashboard-session-send",
+    runId: "cold-run",
+    activeStartedAtEpochMs: base + 1000,
+    activeFinishedAtEpochMs: base + 2500,
+    activeTurnMs: 1500,
+    sendStartedAtEpochMs: base + 1000,
+    sendFinishedAtEpochMs: base + 1040,
+    sendDurationMs: 40,
+    assistantFirstSeenAtEpochMs: base + 2200,
+    assistantMatchedAtEpochMs: base + 2500,
+    timeToFirstAssistantMs: 1200,
+    timeToMatchedAssistantMs: 1500,
+    historyPollCount: 3,
+    historyErrorCount: 0,
+    assistantMessageCount: 1,
+    finalAssistantVisibleText: "KOVA_AGENT_OK",
+    expectedTextPresent: true
+  };
+  const warmPayload = {
+    ...coldPayload,
+    createSession: false,
+    minAssistantCount: 2,
+    runId: "warm-run",
+    activeStartedAtEpochMs: base + 11000,
+    activeFinishedAtEpochMs: base + 11800,
+    activeTurnMs: 800,
+    sendStartedAtEpochMs: base + 11000,
+    sendFinishedAtEpochMs: base + 11050,
+    sendDurationMs: 50,
+    assistantFirstSeenAtEpochMs: base + 11600,
+    assistantMatchedAtEpochMs: base + 11800,
+    timeToFirstAssistantMs: 600,
+    timeToMatchedAssistantMs: 800,
+    historyPollCount: 2,
+    assistantMessageCount: 2
+  };
+  return {
+    scenario: "dashboard-session-send-turn",
+    surface: "dashboard-session-send-turn",
+    title: "Gateway session cold/warm",
+    status: "PASS",
+    cleanup: "done",
+    auth: { mode: "mock" },
+    phases: [
+      syntheticDashboardTurnPhase({
+        id: "cold-dashboard-session-turn",
+        command: "node support/run-dashboard-session-send-turn.mjs --create-session true",
+        startedAtEpochMs: base,
+        finishedAtEpochMs: base + 5000,
+        payload: coldPayload
+      }),
+      syntheticDashboardTurnPhase({
+        id: "warm-dashboard-session-turn",
+        command: "node support/run-dashboard-session-send-turn.mjs --create-session false",
+        startedAtEpochMs: base + 10000,
+        finishedAtEpochMs: base + 14000,
+        payload: warmPayload
+      })
+    ],
+    providerEvidence: {
+      available: true,
+      requestCount: 2,
+      requests: [
+        {
+          requestId: "cold-provider",
+          receivedAt: new Date(base + 1200).toISOString(),
+          receivedAtEpochMs: base + 1200,
+          respondedAt: new Date(base + 1800).toISOString(),
+          respondedAtEpochMs: base + 1800,
+          firstByteLatencyMs: 25,
+          firstChunkLatencyMs: 30,
+          route: "/v1/responses",
+          model: "gpt-5.5",
+          status: 200
+        },
+        {
+          requestId: "warm-provider",
+          receivedAt: new Date(base + 11250).toISOString(),
+          receivedAtEpochMs: base + 11250,
+          respondedAt: new Date(base + 11600).toISOString(),
+          respondedAtEpochMs: base + 11600,
+          firstByteLatencyMs: 20,
+          firstChunkLatencyMs: 22,
+          route: "/v1/responses",
+          model: "gpt-5.5",
+          status: 200
+        }
+      ]
+    },
+    finalMetrics: {
+      service: { gatewayState: "running" },
+      logs: zeroLogMetrics(),
+      timeline: {
+        ...timeline,
+        artifacts: ["/tmp/kova/openclaw/timeline.jsonl"]
+      }
+    }
+  };
+}
+
+function syntheticDashboardTurnPhase({ id, command, startedAtEpochMs, finishedAtEpochMs, payload }) {
+  return {
+    id,
+    title: id,
+    intent: "Synthetic dashboard session turn",
+    commands: [command],
+    evidence: [],
+    results: [{
+      command,
+      status: 0,
+      timedOut: false,
+      startedAt: new Date(startedAtEpochMs).toISOString(),
+      startedAtEpochMs,
+      finishedAt: new Date(finishedAtEpochMs).toISOString(),
+      finishedAtEpochMs,
+      durationMs: finishedAtEpochMs - startedAtEpochMs,
+      stdout: JSON.stringify(payload),
+      stderr: ""
+    }],
+    metrics: { logs: zeroLogMetrics(), health: { ok: true } }
+  };
 }
 
 function syntheticTurn({
