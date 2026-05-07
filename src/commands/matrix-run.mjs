@@ -119,6 +119,7 @@ export async function runMatrixRun(flags) {
   });
   const performance = buildPerformanceSummary(records, {
     repeat: controls.repeat,
+    parallel: controls.parallel,
     regressionThresholds
   });
   const platform = platformInfo();

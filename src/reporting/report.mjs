@@ -820,6 +820,7 @@ function formatPerformanceSection(performance, baseline) {
     "## Performance",
     "",
     `- Repeat: ${performance.repeat ?? "unknown"}`,
+    `- Parallel: ${performance.parallel ?? "unknown"}`,
     `- Groups: ${performance.groupCount ?? 0}`,
     `- Unstable groups: ${performance.unstableGroupCount ?? 0}`,
     `- Profiled runs: ${performance.profiledRunCount ?? 0}`

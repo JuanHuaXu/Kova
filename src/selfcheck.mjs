@@ -1073,7 +1073,7 @@ function gateSubsystemSummaryCheck() {
 async function performanceBaselineCheck(tmp) {
   try {
     const platform = { os: "darwin", arch: "arm64", release: "test", node: "v24.0.0" };
-    const targetPlan = { kind: "local-build" };
+    const targetPlan = { kind: "local-build", value: "/tmp/openclaw" };
     const baselineReport = syntheticPerformanceReport({
       runId: "baseline",
       platform,
@@ -1128,6 +1128,28 @@ async function performanceBaselineCheck(tmp) {
     await saveBaselineStore(baselinePath, savedStore);
     const loadedStore = await loadBaselineStore(baselinePath);
     assertEqual(Object.keys(loadedStore.entries).length, 1, "baseline entry count");
+    assertEqual(
+      Object.keys(loadedStore.entries)[0].includes("/tmp/openclaw"),
+      true,
+      "baseline key includes target value"
+    );
+    const otherTargetComparison = comparePerformanceToBaseline(baselineReport, loadedStore, {
+      targetPlan: { kind: "local-build", value: "/tmp/other-openclaw" }
+    });
+    assertEqual(otherTargetComparison.missingBaselineCount, 1, "different target value misses baseline");
+
+    const parallelReport = {
+      ...baselineReport,
+      controls: { parallel: 2 },
+      performance: {
+        ...baselineReport.performance,
+        parallel: 2,
+        parallelContaminated: true
+      }
+    };
+    const parallelReview = reviewBaselineUpdate(parallelReport, { reviewedGood: true });
+    assertEqual(parallelReview.ok, false, "parallel report rejected for baseline");
+    assertEqual(parallelReview.blockers.some((blocker) => blocker.kind === "parallel-performance"), true, "parallel-performance blocker");
 
     const currentReport = syntheticPerformanceReport({
       runId: "current",

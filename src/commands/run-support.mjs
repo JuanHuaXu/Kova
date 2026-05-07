@@ -108,6 +108,8 @@ export function summarizePerformanceReceipt(performance, baseline) {
   return {
     schemaVersion: performance.schemaVersion,
     repeat: performance.repeat,
+    parallel: performance.parallel ?? null,
+    parallelContaminated: performance.parallelContaminated === true,
     groupCount: performance.groupCount,
     unstableGroupCount: performance.unstableGroupCount,
     profiledRunCount: performance.profiledRunCount ?? 0,

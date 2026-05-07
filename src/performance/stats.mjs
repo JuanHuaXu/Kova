@@ -60,6 +60,8 @@ export function buildPerformanceSummary(records, options = {}) {
     schemaVersion: PERFORMANCE_SCHEMA,
     generatedAt: new Date().toISOString(),
     repeat: options.repeat ?? null,
+    parallel: options.parallel ?? null,
+    parallelContaminated: Number(options.parallel ?? 1) > 1,
     metricCatalog: PERFORMANCE_METRICS.map(({ id, title, unit }) => ({ id, title, unit })),
     groupCount: groups.length,
     unstableGroupCount: unstableGroups.length,
@@ -74,6 +76,7 @@ export function performanceRecordKey(record, platform, targetPlan) {
     key.platform.os,
     key.platform.arch,
     key.targetKind,
+    key.targetValue,
     key.surface,
     key.state,
     key.scenario
@@ -86,6 +89,7 @@ export function performanceIdentity(record, platform, targetPlan) {
     surface: record.surface ?? null,
     state: record.state?.id ?? null,
     targetKind: targetPlan?.kind ?? targetKindFromSelector(record.target),
+    targetValue: targetPlan?.value ?? targetValueFromSelector(record.target),
     platform: {
       os: platform?.os ?? null,
       arch: platform?.arch ?? null
@@ -208,6 +212,14 @@ function percentile(sortedValues, percentileValue) {
 function targetKindFromSelector(selector) {
   const string = String(selector ?? "");
   return string.includes(":") ? string.split(":", 1)[0] : null;
+}
+
+function targetValueFromSelector(selector) {
+  const string = String(selector ?? "");
+  if (!string.includes(":")) {
+    return null;
+  }
+  return string.slice(string.indexOf(":") + 1) || null;
 }
 
 function isFiniteNumber(value) {

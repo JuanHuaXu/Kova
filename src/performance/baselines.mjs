@@ -208,6 +208,15 @@ export function reviewBaselineUpdate(report, options = {}) {
     });
   }
 
+  const parallel = Number(report?.controls?.parallel ?? performance?.parallel ?? 1);
+  if (Number.isFinite(parallel) && parallel > 1) {
+    blockers.push({
+      kind: "parallel-performance",
+      parallel,
+      message: `baseline updates require sequential runs; parallel=${parallel} can contaminate RSS/CPU/timing samples`
+    });
+  }
+
   const comparison = report?.baseline?.comparison;
   if (comparison && comparison.ok !== true) {
     blockers.push({
