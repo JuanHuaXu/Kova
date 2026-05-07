@@ -816,7 +816,14 @@ export function renderPasteSummary(report) {
     lines.push("");
   }
 
-  for (const record of records) {
+  const recordsForPaste = selectPasteRecords(records);
+  const omittedRecords = records.length - recordsForPaste.length;
+  if (omittedRecords > 0) {
+    lines.push(`Records omitted from paste handoff: ${omittedRecords} passing/uninteresting record(s). See summary JSON for the complete sample list.`);
+    lines.push("");
+  }
+
+  for (const record of recordsForPaste) {
     const failed = firstFailedCommand(record);
     lines.push(`Scenario: ${record.scenario}`);
     lines.push(`Result: ${record.status}`);
@@ -824,7 +831,7 @@ export function renderPasteSummary(report) {
     if (record.status === "PASS" || record.status === "DRY-RUN") {
       lines.push(`Evidence: ${record.phases?.length ?? 0} phases recorded.`);
       if (record.measurements) {
-        pushMeasurementBrief(lines, record.measurements, { compact: false });
+        pushMeasurementBrief(lines, record.measurements, { compact: true });
       }
     } else if (record.violations?.length > 0) {
       if (record.measurements) {
@@ -862,6 +869,24 @@ export function renderPasteSummary(report) {
   }
 
   return lines.join("\n");
+}
+
+function selectPasteRecords(records) {
+  const failing = records.filter((record) =>
+    record.status !== "PASS" ||
+    (record.violations?.length ?? 0) > 0 ||
+    record.measurements?.officialPluginEvidence?.ok === false
+  );
+  if (failing.length > 0) {
+    return failing.slice(0, 8);
+  }
+  const interestingPasses = records.filter((record) =>
+    (record.measurements?.agentTurns?.length ?? 0) > 0 ||
+    record.measurements?.officialPluginEvidence?.available === true ||
+    record.measurements?.gatewaySessionPreProviderAttribution?.count > 0 ||
+    record.measurements?.agentCliPreProviderAttribution?.count > 0
+  );
+  return (interestingPasses.length > 0 ? interestingPasses : records).slice(0, 4);
 }
 
 function buildFailureBrief(report) {
