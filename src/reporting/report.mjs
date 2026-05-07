@@ -1160,16 +1160,20 @@ function hasDiagnosticSignal(measurements) {
 
 function hasMcpSignal(measurements) {
   return measurements.mcpBridgeEvidence?.available ||
-    measurements.mcpInitializeMs !== undefined ||
-    measurements.mcpToolsListMs !== undefined ||
-    measurements.mcpShutdownMs !== undefined;
+    hasValue(measurements.mcpInitializeMs) ||
+    hasValue(measurements.mcpToolsListMs) ||
+    hasValue(measurements.mcpShutdownMs);
 }
 
 function hasBrowserSignal(measurements) {
   return measurements.browserAutomationEvidence?.available ||
-    measurements.browserStartMs !== undefined ||
-    measurements.browserOpenMs !== undefined ||
-    measurements.browserSnapshotMs !== undefined;
+    hasValue(measurements.browserStartMs) ||
+    hasValue(measurements.browserOpenMs) ||
+    hasValue(measurements.browserSnapshotMs);
+}
+
+function hasValue(value) {
+  return value !== null && value !== undefined;
 }
 
 function valueMs(value, fallback = "unknown") {
