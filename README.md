@@ -88,6 +88,10 @@ node bin/kova.mjs setup --ci --json
 Kova data lives in `~/.kova` by default: credentials, reports, artifacts, and
 baselines.
 
+The scenario model separates the shared Gateway session message path from
+dashboard-specific checks, channel adapter checks, and Agent CLI checks. See
+[Kova Scenario Hierarchy](docs/SCENARIO_HIERARCHY.md).
+
 ## Run The Important Checks
 
 ### Test A Local OpenClaw Checkout Like A Release
