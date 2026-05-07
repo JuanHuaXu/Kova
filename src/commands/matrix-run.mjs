@@ -30,7 +30,7 @@ import { reportsDir } from "../paths.mjs";
 import { loadRegistryContext } from "../registries/context.mjs";
 import { loadProfile } from "../registries/profiles.mjs";
 import { validateScenarioRun } from "../registries/scenarios.mjs";
-import { renderMarkdownReport, summarizeRecords } from "../reporting/report.mjs";
+import { buildReportSummary, renderMarkdownReport, summarizeRecords } from "../reporting/report.mjs";
 import { bundleReport, retainGateArtifacts } from "../reporting/artifacts.mjs";
 import { buildDryRunRecord, buildSkippedRecord, createRunId, executeScenario } from "../runner.mjs";
 import { resolveTarget } from "../targets.mjs";
@@ -68,6 +68,7 @@ export async function runMatrixRun(flags) {
   const runId = createRunId();
   const reportPath = join(reportRoot, `${runId}-${profile.id}.md`);
   const jsonPath = join(reportRoot, `${runId}-${profile.id}.json`);
+  const summaryPath = join(reportRoot, `${runId}-${profile.id}.summary.json`);
   const targetSetup = { completed: false };
   const runEntry = async (entry) => {
     const context = {
@@ -129,7 +130,8 @@ export async function runMatrixRun(flags) {
     runId,
     outputPaths: {
       markdown: reportPath,
-      json: jsonPath
+      json: jsonPath,
+      summary: summaryPath
     },
     mode: flags.execute === true ? "execution" : "dry-run",
     profile: profileSummary(profile),
@@ -181,6 +183,7 @@ export async function runMatrixRun(flags) {
   }
   await writeFile(reportPath, renderMarkdownReport(report), "utf8");
   await writeFile(jsonPath, `${JSON.stringify(report, null, 2)}\n`, "utf8");
+  await writeFile(summaryPath, `${JSON.stringify(buildReportSummary(report), null, 2)}\n`, "utf8");
   const bundle = await bundleReport(jsonPath, { outputDir: reportRoot });
   const retainedGateArtifacts = gate && gate.verdict !== "SHIP"
     ? await retainFailedGateArtifacts(report, reportPath, jsonPath, bundle)
@@ -195,6 +198,7 @@ export async function runMatrixRun(flags) {
       profile: profileSummary(profile),
       reportPath,
       jsonPath,
+      summaryPath,
       bundlePath: bundle.outputPath,
       checksumPath: bundle.checksumPath,
       retainedGateArtifacts,
@@ -228,12 +232,15 @@ async function retainFailedGateArtifacts(report, reportPath, jsonPath, bundle) {
   report.retainedGateArtifacts = {
     status: "pending"
   };
+  const summaryPath = report.outputPaths?.summary ?? jsonPath.replace(/\.json$/, ".summary.json");
   await writeFile(reportPath, renderMarkdownReport(report), "utf8");
   await writeFile(jsonPath, `${JSON.stringify(report, null, 2)}\n`, "utf8");
+  await writeFile(summaryPath, `${JSON.stringify(buildReportSummary(report), null, 2)}\n`, "utf8");
   const retained = await retainGateArtifacts(jsonPath, bundle);
   report.retainedGateArtifacts = retained;
   await writeFile(reportPath, renderMarkdownReport(report), "utf8");
   await writeFile(jsonPath, `${JSON.stringify(report, null, 2)}\n`, "utf8");
+  await writeFile(summaryPath, `${JSON.stringify(buildReportSummary(report), null, 2)}\n`, "utf8");
   await retainGateArtifacts(jsonPath, bundle, { outputDir: retained.outputDir });
   return retained;
 }

@@ -3,6 +3,8 @@ import { agentCliPreProviderMarkdownRows } from "../collectors/agent-cli-attribu
 import { gatewaySessionPreProviderMarkdownRows } from "../collectors/gateway-session-turn-attribution.mjs";
 import { healthTotalFailures } from "../health.mjs";
 
+const SUMMARY_SCHEMA = "kova.report.summary.v1";
+
 export function summarizeRecords(records) {
   const statuses = {};
   for (const record of records) {
@@ -16,552 +18,250 @@ export function summarizeRecords(records) {
 }
 
 export function renderMarkdownReport(report) {
+  const summary = buildReportSummary(report);
   const lines = [
     "# Kova OpenClaw Runtime Report",
     "",
-    `Generated: ${report.generatedAt}`,
-    `Run ID: \`${report.runId}\``,
-    `Mode: ${report.mode}`,
-    `Platform: ${report.platform.os} ${report.platform.release} (${report.platform.arch}) · ${report.platform.node}`,
+    "## Verdict",
+    "",
+    `- Verdict: ${summary.decision.verdict}`,
+    `- Reason: ${summary.decision.reason}`,
+    `- Blocking findings: ${summary.decision.blockingFindingCount}`,
+    `- Warnings: ${summary.decision.warningFindingCount}`,
+    "",
+    "## Run",
+    "",
+    `- Run ID: \`${summary.runId}\``,
+    `- Generated: ${summary.generatedAt ?? "unknown"}`,
+    `- Mode: ${summary.mode ?? "unknown"}`,
+    `- Target: \`${summary.target ?? "unknown"}\``,
+    `- Platform: ${summary.platform?.os ?? "unknown"} ${summary.platform?.release ?? ""} (${summary.platform?.arch ?? "unknown"}) · ${summary.platform?.node ?? "unknown"}`,
+    `- Repeat / parallel: ${summary.run.repeat ?? "unknown"} / ${summary.run.parallel ?? "unknown"}`,
+    `- Auth: ${summary.run.auth?.mode ?? "unknown"}${summary.run.auth?.providerId ? ` (${summary.run.auth.providerId})` : ""}`,
+    "",
+    "## Coverage",
+    "",
+    `- Records: ${summary.coverage.recordCount}`,
+    `- Scenarios: ${summary.coverage.scenarioCount}`,
+    `- States: ${summary.coverage.stateCount}`,
+    ...Object.entries(summary.statuses).map(([status, count]) => `- ${status}: ${count}`),
     ""
   ];
-  if (report.gate) {
-    lines.push(...formatReleaseDecisionSection(report.gate, report.outputPaths, report.retainedGateArtifacts));
-  }
 
-  lines.push(
-    "## Summary",
-    "",
-    `- Total scenarios: ${report.summary.total}`,
-    ...Object.entries(report.summary.statuses).map(([status, count]) => `- ${status}: ${count}`),
-    ""
-  );
-  if (!report.gate) {
-    lines.push(...formatRecordFailureCards(report.records));
-  }
   if (report.gate) {
     lines.push(...formatGateSection(report.gate));
   }
 
-  if (report.performance) {
-    lines.push(...formatPerformanceSection(report.performance, report.baseline));
-  }
+  lines.push(...formatFindingsSection(summary.findings));
+  lines.push(...formatPerformanceSummaryTable(summary.groups));
+  lines.push(...formatSampleSummaryTable(summary.samples));
   lines.push(...formatResourceRoleSection(report.records));
-
-  if (report.targetCleanup) {
-    lines.push("## Target Cleanup");
-    lines.push("");
-    lines.push(`- Runtime: \`${report.targetCleanup.runtimeName}\``);
-    lines.push(`- Result: ${report.targetCleanup.status}`);
-    lines.push(`- Command: \`${report.targetCleanup.command}\``);
-    if (report.targetCleanup.reason) {
-      lines.push(`- Reason: ${report.targetCleanup.reason}`);
-    }
-    if (report.targetCleanup.result) {
-      lines.push(`- Exit: ${report.targetCleanup.result.status}`);
-      lines.push(`- Duration: ${report.targetCleanup.result.durationMs}ms`);
-      if (report.targetCleanup.result.attempts?.length > 1) {
-        lines.push(`- Attempts: ${report.targetCleanup.result.attempts.length}`);
-      }
-    }
-    lines.push("");
-  }
-
-  for (const record of report.records) {
-    lines.push(`## ${record.title}`);
-    lines.push("");
-    lines.push(`- Scenario: \`${record.scenario}\``);
-    lines.push(`- Result: ${record.status}`);
-    lines.push(`- OpenClaw target: \`${record.target}\``);
-    if (record.from) {
-      lines.push(`- OpenClaw source: \`${record.from}\``);
-    }
-    if (record.state) {
-      lines.push(`- State: \`${record.state.id}\` (${record.state.title})`);
-    }
-    if (record.auth) {
-      lines.push(`- Auth: ${record.auth.mode} (${record.auth.source}; provider ${record.auth.providerId ?? "none"})`);
-      if (record.auth.fallbackFrom) {
-        lines.push(`- Auth fallback: ${record.auth.fallbackFrom} -> ${record.auth.source}`);
-      }
-      if (record.auth.environmentDependent) {
-        lines.push("- Live provider lane: environment-dependent; compare separately from deterministic mock baselines.");
-      }
-      if (record.auth.mockProvider) {
-        lines.push(`- Mock provider mode: ${record.auth.mockProvider.mode}`);
-      }
-    }
-    lines.push(`- Harness env: \`${record.envName}\``);
-    lines.push(`- Likely owner on failure: ${record.likelyOwner}`);
-    lines.push(`- Objective: ${record.objective}`);
-    if (record.measurements) {
-      lines.push(`- Peak RSS: ${record.measurements.peakRssMb ?? "unknown"} MB`);
-      lines.push(`- Max CPU: ${record.measurements.cpuPercentMax ?? "unknown"}%`);
-      lines.push(`- Resource samples: ${record.measurements.resourceSampleCount ?? "unknown"}`);
-      lines.push(`- Command tree peak RSS: ${record.measurements.resourcePeakCommandTreeRssMb ?? "unknown"} MB`);
-      lines.push(`- Gateway peak RSS: ${record.measurements.resourcePeakGatewayRssMb ?? "unknown"} MB`);
-      if (record.measurements.resourceTopRolesByRss?.length > 0 || record.measurements.resourceTopRolesByCpu?.length > 0) {
-        lines.push("- Resource by role:");
-        for (const role of compactRolePeaks(record.measurements).slice(0, 6)) {
-          lines.push(`  - ${role.role}: RSS ${role.peakRssMb ?? "unknown"} MB; CPU ${role.maxCpuPercent ?? "unknown"}%`);
-        }
-      }
-      lines.push(`- Cold ready: ${record.measurements.coldReadyMs ?? "unknown"} ms`);
-      lines.push(`- Warm ready: ${record.measurements.warmReadyMs ?? "unknown"} ms`);
-      const readiness = record.measurements.health?.readiness ?? null;
-      lines.push(`- Time to listening: ${readiness?.listeningReadyAtMs ?? "unknown"} ms`);
-      lines.push(`- Time to health ready: ${readiness?.healthReadyAtMs ?? "unknown"} ms`);
-      lines.push(`- Readiness classification: ${readiness?.classification ?? "unknown"}`);
-      if (readiness?.reason) {
-        lines.push(`- Readiness reason: ${readiness.reason}`);
-      }
-      lines.push(`- TCP connect max: ${record.measurements.tcpConnectMaxMs ?? "unknown"} ms`);
-      lines.push(`- Missing dependency errors: ${record.measurements.missingDependencyErrors ?? "unknown"}`);
-      lines.push(`- Final gateway state: ${record.measurements.finalGatewayState ?? "unknown"}`);
-      lines.push(...formatHealthMeasurementLines(record.measurements));
-      if (record.measurements.soakEvidence?.available) {
-        lines.push(`- Soak trend: duration ${record.measurements.soakDurationMs ?? "unknown"} ms; iterations ${record.measurements.soakIterations ?? "unknown"}; command p95 ${record.measurements.soakCommandP95Ms ?? "unknown"} ms; health p95 ${record.measurements.soakHealthP95Ms ?? "unknown"} ms; RSS growth ${record.measurements.rssGrowthMb ?? "unknown"} MB; gateway RSS growth ${record.measurements.gatewayRssGrowthMb ?? "unknown"} MB`);
-      }
-      lines.push(`- Readiness failures: ${record.measurements.readinessFailures ?? "unknown"}`);
-      lines.push(`- Gateway restarts: ${record.measurements.gatewayRestartCount ?? "unknown"}`);
-      lines.push(`- Plugin load failures: ${record.measurements.pluginLoadFailures ?? "unknown"}`);
-      if (record.measurements.officialPluginEvidence?.available) {
-        const evidence = record.measurements.officialPluginEvidence;
-        lines.push(`- Official plugin install: ${evidence.ok ? "ok" : "failed"}; plugins ${evidence.pluginCount}; failed required ${evidence.failedRequiredCount}; security signals ${evidence.securityBlockCount}`);
-        if (evidence.artifactPath) {
-          lines.push(`- Official plugin artifact: ${evidence.artifactPath}`);
-        }
-        const failure = evidence.failureEvidence?.[0];
-        if (failure?.command) {
-          lines.push(`- Official plugin failed command: ${failure.command.command ?? failure.command.id} (status ${failure.command.status}${failure.command.timedOut ? ", timeout" : ""})`);
-        }
-      }
-      lines.push(`- Metadata scan mentions: ${record.measurements.metadataScanMentions ?? "unknown"}`);
-      lines.push(`- Config normalization mentions: ${record.measurements.configNormalizationMentions ?? "unknown"}`);
-      lines.push(`- Provider/model timeout mentions: ${record.measurements.providerTimeoutMentions ?? "unknown"}`);
-      lines.push(`- Event-loop delay mentions: ${record.measurements.eventLoopDelayMentions ?? "unknown"}`);
-      lines.push(`- OpenClaw timeline: ${record.measurements.openclawTimelineAvailable ? "available" : "unavailable"} (${record.measurements.openclawTimelineEventCount ?? 0} events, ${record.measurements.openclawTimelineParseErrors ?? 0} parse errors)`);
-      lines.push(`- Slowest OpenClaw span: ${record.measurements.openclawSlowestSpanName ?? "unknown"} ${record.measurements.openclawSlowestSpanMs ?? "unknown"} ms`);
-      lines.push(`- Open OpenClaw spans: ${record.measurements.openclawOpenSpanCount ?? "unknown"} (${record.measurements.openclawOpenRequiredSpanCount ?? "unknown"} required)`);
-      if (record.measurements.openclawOpenSpans?.length > 0) {
-        const span = record.measurements.openclawOpenSpans[0];
-        lines.push(`- Slowest open span: ${span.name}${span.ageMs !== null ? ` ${span.ageMs} ms` : ""}`);
-      }
-      if (record.measurements.openclawKeySpans) {
-        const keySpanText = compactKeySpans(record.measurements.openclawKeySpans).slice(0, 5)
-          .map((span) => `${span.name} max ${span.maxDurationMs ?? "?"}ms open ${span.openCount ?? 0}`)
-          .join("; ");
-        if (keySpanText) {
-          lines.push(`- Key OpenClaw spans: ${keySpanText}`);
-        }
-      }
-      lines.push(`- OpenClaw event-loop max: ${record.measurements.openclawEventLoopMaxMs ?? "unknown"} ms`);
-      if (record.measurements.openclawLivenessWarningCount > 0) {
-        lines.push(`- OpenClaw liveness warnings: ${record.measurements.openclawLivenessWarningCount}; log event-loop max ${record.measurements.openclawLogEventLoopMaxMs ?? "unknown"} ms`);
-      }
-      if (record.measurements.embeddedRunTraceCount > 0) {
-        const topStages = formatEmbeddedRunTopStages(record.measurements.embeddedRunTopStages);
-        lines.push(`- Embedded agent traces: ${record.measurements.embeddedRunTraceCount}; startup ${record.measurements.embeddedRunStartupTraceCount}; prep ${record.measurements.embeddedRunPrepTraceCount}; max ${record.measurements.embeddedRunTraceMaxMs ?? "unknown"} ms${topStages ? `; top ${topStages}` : ""}`);
-      }
-      lines.push(`- OpenClaw provider request max: ${record.measurements.openclawProviderRequestMaxMs ?? "unknown"} ms`);
-      lines.push(`- Structured event-loop delay: ${record.measurements.eventLoopDelayMs ?? "unknown"} ms`);
-      lines.push(`- Runtime deps staging: ${record.measurements.runtimeDepsStagingMs ?? "unknown"} ms`);
-      lines.push(`- Runtime deps warm reuse: ${record.measurements.runtimeDepsWarmReuseOk ?? "unknown"} (cold installs ${record.measurements.coldRuntimeDepsInstallCount ?? "unknown"}; warm restages ${record.measurements.warmRuntimeDepsRestageCount ?? "unknown"}; warm max ${record.measurements.warmRuntimeDepsStagingMs ?? "unknown"} ms)`);
-      if (record.measurements.mcpBridgeEvidence?.available) {
-        lines.push(`- MCP bridge: initialize ${record.measurements.mcpInitializeMs ?? "unknown"} ms; tools/list ${record.measurements.mcpToolsListMs ?? "unknown"} ms; tools ${record.measurements.mcpToolCount ?? "unknown"}; shutdown ${record.measurements.mcpShutdownMs ?? "unknown"} ms; exited ${record.measurements.mcpProcessExited ?? "unknown"}`);
-      }
-      if (record.measurements.browserAutomationEvidence?.available) {
-        lines.push(`- Browser automation: doctor ${record.measurements.browserDoctorMs ?? "unknown"} ms; start ${record.measurements.browserStartMs ?? "unknown"} ms; open ${record.measurements.browserOpenMs ?? "unknown"} ms; tabs ${record.measurements.browserTabsMs ?? "unknown"} ms; snapshot ${record.measurements.browserSnapshotMs ?? "unknown"} ms; stop ${record.measurements.browserStopMs ?? "unknown"} ms; tabs ${record.measurements.browserTabCount ?? "unknown"}; stopped ${record.measurements.browserStopped ?? "unknown"}`);
-      }
-      if (record.measurements.mediaUnderstandingEvidence?.available) {
-        lines.push(`- Media understanding: describe ${record.measurements.mediaDescribeMs ?? "unknown"} ms; timeout observed ${record.measurements.mediaTimeoutObserved ?? "unknown"}; command outer timeout ${record.measurements.mediaCommandTimedOut ?? "unknown"}; status after timeout ${record.measurements.mediaStatusAfterTimeoutMs ?? "unknown"} ms; gateway status ${record.measurements.mediaGatewayStatusWorks ?? "unknown"}`);
-      }
-      if (record.measurements.networkOfflineEvidence?.available) {
-        lines.push(`- Network offline: turn ${record.measurements.networkTurnMs ?? "unknown"} ms; failure observed ${record.measurements.networkFailureObserved ?? "unknown"}; command outer timeout ${record.measurements.networkCommandTimedOut ?? "unknown"}; status after failure ${record.measurements.networkStatusAfterFailureMs ?? "unknown"} ms; gateway status ${record.measurements.networkGatewayStatusWorks ?? "unknown"}`);
-      }
-      lines.push(`- Provider/model timing: ${record.measurements.providerModelTimingMs ?? "unknown"} ms`);
-      lines.push(`- Agent turn: ${record.measurements.agentTurnMs ?? "unknown"} ms (${record.measurements.agentResponseOk ?? "not-run"})`);
-      if (record.measurements.agentTurnCount > 0) {
-        lines.push(`- Agent cold/warm: cold ${record.measurements.coldAgentTurnMs ?? "unknown"} ms; warm ${record.measurements.warmAgentTurnMs ?? "unknown"} ms; delta ${record.measurements.agentColdWarmDeltaMs ?? "unknown"} ms`);
-        lines.push(`- Agent pre-provider: cold ${record.measurements.coldPreProviderMs ?? "unknown"} ms; warm ${record.measurements.warmPreProviderMs ?? "unknown"} ms; delta ${record.measurements.agentColdWarmPreProviderDeltaMs ?? "unknown"} ms`);
-        if (record.measurements.gatewaySessionPreProviderAttribution?.count > 0) {
-          lines.push(`- Gateway session pre-provider known: cold ${record.measurements.coldPreProviderAttributedMs ?? "unknown"} ms; warm ${record.measurements.warmPreProviderAttributedMs ?? "unknown"} ms; unattributed cold ${record.measurements.coldPreProviderUnattributedMs ?? "unknown"} ms; warm ${record.measurements.warmPreProviderUnattributedMs ?? "unknown"} ms`);
-        }
-        if (record.measurements.agentCliPreProviderAttribution?.count > 0) {
-          lines.push(`- Agent CLI pre-provider known: cold ${record.measurements.coldPreProviderAttributedMs ?? "unknown"} ms; warm ${record.measurements.warmPreProviderAttributedMs ?? "unknown"} ms; unattributed cold ${record.measurements.coldPreProviderUnattributedMs ?? "unknown"} ms; warm ${record.measurements.warmPreProviderUnattributedMs ?? "unknown"} ms`);
-        }
-        lines.push(`- Agent provider final: cold ${record.measurements.coldProviderFinalMs ?? "unknown"} ms; warm ${record.measurements.warmProviderFinalMs ?? "unknown"} ms`);
-        lines.push(`- Agent turn stats: count ${record.measurements.agentTurnCount}; p95 ${record.measurements.agentTurnP95Ms ?? "unknown"} ms; max ${record.measurements.agentTurnMaxMs ?? "unknown"} ms; pre-provider p95 ${record.measurements.agentPreProviderP95Ms ?? "unknown"} ms`);
-        lines.push(`- Agent active-turn diagnostics: metadata scans ${record.measurements.agentMetadataScanCount ?? "unknown"} (${record.measurements.agentMetadataScanTotalMs ?? "unknown"} ms total); event-loop max ${record.measurements.agentEventLoopMaxMs ?? "unknown"} ms; session polls ${record.measurements.agentSessionPollCount ?? "unknown"} (${record.measurements.agentSessionPollErrorCount ?? "unknown"} errors)`);
-      }
-      if (record.measurements.agentProviderAttribution) {
-        lines.push(`- Provider evidence: ${record.measurements.agentProviderRequestCount ?? 0} request(s); provider work ${record.measurements.agentProviderFinalMs ?? "unknown"} ms; pre-provider ${record.measurements.agentPreProviderMs ?? "unknown"} ms; post-provider ${record.measurements.agentPostProviderMs ?? "unknown"} ms`);
-      } else if (record.providerEvidence?.available) {
-        const usage = record.providerEvidence.usage?.available
-          ? `; tokens ${record.providerEvidence.usage.totalTokens ?? "unknown"}`
-          : "";
-        lines.push(`- Provider evidence: ${record.providerEvidence.requestCount ?? 0} request(s); provider duration ${record.providerEvidence.providerDurationMs ?? "unknown"} ms${usage}`);
-      } else if (record.auth?.mode === "live") {
-        lines.push(`- Provider evidence: unavailable for live lane (${record.providerEvidence?.error ?? "no provider events captured"})`);
-      }
-      if (record.measurements.agentLatencyDiagnosis) {
-        lines.push(`- Agent latency diagnosis: ${record.measurements.agentLatencyDiagnosis.summary}`);
-      }
-      if (record.measurements.agentCleanupDiagnosis) {
-        lines.push(`- Agent cleanup diagnosis: ${record.measurements.agentCleanupDiagnosis.summary}`);
-      }
-      if (record.measurements.agentProviderSimulation?.expected) {
-        const sim = record.measurements.agentProviderSimulation;
-        const concurrent = sim.concurrentObserved === null || sim.concurrentObserved === undefined
-          ? ""
-          : `; concurrent requests ${sim.providerRequestCount}/${sim.providerRequestCountMin}, max in-flight ${sim.providerMaxConcurrency}/${sim.providerConcurrencyMin}, ok ${sim.concurrentObserved}`;
-        lines.push(`- Provider simulation: ${sim.mode}; observed ${sim.observedIssue}; containment ${sim.containmentOk}; recovery ${sim.recoveryOk ?? "n/a"}${concurrent}`);
-      }
-      if (record.measurements.agentFailureContainment) {
-        const containment = record.measurements.agentFailureContainment;
-        lines.push(`- Agent containment: process leaks ${containment.processLeakCount}; gateway healthy ${containment.gatewayHealthy ?? "n/a"}; status works ${containment.statusWorks ?? "n/a"}`);
-      }
-      if (record.measurements.agentFailureFixerSummary?.items?.length > 0) {
-        lines.push("- Agent fixer evidence:");
-        for (const item of record.measurements.agentFailureFixerSummary.items.slice(0, 4)) {
-          lines.push(`  - ${item.kind}: ${item.summary}`);
-        }
-      }
-      if (record.measurements.agentTurns?.length > 0) {
-        lines.push("- Agent turns:");
-        for (const turn of record.measurements.agentTurns.slice(0, 4)) {
-          const route = turn.providerRoutes?.[0]?.value ?? "unknown";
-          const status = turn.providerStatuses?.[0]?.value ?? "unknown";
-          const issue = turn.providerErrorClasses?.[0]?.value ?? turn.providerOutcomes?.[0]?.value ?? "none";
-          const providerTiming = turn.providerAfterCommandEnd ? `; provider late ${turn.providerLateByMs} ms` : "";
-          const expectedFailure = turn.expectedFailure ? "; expected failure observed " + turn.expectedFailureObserved : "";
-          lines.push(`  - ${turn.label}: total ${turn.totalTurnMs ?? "unknown"} ms; pre-provider ${turn.preProviderMs ?? "unknown"} ms; provider ${turn.providerFinalMs ?? "unknown"} ms; post-provider ${turn.postProviderMs ?? "unknown"} ms; route ${route}; status ${status}; issue ${issue}; response ${turn.responseOk}; leaks ${turn.processLeakCount ?? "unknown"}${providerTiming}${expectedFailure}`);
-          if (turn.gatewaySession) {
-            const transport = turn.gatewaySession.gatewayTransportKind ?? "unknown";
-            const fallback = turn.gatewaySession.gatewayTransportFallbackReason ? `; fallback ${turn.gatewaySession.gatewayTransportFallbackReason}` : "";
-            lines.push(`    - gateway session: transport ${transport}${fallback}; create ${turn.gatewaySession.createSession}; session create ${turn.gatewaySession.sessionCreateDurationMs ?? "n/a"} ms; send ${turn.gatewaySession.sendDurationMs ?? "unknown"} ms; first assistant ${turn.gatewaySession.timeToFirstAssistantMs ?? "unknown"} ms; matched assistant ${turn.gatewaySession.timeToMatchedAssistantMs ?? "unknown"} ms; polls ${turn.gatewaySession.historyPollCount ?? "unknown"} (${turn.gatewaySession.historyErrorCount ?? "unknown"} errors)`);
-          }
-          if (turn.turnDiagnostics) {
-            lines.push(`    - active window: metadata scans ${turn.metadataScanCount ?? "unknown"} (${turn.metadataScanTotalMs ?? "unknown"} ms total, max ${turn.metadataScanMaxMs ?? "unknown"} ms); event-loop samples ${turn.turnDiagnostics.eventLoop?.sampleCount ?? "unknown"} max ${turn.eventLoopMaxMs ?? "unknown"} ms`);
-          }
-          const breakdown = summarizeAgentTurnBreakdownForMarkdown(turn.phaseBreakdown);
-          if (breakdown) {
-            lines.push(`    - breakdown: ${breakdown}`);
-          }
-        }
-        lines.push(...gatewaySessionPreProviderMarkdownRows(record.measurements.agentTurns));
-        lines.push(...agentCliPreProviderMarkdownRows(record.measurements.agentTurns));
-      }
-      lines.push(`- Profiling: ${record.profiling?.enabled ? "enabled" : "off"} (${record.profiling?.interpretation ?? "unknown"})`);
-      lines.push(`- V8 reports / heap snapshots: ${record.measurements.v8ReportCount ?? "unknown"} / ${record.measurements.heapSnapshotCount ?? "unknown"}`);
-      lines.push(`- Node CPU/heap/trace profiles: ${record.measurements.nodeCpuProfileCount ?? "unknown"} / ${record.measurements.nodeHeapProfileCount ?? "unknown"} / ${record.measurements.nodeTraceEventCount ?? "unknown"}`);
-      lines.push(`- Node profile top function: ${record.measurements.nodeProfileTopFunction ?? "unknown"} ${record.measurements.nodeProfileTopFunctionMs ?? "unknown"} ms`);
-      lines.push(`- Node heap top function: ${record.measurements.nodeHeapTopFunction ?? "unknown"} ${record.measurements.nodeHeapTopFunctionMb ?? "unknown"} MB`);
-      lines.push(`- Diagnostic / heap bytes: ${record.measurements.diagnosticArtifactBytes ?? "unknown"} / ${record.measurements.heapSnapshotBytes ?? "unknown"}`);
-      lines.push(`- Diagnostic reports: ${record.measurements.diagnosticReportCount ?? "unknown"} (${record.measurements.diagnosticReportBytes ?? "unknown"} bytes)`);
-      lines.push(`- Node profile bytes: ${record.measurements.nodeProfileArtifactBytes ?? "unknown"}`);
-      lines.push(`- Resource peaks: CPU at ${record.measurements.resourcePeakCpuAtMs ?? "unknown"}ms; RSS at ${record.measurements.resourcePeakRssAtMs ?? "unknown"}ms`);
-      if (record.measurements.diagnosticCorrelation?.findings?.length > 0) {
-        lines.push("- Diagnostic correlation:");
-        for (const finding of record.measurements.diagnosticCorrelation.findings.slice(0, 6)) {
-          lines.push(`  - ${finding.summary}`);
-        }
-      }
-      if (record.measurements.resourceTopByCpu?.length > 0) {
-        const top = record.measurements.resourceTopByCpu[0];
-        lines.push(`- Top CPU process: pid ${top.pid} ${top.maxCpuPercent}% ${top.role} ${shortCommand(top.command)}`);
-      }
-      if (record.measurements.resourceTopByRss?.length > 0) {
-        const top = record.measurements.resourceTopByRss[0];
-        lines.push(`- Top RSS process: pid ${top.pid} ${top.peakRssMb} MB ${top.role} ${shortCommand(top.command)}`);
-      }
-    }
-    lines.push("");
-    if (record.violations?.length > 0) {
-      lines.push("### Violations");
-      lines.push("");
-      for (const violation of record.violations) {
-        lines.push(`- ${violation.message}`);
-      }
-      lines.push("");
-    }
-    lines.push("### Phases");
-    lines.push("");
-
-    for (const phase of record.phases) {
-      lines.push(`#### ${phase.title}`);
-      lines.push("");
-      lines.push(phase.intent);
-      lines.push("");
-      if (phase.commands.length > 0) {
-        lines.push("Commands:");
-        lines.push("");
-        for (const command of phase.commands) {
-          lines.push(`- \`${command}\``);
-        }
-        lines.push("");
-      }
-      if (phase.evidence.length > 0) {
-        lines.push("Evidence to capture:");
-        lines.push("");
-        for (const item of phase.evidence) {
-          lines.push(`- ${item}`);
-        }
-        lines.push("");
-      }
-      if (phase.results?.length > 0) {
-        lines.push("Results:");
-        lines.push("");
-        for (const result of phase.results) {
-          lines.push(`- \`${result.command}\``);
-          lines.push(`  - status: ${result.status}${result.timedOut ? " (timeout)" : ""}`);
-          lines.push(`  - duration: ${result.durationMs}ms`);
-          if (result.resourceSamples) {
-            lines.push(`  - resource samples: ${result.resourceSamples.sampleCount}`);
-            lines.push(`  - peak sampled RSS: ${result.resourceSamples.peakTotalRssMb ?? "unknown"} MB`);
-            lines.push(`  - max sampled CPU: ${result.resourceSamples.maxTotalCpuPercent ?? "unknown"}%`);
-            if (result.resourceSamples.topRolesByRss?.length > 0 || result.resourceSamples.topRolesByCpu?.length > 0) {
-              const roles = compactRolePeaks(result.resourceSamples).slice(0, 4)
-                .map((role) => `${role.role} RSS ${role.peakRssMb ?? "unknown"} MB CPU ${role.maxCpuPercent ?? "unknown"}%`)
-                .join("; ");
-              lines.push(`  - role peaks: ${roles}`);
-            }
-            if (result.resourceSamples.topByCpu?.length > 0) {
-              const top = result.resourceSamples.topByCpu[0];
-              lines.push(`  - top CPU: pid ${top.pid} ${top.maxCpuPercent}% ${top.role} ${shortCommand(top.command)}`);
-            }
-            if (result.resourceSamples.artifactPath) {
-              lines.push(`  - resource artifact: ${result.resourceSamples.artifactPath}`);
-            }
-          }
-          const includeOutput = result.status !== 0 || result.timedOut;
-          if (includeOutput && result.stdout.trim()) {
-            lines.push("  - stdout:");
-            lines.push("");
-            lines.push(indentFence(result.stdout));
-            lines.push("");
-          }
-          if (includeOutput && result.stderr.trim()) {
-            lines.push("  - stderr:");
-            lines.push("");
-            lines.push(indentFence(result.stderr));
-            lines.push("");
-          }
-        }
-        lines.push("");
-      }
-      if (phase.metrics) {
-        lines.push("Metrics:");
-        lines.push("");
-        lines.push(...formatMetrics(phase.metrics));
-        lines.push("");
-      }
-    }
-
-    lines.push("### Cleanup");
-    lines.push("");
-    lines.push(`- ${record.cleanup ?? "not-run"}`);
-    if (record.cleanupResult) {
-      lines.push(`- cleanup command: \`${record.cleanupResult.command}\``);
-      lines.push(`- cleanup status: ${record.cleanupResult.status}`);
-      lines.push(`- cleanup duration: ${record.cleanupResult.durationMs}ms`);
-      if (record.cleanupResult.attempts?.length > 1) {
-        lines.push(`- cleanup attempts: ${record.cleanupResult.attempts.length}`);
-      }
-      if (record.cleanupResult.stderr.trim()) {
-        lines.push("");
-        lines.push("Cleanup stderr:");
-        lines.push("");
-        lines.push(indentFence(record.cleanupResult.stderr));
-      }
-    }
-    lines.push("");
-  }
+  lines.push(...formatSelectedSampleDetails(report.records));
+  lines.push(...formatArtifactSection(summary.artifacts));
+  lines.push(...formatTargetCleanupSummary(report.targetCleanup));
 
   return `${lines.join("\n")}\n`;
 }
 
-function formatMetrics(metrics) {
-  const lines = [];
-  if (metrics.service) {
-    lines.push(`- gateway state: ${metrics.service.gatewayState ?? "unknown"}`);
-    lines.push(`- child pid: ${metrics.service.childPid ?? "none"}`);
-    lines.push(`- gateway port: ${metrics.service.gatewayPort ?? "unknown"}`);
-    if (metrics.service.issue) {
-      lines.push(`- issue: ${metrics.service.issue}`);
-    }
-  } else if (metrics.error) {
-    lines.push(`- unavailable: ${metrics.error}`);
+function formatFindingsSection(findings = []) {
+  const lines = ["## Findings", ""];
+  if (findings.length === 0) {
+    lines.push("- No blocking findings.");
+    lines.push("");
+    return lines;
   }
-
-  if (metrics.process) {
-    if (metrics.process.rssMb !== null) {
-      lines.push(`- RSS: ${metrics.process.rssMb} MB`);
-    }
-    if (metrics.process.cpuPercent !== null) {
-      lines.push(`- CPU: ${metrics.process.cpuPercent}%`);
-    }
+  lines.push("| Severity | Area | Scenario | Finding | Evidence |");
+  lines.push("|---|---|---|---|---|");
+  for (const finding of findings.slice(0, 12)) {
+    const scenario = [finding.scenario, finding.state].filter(Boolean).join("/") || "run";
+    const evidence = (finding.evidence ?? []).slice(0, 2).join("; ");
+    lines.push(`| ${tableCell(finding.severity)} | ${tableCell(finding.ownerArea ?? "OpenClaw")} | ${tableCell(scenario)} | ${tableCell(finding.summary)} | ${tableCell(evidence || "see JSON")} |`);
   }
-
-  if (metrics.readiness) {
-    lines.push(`- readiness: ${metrics.readiness.ready ? "ready" : "not-ready"} after ${metrics.readiness.attempts} attempt(s)`);
-    lines.push(`- readiness classification: ${metrics.readiness.classification?.state ?? "unknown"}`);
-    if (metrics.readiness.classification?.reason) {
-      lines.push(`- readiness reason: ${metrics.readiness.classification.reason}`);
-    }
-    lines.push(`- readiness threshold/deadline: ${metrics.readiness.thresholdMs ?? "unknown"}ms / ${metrics.readiness.deadlineMs ?? "unknown"}ms`);
-    lines.push(`- time to listening: ${metrics.readiness.listeningReadyAtMs ?? "not-ready"}ms`);
-    lines.push(`- time to health ready: ${metrics.readiness.healthReadyAtMs ?? "not-ready"}ms`);
-  }
-
-  if (metrics.listening) {
-    lines.push(`- tcp listening: ${metrics.listening.ok ? "ok" : "not-ok"} in ${metrics.listening.durationMs}ms`);
-    if (metrics.listening.error) {
-      lines.push(`- tcp error: ${metrics.listening.error}`);
-    }
-  }
-
-  if (metrics.health) {
-    lines.push(`- health: ${metrics.health.ok ? "ok" : "not-ok"}${metrics.health.status ? ` (${metrics.health.status})` : ""} in ${metrics.health.durationMs}ms`);
-    if (metrics.health.error) {
-      lines.push(`- health error: ${metrics.health.error}`);
-    }
-  }
-
-  if (metrics.healthSummary) {
-    lines.push(`- health samples: ${metrics.healthSummary.okCount}/${metrics.healthSummary.count} ok`);
-    lines.push(`- health latency p95/max: ${metrics.healthSummary.p95Ms ?? "unknown"}ms / ${metrics.healthSummary.maxMs ?? "unknown"}ms`);
-  }
-
-  if (metrics.logs) {
-    lines.push(`- log missing dependency errors: ${metrics.logs.missingDependencyErrors}`);
-    lines.push(`- log plugin load failures: ${metrics.logs.pluginLoadFailures}`);
-    lines.push(`- log metadata scan mentions: ${metrics.logs.metadataScanMentions}`);
-    lines.push(`- log config normalization mentions: ${metrics.logs.configNormalizationMentions}`);
-    lines.push(`- log gateway restart mentions: ${metrics.logs.gatewayRestartMentions}`);
-    lines.push(`- log provider/model timeout mentions: ${metrics.logs.providerTimeoutMentions}`);
-    lines.push(`- log event-loop delay mentions: ${metrics.logs.eventLoopDelayMentions}`);
-    if (metrics.logs.observedWindowMs !== null) {
-      lines.push(`- log observed window: ${metrics.logs.observedWindowMs}ms`);
-    }
-  }
-
-  if (metrics.diagnostics) {
-    lines.push(`- diagnostic files: ${metrics.diagnostics.fileCount}`);
-    lines.push(`- V8 reports: ${metrics.diagnostics.v8ReportCount}`);
-    lines.push(`- heap snapshots: ${metrics.diagnostics.heapSnapshotCount}`);
-    lines.push(`- diagnostic artifact bytes: ${metrics.diagnostics.artifactBytes}`);
-  }
-
-  if (metrics.heapSnapshot) {
-    lines.push(`- heap snapshot trigger: ${metrics.heapSnapshot.fileCount} file(s), ${metrics.heapSnapshot.artifactBytes} bytes`);
-  }
-
-  if (metrics.nodeProfiles) {
-    lines.push(`- Node profile artifacts: ${metrics.nodeProfiles.fileCount}`);
-    lines.push(`- Node CPU profiles: ${metrics.nodeProfiles.cpuProfileCount}`);
-    lines.push(`- Node heap profiles: ${metrics.nodeProfiles.heapProfileCount}`);
-    lines.push(`- Node trace events: ${metrics.nodeProfiles.traceEventCount}`);
-    lines.push(`- Node profile artifact bytes: ${metrics.nodeProfiles.artifactBytes}`);
-    if (metrics.nodeProfiles.cpuProfileSummary?.topFunctions?.length > 0) {
-      const top = metrics.nodeProfiles.cpuProfileSummary.topFunctions[0];
-      lines.push(`- Node top CPU function: ${top.functionName} ${top.selfMs}ms ${shortLocation(top.url, top.lineNumber)}`);
-    }
-  }
-
-  if (metrics.openclawDiagnostics) {
-    lines.push(`- OpenClaw diagnostics source: ${metrics.openclawDiagnostics.source}`);
-    lines.push(`- OpenClaw diagnostic events: ${metrics.openclawDiagnostics.eventCount}`);
-    lines.push(`- plugin metadata scans: ${metrics.openclawDiagnostics.pluginMetadataScanCount ?? "unknown"}`);
-    lines.push(`- config normalizations: ${metrics.openclawDiagnostics.configNormalizationCount ?? "unknown"}`);
-    lines.push(`- runtime deps staging: ${metrics.openclawDiagnostics.runtimeDepsStagingMs ?? "unknown"}ms`);
-    lines.push(`- event-loop delay: ${metrics.openclawDiagnostics.eventLoopDelayMs ?? "unknown"}ms`);
-    lines.push(`- provider/model timing: ${metrics.openclawDiagnostics.providerModelTimingMs ?? "unknown"}ms`);
-  }
-
-  if (metrics.timeline) {
-    lines.push(`- OpenClaw timeline: ${metrics.timeline.available ? "available" : "unavailable"}`);
-    lines.push(`- OpenClaw timeline events: ${metrics.timeline.eventCount ?? 0}`);
-    lines.push(`- OpenClaw timeline parse errors: ${metrics.timeline.parseErrorCount ?? 0}`);
-    if (metrics.timeline.slowestSpans?.length > 0) {
-      const span = metrics.timeline.slowestSpans[0];
-      lines.push(`- slowest OpenClaw span: ${span.name} ${span.durationMs}ms`);
-    }
-    if (metrics.timeline.repeatedSpans?.length > 0) {
-      const span = metrics.timeline.repeatedSpans[0];
-      lines.push(`- most expensive repeated span: ${span.name} ${span.count}x ${span.totalDurationMs}ms`);
-    }
-    lines.push(`- OpenClaw event-loop max: ${metrics.timeline.eventLoop?.maxMs ?? "unknown"}ms`);
-    lines.push(`- OpenClaw provider request max: ${metrics.timeline.providers?.maxDurationMs ?? "unknown"}ms`);
-    if (metrics.timeline.runtimeDeps?.slowest) {
-      const runtimeDeps = metrics.timeline.runtimeDeps.slowest;
-      const plugin = runtimeDeps.pluginId ? ` (${runtimeDeps.pluginId})` : "";
-      lines.push(`- slowest runtime deps stage: ${runtimeDeps.durationMs}ms${plugin}`);
-    }
-    if (metrics.timeline.runtimeDeps?.byPlugin?.length > 0) {
-      const top = metrics.timeline.runtimeDeps.byPlugin
-        .slice(0, 3)
-        .map((entry) => `${entry.pluginId}:${entry.totalDurationMs}ms/${entry.count}x`)
-        .join(", ");
-      lines.push(`- runtime deps by plugin: ${top}`);
-    }
-    lines.push(`- OpenClaw child process failures: ${metrics.timeline.childProcesses?.failedCount ?? 0}`);
-  }
-
-  if (metrics.collectors?.length > 0) {
-    lines.push("- collectors:");
-    for (const collector of metrics.collectors) {
-      const suffix = collector.error ? ` (${collector.error})` : "";
-      lines.push(`  - ${collector.id}: ${collector.status}, ${collector.durationMs}ms, artifacts ${collector.artifactCount}${suffix}`);
-    }
-  }
-
-  return lines.length > 0 ? lines : ["- unavailable"];
-}
-
-function formatHealthMeasurementLines(measurements) {
-  const health = measurements.health;
-  const totalFailures = health ? healthTotalFailures(health) : null;
-  const lines = [
-    `- Health failures: ${totalFailures ?? "unknown"}`,
-    `- Startup health p95: ${health?.startupSamples?.p95Ms ?? "unknown"} ms`,
-    `- Post-ready liveness p95: ${health?.postReadySamples?.p95Ms ?? "unknown"} ms`,
-    `- Final health failures: ${health?.final?.failureCount ?? "unknown"}`
-  ];
-  if (health?.final) {
-    const healthState = health.final.healthOk === null ? "unknown" : health.final.healthOk ? "ok" : "not-ok";
-    lines.push(`- Final health state: gateway ${health.final.gatewayState ?? "unknown"}; health ${healthState}`);
-  }
-  if (health?.slowestSample) {
-    lines.push(`- Slowest health sample: ${health.slowestSample.scope} ${health.slowestSample.phaseId ?? "unknown"} ${health.slowestSample.durationMs} ms`);
-  }
-  return lines;
-}
-
-function formatRecordFailureCards(records = []) {
-  const cards = records
-    .filter((record) => !["PASS", "DRY-RUN"].includes(record.status))
-    .map(recordFailureCard);
-  if (cards.length === 0) {
-    return [];
-  }
-
-  const lines = ["## Failure Cards", ""];
-  for (const card of cards.slice(0, 8)) {
-    lines.push(`- ${card.status} ${card.scenario}${card.state ? `/${card.state}` : ""}: ${card.summary}`);
-    lines.push(`  - likely owner: ${card.likelyOwner}`);
-    if (card.command) {
-      lines.push(`  - command: \`${card.command}\``);
-    }
-    for (const item of card.evidence.slice(0, 4)) {
-      lines.push(`  - evidence: ${item}`);
-    }
-  }
-  if (cards.length > 8) {
-    lines.push(`- ${cards.length - 8} additional failure card(s) omitted from Markdown. See JSON report for full records.`);
+  if (findings.length > 12) {
+    lines.push(`| info | Kova | report | ${findings.length - 12} additional finding(s) omitted from Markdown | see summary JSON |`);
   }
   lines.push("");
   return lines;
+}
+
+function formatPerformanceSummaryTable(groups = []) {
+  const lines = ["## Performance Summary", ""];
+  if (groups.length === 0) {
+    lines.push("- No aggregate performance groups were recorded.");
+    lines.push("");
+    return lines;
+  }
+  lines.push("| Scenario | Samples | Status | Health Ready | Gateway RSS | Peak RSS | CPU | Cold Turn | Warm Turn | Cold Pre-Provider |");
+  lines.push("|---|---:|---|---:|---:|---:|---:|---:|---:|---:|");
+  for (const group of groups.slice(0, 12)) {
+    lines.push([
+      tableCell([group.scenario, group.state].filter(Boolean).join("/") || group.key),
+      group.sampleCount ?? "unknown",
+      tableCell(statusCountsText(group.statuses)),
+      tableCell(metricMedian(group, "readinessHealthReadyMs")),
+      tableCell(metricMedian(group, "resourcePeakGatewayRssMb")),
+      tableCell(metricMedian(group, "peakRssMb")),
+      tableCell(metricMedian(group, "cpuPercentMax")),
+      tableCell(metricMedian(group, "coldAgentTurnMs")),
+      tableCell(metricMedian(group, "warmAgentTurnMs")),
+      tableCell(metricMedian(group, "coldPreProviderMs"))
+    ].join(" | ").replace(/^/, "| ").replace(/$/, " |"));
+  }
+  if (groups.length > 12) {
+    lines.push(`| ${groups.length - 12} additional group(s) omitted |  |  |  |  |  |  |  |  |  |`);
+  }
+  lines.push("");
+  return lines;
+}
+
+function formatSampleSummaryTable(samples = []) {
+  const lines = ["## Samples", ""];
+  if (samples.length === 0) {
+    lines.push("- No samples were recorded.");
+    lines.push("");
+    return lines;
+  }
+  lines.push("| Sample | Status | Scenario | Health Ready | Gateway RSS | Peak RSS | Cold Turn | Warm Turn | Blocker |");
+  lines.push("|---:|---|---|---:|---:|---:|---:|---:|---|");
+  for (const sample of samples.slice(0, 20)) {
+    const measurements = sample.measurements ?? {};
+    const blocker = sample.violations?.[0]?.message ?? sample.failureReason ?? "";
+    lines.push([
+      sample.sampleIndex,
+      tableCell(sample.status),
+      tableCell([sample.scenario, sample.state?.id].filter(Boolean).join("/") || "unknown"),
+      tableCell(valueMs(measurements.readiness?.healthReadyAtMs)),
+      tableCell(valueMb(measurements.resources?.gatewayPeakRssMb)),
+      tableCell(valueMb(measurements.resources?.peakRssMb)),
+      tableCell(valueMs(measurements.agent?.coldTurnMs)),
+      tableCell(valueMs(measurements.agent?.warmTurnMs)),
+      tableCell(blocker)
+    ].join(" | ").replace(/^/, "| ").replace(/$/, " |"));
+  }
+  if (samples.length > 20) {
+    lines.push(`|  |  | ${samples.length - 20} additional sample(s) omitted from Markdown |  |  |  |  |  | see summary JSON |`);
+  }
+  lines.push("");
+  return lines;
+}
+
+function formatSelectedSampleDetails(records = []) {
+  const selected = records.filter((record) =>
+    record.status !== "PASS" ||
+    (record.violations?.length ?? 0) > 0 ||
+    (record.measurements?.agentTurns?.length ?? 0) > 0 ||
+    record.measurements?.gatewaySessionPreProviderAttribution?.count > 0 ||
+    record.measurements?.agentCliPreProviderAttribution?.count > 0 ||
+    record.measurements?.officialPluginEvidence?.available === true
+  ).slice(0, 8);
+  if (selected.length === 0) {
+    return [];
+  }
+
+  const lines = ["## Selected Sample Details", ""];
+  for (const record of selected) {
+    const sample = record.repeat?.index ?? "?";
+    lines.push(`### ${record.scenario ?? record.title} sample ${sample}`);
+    lines.push("");
+    lines.push(`- Status: ${record.status}`);
+    lines.push(`- Cleanup: ${record.cleanup ?? "not-run"}`);
+    if (record.collectorArtifactDirs?.root) {
+      lines.push(`- Artifact root: ${record.collectorArtifactDirs.root}`);
+    }
+    if (record.measurements) {
+      pushMeasurementBrief(lines, record.measurements, { compact: record.status === "PASS" });
+    }
+    if (record.violations?.length > 0) {
+      lines.push("- Violations:");
+      for (const violation of record.violations) {
+        lines.push(`  - ${violation.message}`);
+      }
+    }
+    const failed = firstFailedCommand(record);
+    if (failed) {
+      lines.push(`- Failed command: \`${shortCommand(failed.command)}\``);
+      lines.push(`- Failure: ${summarizeFailureReason(failed)}`);
+    }
+    pushAgentTurnDetails(lines, record);
+    lines.push(...gatewaySessionPreProviderMarkdownRows(record.measurements?.agentTurns ?? []));
+    lines.push(...agentCliPreProviderMarkdownRows(record.measurements?.agentTurns ?? []));
+    lines.push("");
+  }
+  return lines;
+}
+
+function pushAgentTurnDetails(lines, record) {
+  const turns = record.measurements?.agentTurns ?? [];
+  if (turns.length === 0) {
+    return;
+  }
+  lines.push("- Agent turns:");
+  for (const turn of turns.slice(0, 4)) {
+    const providerTiming = turn.providerAfterCommandEnd ? `; provider late ${turn.providerLateByMs} ms` : "";
+    lines.push(`  - ${turn.label}: total ${valueMs(turn.totalTurnMs)}; pre-provider ${valueMs(turn.preProviderMs)}; provider ${valueMs(turn.providerFinalMs)}; post-provider ${valueMs(turn.postProviderMs)}; response ${turn.responseOk}${providerTiming}`);
+    if (turn.gatewaySession) {
+      const transport = turn.gatewaySession.gatewayTransportKind ?? "unknown";
+      const fallback = turn.gatewaySession.gatewayTransportFallbackReason ? `; fallback ${turn.gatewaySession.gatewayTransportFallbackReason}` : "";
+      lines.push(`    - gateway session: transport ${transport}${fallback}; create ${turn.gatewaySession.createSession}; session create ${valueMs(turn.gatewaySession.sessionCreateDurationMs, "n/a")}; send ${valueMs(turn.gatewaySession.sendDurationMs)}; first assistant ${valueMs(turn.gatewaySession.timeToFirstAssistantMs)}; matched assistant ${valueMs(turn.gatewaySession.timeToMatchedAssistantMs)}; polls ${turn.gatewaySession.historyPollCount ?? "unknown"} (${turn.gatewaySession.historyErrorCount ?? "unknown"} errors)`);
+    }
+    if (turn.turnDiagnostics) {
+      lines.push(`    - active window: metadata scans ${turn.metadataScanCount ?? "unknown"} (${valueMs(turn.metadataScanTotalMs)} total, max ${valueMs(turn.metadataScanMaxMs)}); event-loop samples ${turn.turnDiagnostics.eventLoop?.sampleCount ?? "unknown"} max ${valueMs(turn.eventLoopMaxMs)}`);
+    }
+    const breakdown = summarizeAgentTurnBreakdownForMarkdown(turn.phaseBreakdown);
+    if (breakdown) {
+      lines.push(`    - breakdown: ${breakdown}`);
+    }
+  }
+}
+
+function formatArtifactSection(artifacts = []) {
+  if (artifacts.length === 0) {
+    return [];
+  }
+  const lines = ["## Artifacts", ""];
+  for (const artifact of artifacts.slice(0, 12)) {
+    const owner = artifact.scenario ? ` ${artifact.scenario}${artifact.sampleIndex ? `#${artifact.sampleIndex}` : ""}` : "";
+    lines.push(`- ${artifact.kind}${owner}: ${artifact.path}`);
+  }
+  if (artifacts.length > 12) {
+    lines.push(`- ${artifacts.length - 12} additional artifact reference(s) omitted from Markdown. See summary JSON.`);
+  }
+  lines.push("");
+  return lines;
+}
+
+function formatTargetCleanupSummary(targetCleanup) {
+  if (!targetCleanup) {
+    return [];
+  }
+  const lines = ["## Target Cleanup", ""];
+  lines.push(`- Runtime: \`${targetCleanup.runtimeName ?? "unknown"}\``);
+  lines.push(`- Result: ${targetCleanup.status ?? "unknown"}`);
+  if (targetCleanup.reason) {
+    lines.push(`- Reason: ${targetCleanup.reason}`);
+  }
+  if (targetCleanup.result) {
+    lines.push(`- Duration: ${targetCleanup.result.durationMs ?? "unknown"}ms`);
+  }
+  lines.push("");
+  return lines;
+}
+
+function metricMedian(group, metricId) {
+  const metric = group.metrics?.[metricId];
+  if (!metric) {
+    return "unknown";
+  }
+  const unit = metric.unit ?? "";
+  return `${metric.median ?? "?"}${unit}`;
+}
+
+function statusCountsText(statuses = {}) {
+  return Object.entries(statuses).map(([status, count]) => `${status}:${count}`).join(", ") || "unknown";
+}
+
+function tableCell(value) {
+  return String(value ?? "unknown").replaceAll("|", "\\|").replace(/\s+/g, " ").trim();
 }
 
 function formatResourceRoleSection(records = []) {
@@ -609,53 +309,49 @@ function summarizeResourceRoles(records = []) {
   });
 }
 
-function recordFailureCard(record) {
-  const failed = firstFailedCommand(record);
-  const violationMessages = (record.violations ?? []).map((violation) => violation.message);
-  const summary = violationMessages[0] ?? summarizeFailureReason(failed) ?? `${record.status} ${record.scenario}`;
-  return {
-    status: record.status,
-    scenario: record.scenario,
-    state: record.state?.id ?? null,
-    summary,
-    likelyOwner: record.likelyOwner ?? "OpenClaw",
-    command: failed?.command ? shortCommand(failed.command) : null,
-    evidence: briefEvidence(record.measurements ?? {}, violationMessages)
-  };
-}
-
-function indentFence(value) {
-  return ["  ```text", ...value.trim().split("\n").slice(0, 80).map((line) => `  ${line}`), "  ```"].join("\n");
-}
-
-export function renderReportSummary(report, options = {}) {
+export function buildReportSummary(report) {
   const records = report.records ?? [];
-  const summary = {
+  const statuses = report.summary?.statuses ?? summarizeRecords(records).statuses;
+  const findings = buildFindings(report);
+  const blockingFindingCount = findings.filter((finding) => finding.severity === "blocking" || finding.severity === "fail" || finding.severity === "blocked").length;
+  const warningFindingCount = findings.filter((finding) => finding.severity === "warning").length;
+  const decision = buildDecision(report, statuses, findings, blockingFindingCount, warningFindingCount);
+  const samples = records.map((record, index) => summarizeSample(record, index));
+  const groups = summarizeReportGroups(report, samples);
+  return {
+    schemaVersion: SUMMARY_SCHEMA,
+    generatedAt: new Date().toISOString(),
     runId: report.runId,
+    reportGeneratedAt: report.generatedAt ?? null,
     mode: report.mode,
     target: report.target,
     from: report.from ?? null,
     platform: report.platform,
+    decision,
+    run: {
+      profile: report.profile ?? null,
+      state: report.state ?? null,
+      repeat: report.controls?.repeat ?? report.performance?.repeat ?? null,
+      parallel: report.controls?.parallel ?? report.performance?.parallel ?? null,
+      auth: report.auth ?? null,
+      targetCleanup: summarizeTargetCleanup(report.targetCleanup)
+    },
+    coverage: summarizeCoverage(records),
     gate: report.gate ?? null,
     performance: summarizePerformance(report.performance, report.baseline),
     failureBrief: buildFailureBrief(report),
     recommendedNextScenario: buildRecommendedNextScenario(report),
-    statuses: report.summary?.statuses ?? summarizeRecords(records).statuses,
-    scenarios: records.map((record) => {
-      const failed = firstFailedCommand(record);
-      return {
-        id: record.scenario,
-        title: record.title,
-        status: record.status,
-        cleanup: record.cleanup ?? "not-run",
-        state: record.state ?? null,
-        failedCommand: failed?.command ?? null,
-        failureReason: failed ? summarizeFailureReason(failed) : null,
-        measurements: summarizeMeasurements(record.measurements),
-        violations: record.violations ?? []
-      };
-    })
+    statuses,
+    findings,
+    groups,
+    samples,
+    artifacts: summarizeArtifacts(report, records),
+    scenarios: samples
   };
+}
+
+export function renderReportSummary(report, options = {}) {
+  const summary = buildReportSummary(report);
 
   if (options.structured) {
     return summary;
@@ -676,7 +372,7 @@ export function renderReportSummary(report, options = {}) {
   ];
 
   for (const scenario of summary.scenarios) {
-    lines.push(`- ${scenario.status} ${scenario.id} (${scenario.cleanup})`);
+    lines.push(`- ${scenario.status} ${scenario.scenario} (${scenario.cleanup})`);
     if (scenario.failedCommand) {
       lines.push(`  failed command: ${scenario.failedCommand}`);
     }
@@ -697,162 +393,345 @@ export function renderReportSummary(report, options = {}) {
   return lines.join("\n");
 }
 
-function summarizeMeasurements(measurements) {
-  if (!measurements) {
-    return null;
+function buildDecision(report, statuses, findings, blockingFindingCount, warningFindingCount) {
+  if (report.gate) {
+    const primary = findings.find((finding) => finding.severity === "blocking") ?? findings[0] ?? null;
+    return {
+      verdict: report.gate.verdict,
+      ok: report.gate.ok === true,
+      reason: primary?.summary ?? (report.gate.verdict === "SHIP" ? "release gate accepted" : "release gate did not pass"),
+      blockingFindingCount,
+      warningFindingCount
+    };
   }
-
+  if ((statuses.BLOCKED ?? 0) > 0) {
+    const primary = findings.find((finding) => finding.severity === "blocked") ?? findings[0] ?? null;
+    return {
+      verdict: "BLOCKED",
+      ok: false,
+      reason: primary?.summary ?? "one or more scenarios were blocked",
+      blockingFindingCount,
+      warningFindingCount
+    };
+  }
+  if ((statuses.FAIL ?? 0) > 0) {
+    const primary = findings.find((finding) => finding.severity === "fail") ?? findings[0] ?? null;
+    return {
+      verdict: "FAIL",
+      ok: false,
+      reason: primary?.summary ?? "one or more scenarios failed",
+      blockingFindingCount,
+      warningFindingCount
+    };
+  }
+  if ((statuses["DRY-RUN"] ?? 0) > 0 && Object.keys(statuses).length === 1) {
+    return {
+      verdict: "DRY-RUN",
+      ok: true,
+      reason: "dry-run plan rendered without executing OpenClaw",
+      blockingFindingCount,
+      warningFindingCount
+    };
+  }
   return {
-    peakRssMb: measurements.peakRssMb ?? null,
-    cpuPercentMax: measurements.cpuPercentMax ?? null,
-    measurementScopeSummary: measurements.measurementScopeSummary ?? null,
-    resourceMeasurementScope: measurements.resourceMeasurementScope ?? null,
-    resourcePrimaryRole: measurements.resourcePrimaryRole ?? null,
-    resourcePeakTrackedRssMb: measurements.resourcePeakTrackedRssMb ?? null,
-    resourceCpuPercentMaxTracked: measurements.resourceCpuPercentMaxTracked ?? null,
-    health: measurements.health ?? null,
-    missingDependencyErrors: measurements.missingDependencyErrors ?? null,
-    pluginLoadFailures: measurements.pluginLoadFailures ?? null,
-    officialPluginEvidence: measurements.officialPluginEvidence ?? null,
-    officialPluginInstallOk: measurements.officialPluginInstallOk ?? null,
-    officialPluginSecurityBlocks: measurements.officialPluginSecurityBlocks ?? null,
-    officialPluginInstallMs: measurements.officialPluginInstallMs ?? null,
-    resourceSampleCount: measurements.resourceSampleCount ?? null,
-    resourceByRole: measurements.resourceByRole ?? null,
-    resourceTopRolesByRss: measurements.resourceTopRolesByRss ?? null,
-    resourceTopRolesByCpu: measurements.resourceTopRolesByCpu ?? null,
-    openclawTimelineAvailable: measurements.openclawTimelineAvailable ?? null,
-    openclawSlowestSpanName: measurements.openclawSlowestSpanName ?? null,
-    openclawSlowestSpanMs: measurements.openclawSlowestSpanMs ?? null,
-    openclawOpenSpanCount: measurements.openclawOpenSpanCount ?? null,
-    openclawOpenRequiredSpanCount: measurements.openclawOpenRequiredSpanCount ?? null,
-    openclawMissingRequiredSpanCount: measurements.openclawMissingRequiredSpanCount ?? null,
-    openclawMissingRequiredSpans: measurements.openclawMissingRequiredSpans ?? null,
-    openclawOpenSpans: measurements.openclawOpenSpans ?? null,
-    openclawKeySpans: measurements.openclawKeySpans ?? null,
-    providerRequestCount: measurements.providerRequestCount ?? null,
-    providerDurationMs: measurements.providerDurationMs ?? null,
-    providerFirstByteLatencyMs: measurements.providerFirstByteLatencyMs ?? null,
-    agentTurnCount: measurements.agentTurnCount ?? null,
-    agentTurns: measurements.agentTurns ?? null,
-    agentTurnStats: measurements.agentTurnStats ?? null,
-    agentTurnP95Ms: measurements.agentTurnP95Ms ?? null,
-    agentTurnMaxMs: measurements.agentTurnMaxMs ?? null,
-    agentPreProviderP95Ms: measurements.agentPreProviderP95Ms ?? null,
-    agentPreProviderMaxMs: measurements.agentPreProviderMaxMs ?? null,
-    agentProviderFinalP95Ms: measurements.agentProviderFinalP95Ms ?? null,
-    agentProviderFinalMaxMs: measurements.agentProviderFinalMaxMs ?? null,
-    agentMetadataScanCount: measurements.agentMetadataScanCount ?? null,
-    agentMetadataScanTotalMs: measurements.agentMetadataScanTotalMs ?? null,
-    agentMetadataScanMaxMs: measurements.agentMetadataScanMaxMs ?? null,
-    agentEventLoopMaxMs: measurements.agentEventLoopMaxMs ?? null,
-    agentEventLoopSampleCount: measurements.agentEventLoopSampleCount ?? null,
-    agentSessionPollCount: measurements.agentSessionPollCount ?? null,
-    agentSessionPollErrorCount: measurements.agentSessionPollErrorCount ?? null,
-    gatewaySessionPreProviderAttribution: measurements.gatewaySessionPreProviderAttribution ?? null,
-    agentCliPreProviderAttribution: measurements.agentCliPreProviderAttribution ?? null,
-    coldPreProviderAttributedMs: measurements.coldPreProviderAttributedMs ?? null,
-    warmPreProviderAttributedMs: measurements.warmPreProviderAttributedMs ?? null,
-    coldPreProviderUnattributedMs: measurements.coldPreProviderUnattributedMs ?? null,
-    warmPreProviderUnattributedMs: measurements.warmPreProviderUnattributedMs ?? null,
-    coldPreProviderAttributionCoverage: measurements.coldPreProviderAttributionCoverage ?? null,
-    warmPreProviderAttributionCoverage: measurements.warmPreProviderAttributionCoverage ?? null,
-    coldAgentTurnMs: measurements.coldAgentTurnMs ?? null,
-    warmAgentTurnMs: measurements.warmAgentTurnMs ?? null,
-    agentColdWarmDeltaMs: measurements.agentColdWarmDeltaMs ?? null,
-    coldPreProviderMs: measurements.coldPreProviderMs ?? null,
-    warmPreProviderMs: measurements.warmPreProviderMs ?? null,
-    agentColdWarmPreProviderDeltaMs: measurements.agentColdWarmPreProviderDeltaMs ?? null,
-    coldProviderFinalMs: measurements.coldProviderFinalMs ?? null,
-    warmProviderFinalMs: measurements.warmProviderFinalMs ?? null,
-    agentLatencyDiagnosis: measurements.agentLatencyDiagnosis ?? null,
-    agentCleanupDiagnosis: measurements.agentCleanupDiagnosis ?? null,
-    agentPreProviderMs: measurements.agentPreProviderMs ?? null,
-    agentProviderFinalMs: measurements.agentProviderFinalMs ?? null,
-    agentPostProviderMs: measurements.agentPostProviderMs ?? null,
-    agentPreProviderDominance: measurements.agentPreProviderDominance ?? null,
-    agentProviderRequestMissing: measurements.agentProviderRequestMissing ?? null,
-    runtimeDepsStagingMs: measurements.runtimeDepsStagingMs ?? null,
-    runtimeDepsInstallCount: measurements.runtimeDepsInstallCount ?? null,
-    runtimeDepsInstallMaxMs: measurements.runtimeDepsInstallMaxMs ?? null,
-    coldRuntimeDepsInstallCount: measurements.coldRuntimeDepsInstallCount ?? null,
-    coldRuntimeDepsStagingMs: measurements.coldRuntimeDepsStagingMs ?? null,
-    warmRuntimeDepsRestageCount: measurements.warmRuntimeDepsRestageCount ?? null,
-    warmRuntimeDepsStagingMs: measurements.warmRuntimeDepsStagingMs ?? null,
-    runtimeDepsWarmReuseOk: measurements.runtimeDepsWarmReuseOk ?? null,
-    soakDurationMs: measurements.soakDurationMs ?? null,
-    soakIterations: measurements.soakIterations ?? null,
-    soakCommandP95Ms: measurements.soakCommandP95Ms ?? null,
-    soakCommandFailures: measurements.soakCommandFailures ?? null,
-    soakHealthP95Ms: measurements.soakHealthP95Ms ?? null,
-    soakHealthFailures: measurements.soakHealthFailures ?? null,
-    rssGrowthMb: measurements.rssGrowthMb ?? null,
-    gatewayRssGrowthMb: measurements.gatewayRssGrowthMb ?? null,
-    mediaUnderstandingEvidence: measurements.mediaUnderstandingEvidence ?? null,
-    mediaDescribeMs: measurements.mediaDescribeMs ?? null,
-    mediaTimeoutObserved: measurements.mediaTimeoutObserved ?? null,
-    mediaCommandTimedOut: measurements.mediaCommandTimedOut ?? null,
-    mediaStatusAfterTimeoutMs: measurements.mediaStatusAfterTimeoutMs ?? null,
-    mediaGatewayStatusWorks: measurements.mediaGatewayStatusWorks ?? null,
-    networkOfflineEvidence: measurements.networkOfflineEvidence ?? null,
-    networkTurnMs: measurements.networkTurnMs ?? null,
-    networkFailureObserved: measurements.networkFailureObserved ?? null,
-    networkCommandTimedOut: measurements.networkCommandTimedOut ?? null,
-    networkStatusAfterFailureMs: measurements.networkStatusAfterFailureMs ?? null,
-    networkGatewayStatusWorks: measurements.networkGatewayStatusWorks ?? null,
-    resourceTrend: measurements.resourceTrend ?? null,
-    profilingEnabled: measurements.profilingEnabled ?? null,
-    profilingResourceInterpretation: measurements.profilingResourceInterpretation ?? null,
-    profilingBaselineEligible: measurements.profilingBaselineEligible ?? null,
-    nodeCpuProfileCount: measurements.nodeCpuProfileCount ?? null,
-    nodeHeapProfileCount: measurements.nodeHeapProfileCount ?? null,
-    nodeTraceEventCount: measurements.nodeTraceEventCount ?? null,
-    nodeProfileTopFunction: measurements.nodeProfileTopFunction ?? null,
-    nodeProfileTopFunctionMs: measurements.nodeProfileTopFunctionMs ?? null,
-    nodeHeapTopFunction: measurements.nodeHeapTopFunction ?? null,
-    nodeHeapTopFunctionMb: measurements.nodeHeapTopFunctionMb ?? null,
-    diagnosticCorrelation: measurements.diagnosticCorrelation ?? null
+    verdict: "PASS",
+    ok: true,
+    reason: "all executed scenarios passed",
+    blockingFindingCount,
+    warningFindingCount
   };
 }
 
-function formatPerformanceSection(performance, baseline) {
-  const lines = [
-    "## Performance",
-    "",
-    `- Repeat: ${performance.repeat ?? "unknown"}`,
-    `- Parallel: ${performance.parallel ?? "unknown"}`,
-    `- Groups: ${performance.groupCount ?? 0}`,
-    `- Unstable groups: ${performance.unstableGroupCount ?? 0}`,
-    `- Profiled runs: ${performance.profiledRunCount ?? 0}`
-  ];
-
-  if (baseline?.comparison) {
-    lines.push(`- Baseline regressions: ${baseline.comparison.regressionCount}`);
-    lines.push(`- Missing baselines: ${baseline.comparison.missingBaselineCount}`);
-    for (const regression of baseline.comparison.regressions.slice(0, 6)) {
-      lines.push(`- Regression: ${regression.scenario}/${regression.state ?? "none"} ${regression.message}`);
+function buildFindings(report) {
+  const findings = [];
+  for (const card of report.gate?.cards ?? []) {
+    if (card.severity === "info") {
+      continue;
+    }
+    findings.push({
+      id: card.id ?? `${card.kind ?? "gate"}:${card.scenario ?? "gate"}:${card.state ?? "none"}`,
+      severity: card.severity === "blocking" ? "blocking" : card.severity,
+      kind: card.kind ?? "gate",
+      scenario: card.scenario ?? null,
+      state: card.state ?? null,
+      ownerArea: card.likelyOwner ?? null,
+      metric: card.metric ?? null,
+      summary: card.summary ?? card.message ?? "gate finding",
+      expected: card.expected ?? null,
+      actual: card.actual ?? null,
+      evidence: [card.impact, card.failedCommand].filter(Boolean)
+    });
+  }
+  for (const [index, record] of (report.records ?? []).entries()) {
+    const state = record.state?.id ?? null;
+    for (const violation of record.violations ?? []) {
+      findings.push({
+        id: violation.id ?? `${record.scenario}:${state ?? "none"}:${violation.metric ?? "violation"}:${index + 1}`,
+        severity: record.status === "BLOCKED" ? "blocked" : "fail",
+        kind: "violation",
+        scenario: record.scenario ?? null,
+        state,
+        sampleIndex: record.repeat?.index ?? index + 1,
+        ownerArea: record.likelyOwner ?? null,
+        metric: violation.metric ?? null,
+        summary: violation.message ?? "scenario violation",
+        expected: violation.threshold ?? null,
+        actual: violation.actual ?? null,
+        evidence: briefEvidence(record.measurements ?? {}, [violation.message].filter(Boolean))
+      });
+    }
+    const failed = firstFailedCommand(record);
+    if ((record.status === "FAIL" || record.status === "BLOCKED") && failed && (record.violations ?? []).length === 0) {
+      findings.push({
+        id: `${record.scenario}:${state ?? "none"}:command:${index + 1}`,
+        severity: record.status === "BLOCKED" ? "blocked" : "fail",
+        kind: "command",
+        scenario: record.scenario ?? null,
+        state,
+        sampleIndex: record.repeat?.index ?? index + 1,
+        ownerArea: record.likelyOwner ?? null,
+        metric: null,
+        summary: summarizeFailureReason(failed) ?? "command failed",
+        expected: "command exits successfully",
+        actual: failed.timedOut ? "timed out" : `exit ${failed.status}`,
+        evidence: [shortCommand(failed.command)]
+      });
     }
   }
-  if (baseline?.review) {
-    lines.push(`- Baseline update review: ${baseline.review.ok ? "accepted" : "rejected"} (${baseline.review.blockerCount ?? 0} blocker(s))`);
-    for (const blocker of (baseline.review.blockers ?? []).slice(0, 4)) {
-      lines.push(`- Baseline blocker: ${blocker.message}`);
+  return findings;
+}
+
+function summarizeCoverage(records) {
+  const scenarios = new Set();
+  const states = new Set();
+  const surfaces = new Set();
+  for (const record of records) {
+    if (record.scenario) {
+      scenarios.add(record.scenario);
+    }
+    if (record.state?.id) {
+      states.add(record.state.id);
+    }
+    if (record.surface) {
+      surfaces.add(record.surface);
     }
   }
-  if (baseline?.saved) {
-    lines.push(`- Baseline saved: ${baseline.saved.path}`);
-  }
+  return {
+    recordCount: records.length,
+    scenarioCount: scenarios.size,
+    scenarios: [...scenarios].sort(),
+    stateCount: states.size,
+    states: [...states].sort(),
+    surfaceCount: surfaces.size,
+    surfaces: [...surfaces].sort()
+  };
+}
 
-  for (const group of (performance.groups ?? []).slice(0, 8)) {
-    const metricText = compactPerformanceMetrics(group.metrics).slice(0, 5)
-      .map((metric) => `${metric.id} median ${metric.median}${metric.unit} p95 ${metric.p95}${metric.unit} max ${metric.max}${metric.unit}${metric.classification === "unstable" ? " unstable" : ""}`)
-      .join("; ");
-    const interpretation = group.resourceInterpretation === "instrumented" ? "; instrumented resources" : "";
-    lines.push(`- ${group.scenario}/${group.state ?? "none"}: ${group.sampleCount} sample(s)${interpretation}${metricText ? `; ${metricText}` : ""}`);
+function summarizeReportGroups(report, samples) {
+  if (report.performance?.groups?.length > 0) {
+    return report.performance.groups.map((group) => ({
+      key: group.key,
+      scenario: group.scenario,
+      surface: group.surface ?? null,
+      state: group.state ?? null,
+      title: group.title ?? null,
+      sampleCount: group.sampleCount,
+      statuses: group.statuses ?? {},
+      resourceInterpretation: group.resourceInterpretation ?? null,
+      metrics: compactGroupMetrics(group.metrics)
+    }));
   }
+  const groups = new Map();
+  for (const sample of samples) {
+    const key = [sample.scenario ?? "unknown", sample.surface ?? "unknown", sample.state?.id ?? "none"].join("|");
+    const group = groups.get(key) ?? {
+      key,
+      scenario: sample.scenario,
+      surface: sample.surface,
+      state: sample.state?.id ?? null,
+      title: sample.title,
+      sampleCount: 0,
+      statuses: {},
+      resourceInterpretation: null,
+      metrics: {}
+    };
+    group.sampleCount += 1;
+    group.statuses[sample.status] = (group.statuses[sample.status] ?? 0) + 1;
+    groups.set(key, group);
+  }
+  return [...groups.values()];
+}
 
-  lines.push("");
-  return lines;
+function compactGroupMetrics(metrics = {}) {
+  return Object.fromEntries(compactPerformanceMetrics(metrics).slice(0, 12).map((metric) => [
+    metric.id,
+    {
+      title: metric.title ?? metric.id,
+      unit: metric.unit ?? "",
+      count: metric.count,
+      median: metric.median,
+      p95: metric.p95,
+      max: metric.max,
+      classification: metric.classification
+    }
+  ]));
+}
+
+function summarizeSample(record, index) {
+  const failed = firstFailedCommand(record);
+  return {
+    sampleIndex: record.repeat?.index ?? index + 1,
+    repeatTotal: record.repeat?.total ?? null,
+    scenario: record.scenario ?? null,
+    surface: record.surface ?? null,
+    title: record.title ?? null,
+    status: record.status,
+    cleanup: record.cleanup ?? "not-run",
+    target: record.target ?? null,
+    state: record.state ?? null,
+    ownerArea: record.likelyOwner ?? null,
+    failedCommand: failed?.command ?? null,
+    failureReason: failed ? summarizeFailureReason(failed) : null,
+    measurements: summarizeSampleMetrics(record.measurements),
+    violations: record.violations ?? [],
+    artifactRoot: record.collectorArtifactDirs?.root ?? null
+  };
+}
+
+function summarizeSampleMetrics(measurements) {
+  if (!measurements) {
+    return null;
+  }
+  const readiness = measurements.health?.readiness ?? null;
+  return {
+    readiness: {
+      listeningReadyAtMs: readiness?.listeningReadyAtMs ?? null,
+      healthReadyAtMs: readiness?.healthReadyAtMs ?? null,
+      classification: readiness?.classification ?? null,
+      reason: readiness?.reason ?? null
+    },
+    health: {
+      startupP95Ms: measurements.health?.startupSamples?.p95Ms ?? null,
+      postReadyP95Ms: measurements.health?.postReadySamples?.p95Ms ?? null,
+      finalFailures: measurements.health?.final?.failureCount ?? null,
+      totalFailures: measurements.health ? healthTotalFailures(measurements.health) : null,
+      slowestSample: measurements.health?.slowestSample ?? null
+    },
+    resources: {
+      peakRssMb: measurements.peakRssMb ?? null,
+      cpuPercentMax: measurements.cpuPercentMax ?? null,
+      sampleCount: measurements.resourceSampleCount ?? null,
+      commandTreePeakRssMb: measurements.resourcePeakCommandTreeRssMb ?? null,
+      gatewayPeakRssMb: measurements.resourcePeakGatewayRssMb ?? null,
+      trackedPeakRssMb: measurements.resourcePeakTrackedRssMb ?? null,
+      topRolesByRss: measurements.resourceTopRolesByRss?.slice(0, 4) ?? [],
+      topRolesByCpu: measurements.resourceTopRolesByCpu?.slice(0, 4) ?? []
+    },
+    agent: {
+      turnMs: measurements.agentTurnMs ?? null,
+      coldTurnMs: measurements.coldAgentTurnMs ?? null,
+      warmTurnMs: measurements.warmAgentTurnMs ?? null,
+      coldWarmDeltaMs: measurements.agentColdWarmDeltaMs ?? null,
+      coldPreProviderMs: measurements.coldPreProviderMs ?? null,
+      warmPreProviderMs: measurements.warmPreProviderMs ?? null,
+      providerFinalMs: measurements.agentProviderFinalMs ?? null,
+      coldProviderFinalMs: measurements.coldProviderFinalMs ?? null,
+      warmProviderFinalMs: measurements.warmProviderFinalMs ?? null,
+      metadataScanCount: measurements.agentMetadataScanCount ?? null,
+      metadataScanTotalMs: measurements.agentMetadataScanTotalMs ?? null,
+      eventLoopMaxMs: measurements.agentEventLoopMaxMs ?? null,
+      sessionPollCount: measurements.agentSessionPollCount ?? null,
+      turns: (measurements.agentTurns ?? []).slice(0, 4).map((turn) => ({
+        label: turn.label ?? null,
+        totalTurnMs: turn.totalTurnMs ?? null,
+        preProviderMs: turn.preProviderMs ?? null,
+        providerFinalMs: turn.providerFinalMs ?? null,
+        postProviderMs: turn.postProviderMs ?? null,
+        responseOk: turn.responseOk ?? null,
+        metadataScanCount: turn.metadataScanCount ?? null,
+        metadataScanTotalMs: turn.metadataScanTotalMs ?? null,
+        eventLoopMaxMs: turn.eventLoopMaxMs ?? null,
+        gatewayTransportKind: turn.gatewaySession?.gatewayTransportKind ?? null
+      }))
+    },
+    attribution: {
+      gatewaySession: measurements.gatewaySessionPreProviderAttribution ? {
+        count: measurements.gatewaySessionPreProviderAttribution.count ?? 0,
+        coldKnownMs: measurements.coldPreProviderAttributedMs ?? null,
+        warmKnownMs: measurements.warmPreProviderAttributedMs ?? null,
+        coldUnattributedMs: measurements.coldPreProviderUnattributedMs ?? null,
+        warmUnattributedMs: measurements.warmPreProviderUnattributedMs ?? null,
+        timelineArtifacts: measurements.gatewaySessionPreProviderAttribution.timelineArtifacts ?? []
+      } : null,
+      agentCli: measurements.agentCliPreProviderAttribution ? {
+        count: measurements.agentCliPreProviderAttribution.count ?? 0,
+        coldKnownMs: measurements.coldPreProviderAttributedMs ?? null,
+        warmKnownMs: measurements.warmPreProviderAttributedMs ?? null,
+        coldUnattributedMs: measurements.coldPreProviderUnattributedMs ?? null,
+        warmUnattributedMs: measurements.warmPreProviderUnattributedMs ?? null,
+        timelineArtifacts: measurements.agentCliPreProviderAttribution.timelineArtifacts ?? []
+      } : null
+    },
+    plugins: {
+      missingDependencyErrors: measurements.missingDependencyErrors ?? null,
+      pluginLoadFailures: measurements.pluginLoadFailures ?? null,
+      officialPluginInstallOk: measurements.officialPluginInstallOk ?? null,
+      officialPluginInstallMs: measurements.officialPluginInstallMs ?? null,
+      officialPluginSecurityBlocks: measurements.officialPluginSecurityBlocks ?? null
+    },
+    diagnostics: {
+      timelineAvailable: measurements.openclawTimelineAvailable ?? null,
+      timelineEventCount: measurements.openclawTimelineEventCount ?? null,
+      timelineParseErrors: measurements.openclawTimelineParseErrors ?? null,
+      slowestSpanName: measurements.openclawSlowestSpanName ?? null,
+      slowestSpanMs: measurements.openclawSlowestSpanMs ?? null,
+      openSpanCount: measurements.openclawOpenSpanCount ?? null,
+      openRequiredSpanCount: measurements.openclawOpenRequiredSpanCount ?? null,
+      missingRequiredSpanCount: measurements.openclawMissingRequiredSpanCount ?? null,
+      openSpans: measurements.openclawOpenSpans?.slice(0, 5) ?? [],
+      eventLoopMaxMs: measurements.openclawEventLoopMaxMs ?? null,
+      providerRequestMaxMs: measurements.openclawProviderRequestMaxMs ?? null
+    }
+  };
+}
+
+function summarizeArtifacts(report, records) {
+  const artifacts = [];
+  if (report.outputPaths?.markdown) {
+    artifacts.push({ kind: "markdown-report", path: report.outputPaths.markdown });
+  }
+  if (report.outputPaths?.json) {
+    artifacts.push({ kind: "json-report", path: report.outputPaths.json });
+  }
+  if (report.outputPaths?.summary) {
+    artifacts.push({ kind: "summary-json", path: report.outputPaths.summary });
+  }
+  for (const record of records) {
+    const dirs = record.collectorArtifactDirs;
+    if (!dirs?.root) {
+      continue;
+    }
+    artifacts.push({
+      kind: "collector-root",
+      scenario: record.scenario ?? null,
+      state: record.state?.id ?? null,
+      sampleIndex: record.repeat?.index ?? null,
+      path: dirs.root
+    });
+  }
+  return artifacts;
+}
+
+function summarizeTargetCleanup(targetCleanup) {
+  if (!targetCleanup) {
+    return null;
+  }
+  return {
+    runtimeName: targetCleanup.runtimeName ?? null,
+    status: targetCleanup.status ?? null,
+    reason: targetCleanup.reason ?? null,
+    durationMs: targetCleanup.result?.durationMs ?? null
+  };
 }
 
 function summarizePerformance(performance, baseline) {
@@ -1160,12 +1039,6 @@ function firstNonEmptySnippetLine(...values) {
   return null;
 }
 
-function compactKeySpans(keySpans) {
-  return Object.values(keySpans ?? {})
-    .filter((span) => (span.count ?? 0) > 0 || (span.openCount ?? 0) > 0)
-    .toSorted((left, right) => (right.maxDurationMs ?? 0) - (left.maxDurationMs ?? 0) || (right.openCount ?? 0) - (left.openCount ?? 0));
-}
-
 function compactPerformanceMetrics(metrics = {}) {
   const preferred = [
     "readinessHealthReadyMs",
@@ -1216,6 +1089,9 @@ function pushMeasurementBrief(lines, measurements, { compact }) {
   lines.push(`- health: startup p95 ${valueMs(measurements.health?.startupSamples?.p95Ms)}; post-ready p95 ${valueMs(measurements.health?.postReadySamples?.p95Ms)}; failures ${totalHealthFailures ?? "unknown"}; final failures ${measurements.health?.final?.failureCount ?? "unknown"}${healthSlowestText(measurements)}`);
   lines.push(`- resources: peak RSS ${valueMb(measurements.peakRssMb)}; max CPU ${valuePercent(measurements.cpuPercentMax)}; samples ${measurements.resourceSampleCount ?? "unknown"}; roles ${rolePeakText(measurements)}`);
   lines.push(`- agent: turn ${valueMs(measurements.agentTurnMs, "not-run")}; cold/warm ${valueMs(measurements.coldAgentTurnMs)}/${valueMs(measurements.warmAgentTurnMs)}; cold-warm delta ${valueMs(measurements.agentColdWarmDeltaMs)}; pre-provider ${valueMs(measurements.agentPreProviderMs)}; provider ${valueMs(measurements.agentProviderFinalMs)}; metadata scans ${measurements.agentMetadataScanCount ?? "unknown"} (${valueMs(measurements.agentMetadataScanTotalMs)}); event-loop ${valueMs(measurements.agentEventLoopMaxMs)}; polls ${measurements.agentSessionPollCount ?? "unknown"}; cleanup ${valueMs(measurements.agentCleanupMaxMs)}; diagnosis ${measurements.agentLatencyDiagnosis?.kind ?? "unknown"}; leaks ${measurements.agentProcessLeakCount ?? "unknown"}`);
+  if (measurements.agentTurnStats) {
+    lines.push(`- Agent turn stats: count ${measurements.agentTurnStats.count ?? measurements.agentTurnCount ?? "unknown"}; p95 ${valueMs(measurements.agentTurnP95Ms)}; max ${valueMs(measurements.agentTurnMaxMs)}; pre-provider p95 ${valueMs(measurements.agentPreProviderP95Ms)}`);
+  }
   if (measurements.gatewaySessionPreProviderAttribution?.count > 0) {
     lines.push(`- gateway session attribution: cold known ${valueMs(measurements.coldPreProviderAttributedMs)} / unattributed ${valueMs(measurements.coldPreProviderUnattributedMs)}; warm known ${valueMs(measurements.warmPreProviderAttributedMs)} / unattributed ${valueMs(measurements.warmPreProviderUnattributedMs)}`);
   }
@@ -1244,16 +1120,6 @@ function rolePeakText(measurements) {
 
 function runtimeDepsPluginText(measurements) {
   return measurements.runtimeDepsStagingPluginId ? ` (${measurements.runtimeDepsStagingPluginId})` : "";
-}
-
-function formatEmbeddedRunTopStages(stages) {
-  if (!Array.isArray(stages) || stages.length === 0) {
-    return "";
-  }
-  return stages
-    .slice(0, 4)
-    .map((stage) => `${stage.name} ${stage.totalDurationMs ?? stage.maxDurationMs ?? "unknown"}ms`)
-    .join(", ");
 }
 
 function hasDiagnosticSignal(measurements) {
@@ -1384,50 +1250,6 @@ function formatGateSection(gate) {
   return lines;
 }
 
-function formatReleaseDecisionSection(gate, outputPaths, retainedGateArtifacts) {
-  const lines = [
-    "## Release Decision",
-    "",
-    `- Verdict: ${gate.verdict}`,
-    `- Coverage: ${gate.complete ? "complete" : gate.partial ? "partial" : "incomplete"}`,
-    `- Blocking / warnings / info: ${gate.blockingCount} / ${gate.warningCount} / ${gate.infoCount ?? 0}`
-  ];
-
-  if (outputPaths?.markdown) {
-    lines.push(`- Markdown report: ${outputPaths.markdown}`);
-  }
-  if (outputPaths?.json) {
-    lines.push(`- JSON report: ${outputPaths.json}`);
-  }
-  if (retainedGateArtifacts?.outputDir) {
-    lines.push(`- Retained gate artifacts: ${retainedGateArtifacts.outputDir}`);
-  } else if (retainedGateArtifacts?.status === "pending") {
-    lines.push("- Retained gate artifacts: pending");
-  }
-
-  const topCards = (gate.cards ?? [])
-    .filter((card) => card.severity === "blocking" || card.severity === "warning")
-    .slice(0, 3);
-  if (topCards.length > 0) {
-    lines.push("");
-    lines.push("Top findings:");
-    for (const card of topCards) {
-      lines.push(`- ${card.severity.toUpperCase()} ${card.scenario ?? "gate"}${card.state ? `/${card.state}` : ""}: ${card.summary}`);
-    }
-  }
-
-  if (!gate.complete && gate.partial) {
-    lines.push("");
-    lines.push("This is a filtered gate slice. It can reject a release from selected-scenario failures, but it cannot approve the full release gate.");
-  } else if (gate.verdict === "PARTIAL") {
-    lines.push("");
-    lines.push("This gate has incomplete required coverage and cannot approve the release.");
-  }
-
-  lines.push("");
-  return lines;
-}
-
 function firstFailedCommand(record) {
   for (const phase of record.phases ?? []) {
     for (const result of phase.results ?? []) {
@@ -1476,10 +1298,4 @@ function fencedSnippet(value) {
 function shortCommand(command) {
   const value = String(command ?? "").replace(/\s+/g, " ").trim();
   return value.length <= 90 ? value : `${value.slice(0, 87)}...`;
-}
-
-function shortLocation(url, lineNumber) {
-  const value = String(url ?? "");
-  const label = value.length <= 72 ? value : `...${value.slice(-69)}`;
-  return lineNumber === null || lineNumber === undefined ? label : `${label}:${lineNumber}`;
 }

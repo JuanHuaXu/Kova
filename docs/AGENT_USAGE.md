@@ -118,9 +118,11 @@ or baseline comparison is not blocking. Do not save baselines from
 `--profile-on-failure` runs; those are instrumented diagnostic runs and their
 resource numbers can include profiler overhead.
 
-5. Read the generated JSON report first. Use the Markdown report for the human
-summary. For failures, start with `failureBrief` in `report summarize --json`
-or the `Failure Brief` section from `report paste`.
+5. Read the generated `*.summary.json` first. Use the Markdown report for the
+human decision summary and the full JSON report only when raw phase, command,
+or collector evidence is needed. For failures, start with `decision`,
+`findings`, and `failureBrief` in `report summarize --json` or the `Failure
+Brief` section from `report paste`.
 
 6. Produce a compact handoff when needed:
 

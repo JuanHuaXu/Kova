@@ -30,8 +30,9 @@ Unit tests can say code passed. Kova answers the release question:
   and plugin load failures.
 - **Failure containment**: provider timeouts, malformed responses, streaming
   stalls, recovery, gateway health after failure, and leaked child processes.
-- **Human and agent reports**: concise Markdown for people, structured JSON for
-  agents/CI, plus artifact bundles for handoff.
+- **Human and agent reports**: verdict-first Markdown for people, compact
+  `*.summary.json` for agents/CI, full JSON evidence for audits, plus artifact
+  bundles for handoff.
 
 Kova uses OCM to create isolated OpenClaw labs. Kova is not testing OCM. OCM is
 the harness; OpenClaw is the product under test.

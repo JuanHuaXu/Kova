@@ -3,7 +3,7 @@ import { relative } from "node:path";
 import { required, resolveFromCwd } from "../cli.mjs";
 import { bundleReport } from "../reporting/artifacts.mjs";
 import { compareReports, renderCompareFixerSummary, renderCompareSummary } from "../reporting/compare.mjs";
-import { renderPasteSummary, renderReportSummary } from "../reporting/report.mjs";
+import { buildReportSummary, renderPasteSummary, renderReportSummary } from "../reporting/report.mjs";
 
 export async function runReportCommand(flags) {
   const [subcommand, firstPath, secondPath] = flags._;
@@ -11,11 +11,7 @@ export async function runReportCommand(flags) {
   if (subcommand === "summarize") {
     const report = await readReport(required(firstPath, "report path"));
     if (flags.json) {
-      console.log(JSON.stringify({
-        schemaVersion: "kova.report.summary.v1",
-        generatedAt: new Date().toISOString(),
-        summary: renderReportSummary(report, { structured: true })
-      }, null, 2));
+      console.log(JSON.stringify(buildReportSummary(report), null, 2));
       return;
     }
 

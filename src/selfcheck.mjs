@@ -1499,7 +1499,7 @@ exit 2
     assertEqual(report.summary?.statuses?.BLOCKED, 1, "failed local-build scenario status");
     assertEqual(report.records?.[0]?.cleanup, "already-absent", "already absent env cleanup status");
     assertEqual(report.targetCleanup?.status, "already-absent", "already absent local-build target cleanup status");
-    assertEqual(summary.summary?.scenarios?.[0]?.failureReason, "dependency install failed", "summary failure reason");
+    assertEqual(summary.scenarios?.[0]?.failureReason, "dependency install failed", "summary failure reason");
     if (!/runtime remove kova-local-\d+ --json/.test(log)) {
       throw new Error(`runtime remove was not called after failed build; log:\n${log}`);
     }
@@ -4341,12 +4341,12 @@ function diagnosticsTimelineEvaluationCheck() {
       records: [openSpanRecord]
     }, { structured: true });
     assertEqual(
-      reportSummary.scenarios[0]?.measurements?.openclawOpenRequiredSpanCount,
+      reportSummary.scenarios[0]?.measurements?.diagnostics?.openRequiredSpanCount,
       1,
       "structured report open span evidence"
     );
     assertEqual(
-      reportSummary.scenarios[0]?.measurements?.openclawOpenSpans?.[0]?.name,
+      reportSummary.scenarios[0]?.measurements?.diagnostics?.openSpans?.[0]?.name,
       "runtimeDeps.stage",
       "structured report open span name"
     );
@@ -5576,10 +5576,10 @@ function markdownFailureCardsCheck() {
         violations: [{ message: "gateway readiness exceeded threshold" }]
       }]
     });
-    assertEqual(rendered.includes("## Failure Cards"), true, "markdown failure cards section");
-    assertEqual(rendered.includes("FAIL gateway-performance: gateway readiness exceeded threshold"), true, "failure card summary");
-    assertEqual(rendered.includes("likely owner: gateway-runtime"), true, "failure card owner");
-    assertEqual(rendered.includes("evidence: readinessHealthReadyMs: 45000"), true, "failure card evidence");
+    assertEqual(rendered.includes("## Findings"), true, "markdown findings section");
+    assertEqual(rendered.includes("gateway-performance"), true, "finding scenario");
+    assertEqual(rendered.includes("gateway readiness exceeded threshold"), true, "finding summary");
+    assertEqual(rendered.includes("gateway-runtime"), true, "finding owner");
     assertEqual(rendered.includes("## Resource Roles"), true, "markdown resource roles section");
     assertEqual(rendered.includes("gateway: RSS 1100 MB; CPU 220%"), true, "markdown resource role summary");
     return {

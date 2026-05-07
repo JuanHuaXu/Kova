@@ -24,7 +24,7 @@ import { reportsDir } from "../paths.mjs";
 import { loadRegistryContext } from "../registries/context.mjs";
 import { loadScenarios, validateScenarioRun } from "../registries/scenarios.mjs";
 import { loadState } from "../registries/states.mjs";
-import { renderMarkdownReport, summarizeRecords } from "../reporting/report.mjs";
+import { buildReportSummary, renderMarkdownReport, summarizeRecords } from "../reporting/report.mjs";
 import { buildDryRunRecord, createRunId, executeScenario } from "../runner.mjs";
 import { resolveTarget } from "../targets.mjs";
 
@@ -50,6 +50,7 @@ export async function runScenarioCommand(flags) {
   const runId = createRunId();
   const reportPath = join(reportRoot, `${runId}.md`);
   const jsonPath = join(reportRoot, `${runId}.json`);
+  const summaryPath = join(reportRoot, `${runId}.summary.json`);
   const repeat = positiveIntegerFlag(flags, "repeat", 1);
   const auth = await resolveRunAuthContext(flags);
   const regressionThresholds = await loadRegressionThresholds(flags);
@@ -111,6 +112,11 @@ export async function runScenarioCommand(flags) {
     schemaVersion: reportSchemaVersion,
     generatedAt: new Date().toISOString(),
     runId,
+    outputPaths: {
+      markdown: reportPath,
+      json: jsonPath,
+      summary: summaryPath
+    },
     mode: context.execute ? "execution" : "dry-run",
     target,
     from: flags.from ?? null,
@@ -152,6 +158,7 @@ export async function runScenarioCommand(flags) {
   }
   await writeFile(reportPath, renderMarkdownReport(report), "utf8");
   await writeFile(jsonPath, `${JSON.stringify(report, null, 2)}\n`, "utf8");
+  await writeFile(summaryPath, `${JSON.stringify(buildReportSummary(report), null, 2)}\n`, "utf8");
 
   const mode = context.execute ? "execution" : "dry-run";
   if (flags.json) {
@@ -162,6 +169,7 @@ export async function runScenarioCommand(flags) {
       runId,
       reportPath,
       jsonPath,
+      summaryPath,
       performance: summarizePerformanceReceipt(report.performance, report.baseline),
       summary: report.summary
     }, null, 2));

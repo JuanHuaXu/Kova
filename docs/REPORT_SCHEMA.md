@@ -18,7 +18,8 @@ kova.report.v1
   "runId": "kova-2026-04-29T000000Z",
   "outputPaths": {
     "markdown": "/path/to/report.md",
-    "json": "/path/to/report.json"
+    "json": "/path/to/report.json",
+    "summary": "/path/to/report.summary.json"
   },
   "mode": "dry-run",
   "profile": null,
@@ -82,8 +83,9 @@ lists every file staged into the bundle with relative path, byte size, and
 SHA-256 digest so agents can inspect evidence coverage without scraping raw log
 output or unpacking blindly.
 
-`outputPaths` records the Markdown and JSON paths for the report itself. The
-matrix receipt also includes bundle and checksum paths after bundling.
+`outputPaths` records the Markdown, full JSON, and compact summary JSON paths
+for the report itself. The matrix receipt also includes bundle and checksum
+paths after bundling.
 
 `gate` is normally `null`. When `kova matrix run --gate` is used, it contains
 the release gate verdict, blocking/warning counts, required scenario policy, and
@@ -566,11 +568,39 @@ scan only CLI help and manifests.
 
 ## Summary Output
 
-`kova report summarize <report.json> --json` returns a compact agent-facing
-view of each scenario with status, cleanup, failed command, concise failure
-reason, violations, and a small measurement summary. Agents should use this
-before reading the full report when they only need pass/fail and high-signal
-performance evidence.
+Each run also writes `<run>.summary.json`. `kova report summarize
+<report.json> --json` prints the same compact agent-facing contract:
+
+```json
+{
+  "schemaVersion": "kova.report.summary.v1",
+  "decision": {
+    "verdict": "FAIL",
+    "reason": "gateway peak RSS 701.8 MB exceeded threshold 700 MB",
+    "blockingFindingCount": 1,
+    "warningFindingCount": 0
+  },
+  "run": {
+    "repeat": 3,
+    "parallel": 1,
+    "auth": {}
+  },
+  "coverage": {
+    "recordCount": 3,
+    "scenarioCount": 1,
+    "stateCount": 1
+  },
+  "findings": [],
+  "groups": [],
+  "samples": [],
+  "artifacts": []
+}
+```
+
+Agents should use the summary before reading the full report when they only
+need pass/fail, findings, aggregate performance, sample-level evidence, and
+artifact paths. The full `kova.report.v1` JSON remains the audit trail with raw
+records, phases, commands, and collector evidence.
 
 When a report contains failures, the structured summary also includes
 `failureBrief` with:
