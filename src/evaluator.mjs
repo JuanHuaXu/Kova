@@ -127,14 +127,14 @@ export function evaluateRecord(record, scenario, options = {}) {
   const coldReadyMs = maxDurationWhere(allResults, (command) => command.startsWith("ocm start "));
   const warmReadyMs = maxDurationWhere(allResults, (command) => command.startsWith("ocm service restart "));
   const upgradeMs = maxDurationWhere(allResults, (command) => command.startsWith("ocm upgrade "));
-  const statusMs = maxDurationWhere(allResults, (command) => command.includes(" -- status"));
+  const statusMs = maxDurationWhere(allResults, isPostAgentStatusCommand);
   const pluginsListMs = maxDurationWhere(allResults, (command) => command.includes(" -- plugins list"));
   const pluginInstallMs = maxDurationWhere(allResults, (command) => command.includes("run-official-plugin-install.mjs") || command.includes(" -- plugins install"));
   const modelsListMs = maxDurationWhere(allResults, (command) => command.includes(" -- models list"));
   const rssGrowthMb = maxNullable(resourceSummary.maxTotalRssGrowthMb);
   const gatewayRssGrowthMb = maxNullable(resourceSummary.maxGatewayRssGrowthMb);
 
-  checkDuration(violations, allResults, "statusMs", thresholds.statusMs, (command) => command.includes(" -- status"));
+  checkDuration(violations, allResults, "statusMs", thresholds.statusMs, isPostAgentStatusCommand);
   checkDuration(violations, allResults, "pluginsListMs", thresholds.pluginsListMs, (command) => command.includes(" -- plugins list"));
   checkDuration(violations, allResults, "pluginUpdateDryRunMs", thresholds.pluginUpdateDryRunMs, (command) =>
     command.includes(" -- plugins update") && command.includes("--dry-run")
@@ -1263,7 +1263,9 @@ function evaluateAgentFailureContainment({ turns, record, thresholds, gatewayExp
     ? thresholds.agentContainmentHealthFailures
     : (typeof thresholds.providerFailureHealthFailures === "number" ? thresholds.providerFailureHealthFailures : 0);
   const finalGatewayState = record.finalMetrics?.service?.gatewayState ?? null;
-  const statusCommands = collectResults(record).filter((result) => /\s--\sstatus\b|@\S+\s+--\s+status\b/.test(result.command) || result.command.includes(" -- status"));
+  const statusCommands = collectResults(record).filter((result) =>
+    isPostAgentStatusCommand(result.command)
+  );
   const statusWorks = statusCommands.length === 0 ? null : statusCommands.some((result) => result.status === 0 && result.timedOut !== true);
 
   return {
@@ -1282,6 +1284,15 @@ function evaluateAgentFailureContainment({ turns, record, thresholds, gatewayExp
     dashboardResponsive: null,
     tuiResponsive: null
   };
+}
+
+function isPostAgentStatusCommand(command) {
+  return (
+    /\s--\sstatus\b|@\S+\s+--\s+status\b/.test(command) ||
+    command.includes(" -- status") ||
+    /\s--\s+gateway\s+status\b/.test(command) ||
+    /@\S+\s+--\s+gateway\s+status\b/.test(command)
+  );
 }
 
 function checkAgentFailureContainment(violations, containment) {

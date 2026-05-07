@@ -104,11 +104,11 @@
       "title": "Post-Dashboard Gateway Health",
       "intent": "Verify the gateway remains responsive after dashboard-style cold and warm message turns.",
       "commands": [
-        "ocm @{env} -- status",
+        "ocm @{env} -- gateway status --json --require-rpc",
         "ocm logs {env} --tail 300 --raw"
       ],
       "evidence": [
-        "gateway status",
+        "gateway status probe",
         "provider logs",
         "plugin errors",
         "memory after dashboard turn"

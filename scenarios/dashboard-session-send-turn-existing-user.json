@@ -96,11 +96,11 @@
       "title": "Post-Dashboard Gateway Health",
       "intent": "Verify the cloned gateway remains responsive after the dashboard-style turn and collect logs for embedded-run/liveness evidence.",
       "commands": [
-        "ocm @{env} -- status",
+        "ocm @{env} -- gateway status --json --require-rpc",
         "ocm logs {env} --tail 300 --raw"
       ],
       "evidence": [
-        "gateway status",
+        "gateway status probe",
         "embedded-run traces",
         "liveness warnings",
         "plugin errors",
