@@ -3,7 +3,8 @@ import { randomUUID } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 
-const GATEWAY_PROTOCOL_VERSION = 3;
+const GATEWAY_PROTOCOL_MIN_VERSION = 3;
+const GATEWAY_PROTOCOL_MAX_VERSION = 4;
 const GATEWAY_RPC_CLIENT_ID = "gateway-client";
 const GATEWAY_RPC_CLIENT_MODE = "backend";
 const GATEWAY_OPERATOR_SCOPES = ["operator.read", "operator.write"];
@@ -191,8 +192,8 @@ class DirectGatewayRpcClient {
 
   buildConnectParams() {
     return {
-      minProtocol: GATEWAY_PROTOCOL_VERSION,
-      maxProtocol: GATEWAY_PROTOCOL_VERSION,
+      minProtocol: GATEWAY_PROTOCOL_MIN_VERSION,
+      maxProtocol: GATEWAY_PROTOCOL_MAX_VERSION,
       client: {
         id: GATEWAY_RPC_CLIENT_ID,
         displayName: "Kova Gateway RPC",
