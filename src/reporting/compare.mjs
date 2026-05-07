@@ -1,4 +1,5 @@
 import { measurementMetricValue } from "../health.mjs";
+import { buildReportSummary } from "./report.mjs";
 
 const defaultThresholds = {
   missingDependencyErrors: 0,
@@ -57,6 +58,8 @@ const defaultThresholds = {
 
 export function compareReports(baseline, current, options = {}) {
   const thresholds = resolveThresholds(options.thresholds);
+  const baselineSummary = buildReportSummary(baseline);
+  const currentSummary = buildReportSummary(current);
   const baselineRecords = indexRecords(baseline.records ?? []);
   const currentRecords = current.records ?? [];
   const scenarios = [];
@@ -125,18 +128,26 @@ export function compareReports(baseline, current, options = {}) {
     });
   }
 
-  const regressionCount = scenarios.reduce((count, scenario) => count + scenario.regressions.length, 0);
+  const scenarioRegressionCount = scenarios.reduce((count, scenario) => count + scenario.regressions.length, 0);
+  const statusChanges = compareGroupStatuses(baselineSummary.groups, currentSummary.groups);
+  const findingChanges = compareFindings(baselineSummary.findings, currentSummary.findings);
+  const newBlockingFindingCount = findingChanges.new.filter(isBlockingFinding).length;
+  const regressionCount = scenarioRegressionCount + statusChanges.regressions.length + newBlockingFindingCount;
   const sourceRelease = compareSourceReleaseDiagnostics(baseline, current);
   const sourceReleaseBlockingCount = sourceRelease?.blockingCount ?? 0;
   return {
     schemaVersion: "kova.compare.v1",
     generatedAt: new Date().toISOString(),
-    baseline: reportSummary(baseline),
-    current: reportSummary(current),
+    baseline: reportSummary(baseline, baselineSummary),
+    current: reportSummary(current, currentSummary),
     thresholds,
     sourceRelease,
     ok: regressionCount === 0 && sourceReleaseBlockingCount === 0,
     regressionCount,
+    scenarioRegressionCount,
+    statusChanges,
+    findingChanges,
+    improvementCount: statusChanges.improvements.length + findingChanges.resolved.length,
     scenarios
   };
 }
@@ -164,6 +175,22 @@ export function renderCompareFixerSummary(comparison) {
     lines.push("");
   }
 
+  if (comparison.statusChanges?.regressions?.length > 0) {
+    lines.push("Status regressions:");
+    for (const change of comparison.statusChanges.regressions) {
+      lines.push(`- ${change.key}: ${change.baselineLabel} -> ${change.currentLabel}`);
+    }
+    lines.push("");
+  }
+
+  if (comparison.findingChanges?.new?.some(isBlockingFinding)) {
+    lines.push("New findings:");
+    for (const finding of comparison.findingChanges.new.filter(isBlockingFinding).slice(0, 8)) {
+      lines.push(`- ${finding.scenario ?? "run"}${finding.state ? `/${finding.state}` : ""}: ${finding.summary}`);
+    }
+    lines.push("");
+  }
+
   for (const scenario of comparison.scenarios.filter((item) => item.regressions.length > 0)) {
     lines.push(`Scenario: ${scenario.key}`);
     lines.push(`Status: ${scenario.baselineStatus ?? "missing"} -> ${scenario.currentStatus ?? "missing"}`);
@@ -183,11 +210,39 @@ export function renderCompareSummary(comparison) {
     `Current: ${comparison.current.runId ?? "unknown"} (${comparison.current.target ?? "unknown"})`,
     `Result: ${comparison.ok ? "OK" : "REGRESSED"}`,
     `Regressions: ${comparison.regressionCount}`,
+    `Improvements: ${comparison.improvementCount ?? 0}`,
     "",
-    "Scenarios:"
+    "Status changes:"
   ];
 
-  for (const scenario of comparison.scenarios) {
+  for (const change of comparison.statusChanges?.changes ?? []) {
+    lines.push(`- ${change.direction.toUpperCase()} ${change.key}: ${change.baselineLabel} -> ${change.currentLabel}`);
+  }
+  if ((comparison.statusChanges?.changes ?? []).length === 0) {
+    lines.push("- none");
+  }
+
+  if (comparison.findingChanges) {
+    lines.push("");
+    lines.push("Findings:");
+    if (comparison.findingChanges.new.length === 0 && comparison.findingChanges.resolved.length === 0) {
+      lines.push("- no finding changes");
+    }
+    for (const finding of comparison.findingChanges.new.slice(0, 8)) {
+      lines.push(`- NEW ${finding.severity.toUpperCase()} ${finding.scenario ?? "run"}${finding.state ? `/${finding.state}` : ""}: ${finding.summary}`);
+    }
+    for (const finding of comparison.findingChanges.resolved.slice(0, 8)) {
+      lines.push(`- RESOLVED ${finding.severity.toUpperCase()} ${finding.scenario ?? "run"}${finding.state ? `/${finding.state}` : ""}: ${finding.summary}`);
+    }
+  }
+
+  lines.push("");
+  lines.push("Metric regressions:");
+  const regressedScenarios = comparison.scenarios.filter((item) => item.regressions.length > 0);
+  if (regressedScenarios.length === 0) {
+    lines.push("- none");
+  }
+  for (const scenario of regressedScenarios) {
     lines.push(`- ${scenario.status} ${scenario.key}`);
     for (const regression of scenario.regressions) {
       lines.push(`  ${regression.message}`);
@@ -220,7 +275,7 @@ function recordKey(record) {
   return `${record.scenario}:${record.state?.id ?? "none"}`;
 }
 
-function reportSummary(report) {
+function reportSummary(report, summary) {
   return {
     runId: report.runId ?? null,
     mode: report.mode ?? null,
@@ -228,8 +283,96 @@ function reportSummary(report) {
     target: report.target ?? null,
     targetKind: targetKind(report.target),
     generatedAt: report.generatedAt ?? null,
-    statuses: report.summary?.statuses ?? {}
+    statuses: report.summary?.statuses ?? {},
+    decision: summary.decision,
+    findingCount: summary.findings.length,
+    groupCount: summary.groups.length,
+    sampleCount: summary.samples.length
   };
+}
+
+function compareGroupStatuses(baselineGroups = [], currentGroups = []) {
+  const baselineByKey = new Map(baselineGroups.map((group) => [group.key, group]));
+  const currentByKey = new Map(currentGroups.map((group) => [group.key, group]));
+  const changes = [];
+  for (const [key, currentGroup] of currentByKey.entries()) {
+    const baselineGroup = baselineByKey.get(key);
+    if (!baselineGroup) {
+      continue;
+    }
+    const baselineWorst = worstGroupStatus(baselineGroup.statuses);
+    const currentWorst = worstGroupStatus(currentGroup.statuses);
+    if (baselineWorst.rank === currentWorst.rank && statusCountsText(baselineGroup.statuses) === statusCountsText(currentGroup.statuses)) {
+      continue;
+    }
+    const direction = currentWorst.rank > baselineWorst.rank
+      ? "regressed"
+      : currentWorst.rank < baselineWorst.rank
+        ? "improved"
+        : "changed";
+    changes.push({
+      key,
+      scenario: currentGroup.scenario ?? baselineGroup.scenario ?? null,
+      state: currentGroup.state ?? baselineGroup.state ?? null,
+      direction,
+      baseline: baselineGroup.statuses ?? {},
+      current: currentGroup.statuses ?? {},
+      baselineLabel: statusCountsText(baselineGroup.statuses),
+      currentLabel: statusCountsText(currentGroup.statuses)
+    });
+  }
+  return {
+    changes,
+    improvements: changes.filter((change) => change.direction === "improved"),
+    regressions: changes.filter((change) => change.direction === "regressed")
+  };
+}
+
+function compareFindings(baselineFindings = [], currentFindings = []) {
+  const baselineByKey = new Map(baselineFindings.map((finding) => [findingKey(finding), finding]));
+  const currentByKey = new Map(currentFindings.map((finding) => [findingKey(finding), finding]));
+  return {
+    new: [...currentByKey.entries()]
+      .filter(([key]) => !baselineByKey.has(key))
+      .map(([, finding]) => finding),
+    resolved: [...baselineByKey.entries()]
+      .filter(([key]) => !currentByKey.has(key))
+      .map(([, finding]) => finding),
+    unchangedCount: [...currentByKey.keys()].filter((key) => baselineByKey.has(key)).length
+  };
+}
+
+function worstGroupStatus(statuses = {}) {
+  let worst = { status: "PASS", rank: 0 };
+  for (const [status, count] of Object.entries(statuses)) {
+    if (!count) {
+      continue;
+    }
+    const rank = statusRank(status);
+    if (rank > worst.rank) {
+      worst = { status, rank };
+    }
+  }
+  return worst;
+}
+
+function statusCountsText(statuses = {}) {
+  return Object.entries(statuses).map(([status, count]) => `${status}:${count}`).join(", ") || "none";
+}
+
+function findingKey(finding) {
+  return [
+    finding.severity ?? "unknown",
+    finding.kind ?? "finding",
+    finding.scenario ?? "run",
+    finding.state ?? "none",
+    finding.metric ?? "none",
+    finding.summary ?? ""
+  ].join("|");
+}
+
+function isBlockingFinding(finding) {
+  return ["blocking", "blocked", "fail"].includes(finding?.severity);
 }
 
 function compareSourceReleaseDiagnostics(leftReport, rightReport) {

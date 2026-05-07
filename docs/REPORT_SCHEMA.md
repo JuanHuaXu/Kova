@@ -781,7 +781,9 @@ retained-artifacts.json
 Comparison currently detects status regressions, missing scenario/state entries,
 and increases in peak RSS, health failures, health p95, missing dependency
 errors, plugin load failures, metadata scan mentions, and config normalization
-mentions.
+mentions. It also reports group-level status changes and finding deltas before
+metric deltas, so a comparison can say which failures were resolved, which
+new findings appeared, and whether repeat-run pass/fail counts improved.
 
 ## Artifact Bundle
 

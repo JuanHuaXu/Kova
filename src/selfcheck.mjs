@@ -4109,6 +4109,36 @@ function sourceReleaseCompareCheck() {
       "compare summary includes source timeline blocker"
     );
 
+    const failingReport = syntheticCompareReport({
+      runId: "gateway-rss-failing",
+      target: "local-build:/tmp/openclaw",
+      timelineAvailable: true,
+      preProviderMs: 4000,
+      slowestSpanMs: 3200
+    });
+    failingReport.summary = { statuses: { FAIL: 1 } };
+    failingReport.records[0].status = "FAIL";
+    failingReport.records[0].violations = [{
+      metric: "resourcePeakGatewayRssMb",
+      message: "gateway peak RSS 701.8 MB exceeded threshold 700 MB"
+    }];
+    const fixedReport = syntheticCompareReport({
+      runId: "gateway-rss-fixed",
+      target: "local-build:/tmp/openclaw",
+      timelineAvailable: true,
+      preProviderMs: 3800,
+      slowestSpanMs: 3000
+    });
+    const fixedComparison = compareReports(failingReport, fixedReport);
+    assertEqual(fixedComparison.ok, true, "resolved failure comparison should pass");
+    assertEqual(fixedComparison.statusChanges.improvements.length, 1, "status improvement count");
+    assertEqual(fixedComparison.findingChanges.resolved.length, 1, "resolved finding count");
+    assertEqual(
+      renderCompareSummary(fixedComparison).includes("RESOLVED FAIL agent-cold-warm-message/mock-openai-provider"),
+      true,
+      "compare summary includes resolved finding"
+    );
+
     return {
       id: "source-release-compare",
       status: "PASS",
