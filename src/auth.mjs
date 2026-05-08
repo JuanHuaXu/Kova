@@ -132,6 +132,18 @@ export function scenarioAuthPolicy(context, scenario, state) {
   }
 
   const requestedMode = override === "default" ? context.auth?.requestedMode ?? "mock" : override;
+  if (requestedMode === "skip") {
+    return {
+      schemaVersion: "kova.auth.policy.v1",
+      mode: "skip",
+      providerId: null,
+      source: "run-auth-skip",
+      setup: false,
+      commandEnv: {},
+      redactionValues: context.auth?.redactionValues ?? [],
+      summary: authDisplay({ mode: "skip", providerId: null, source: "run-auth-skip", setup: false })
+    };
+  }
   if (requestedMode === "live") {
     const live = context.auth?.live;
     if (!live?.available) {

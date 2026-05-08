@@ -202,6 +202,15 @@ export async function runSelfCheck(flags = {}) {
         throw new Error(`default mock auth phases missing: ${phaseIds.join(", ")}`);
       }
     }));
+    checks.push(await jsonCommandCheck("run-auth-skip-json", `node bin/kova.mjs run --auth skip --target runtime:stable --scenario fresh-install --report-dir ${quoteShell(tmp)} --json`, async (data) => {
+      const report = JSON.parse(await readFile(data.jsonPath, "utf8"));
+      const record = report.records?.[0];
+      assertEqual(record?.auth?.mode, "skip", "run auth skip mode");
+      const phaseIds = record?.phases?.map((phase) => phase.id) ?? [];
+      if (phaseIds.includes("auth-prepare") || phaseIds.includes("auth-setup") || phaseIds.includes("auth-cleanup")) {
+        throw new Error(`run --auth skip should not inject auth phases: ${phaseIds.join(", ")}`);
+      }
+    }));
     checks.push(await jsonCommandCheck("run-auth-missing-override-json", `node bin/kova.mjs run --target runtime:stable --scenario provider-models --state model-auth-missing --report-dir ${quoteShell(tmp)} --json`, async (data) => {
       const report = JSON.parse(await readFile(data.jsonPath, "utf8"));
       const record = report.records?.[0];
@@ -414,8 +423,16 @@ export async function runSelfCheck(flags = {}) {
       `node bin/kova.mjs run --target runtime:stable --scenario official-plugin-install --state official-plugins --report-dir ${quoteShell(tmp)} --json`,
       async (data) => {
         const report = JSON.parse(await readFile(data.jsonPath, "utf8"));
-        const commands = report.records?.[0]?.phases?.flatMap((phase) => phase.commands ?? []) ?? [];
+        const record = report.records?.[0];
+        assertEqual(record?.auth?.mode, "skip", "official plugin install skips provider auth");
+        const phaseIds = record?.phases?.map((phase) => phase.id) ?? [];
+        if (phaseIds.includes("auth-prepare") || phaseIds.includes("auth-setup") || phaseIds.includes("auth-cleanup")) {
+          throw new Error(`official plugin install should not inject provider auth phases: ${phaseIds.join(", ")}`);
+        }
+        const commands = record?.phases?.flatMap((phase) => phase.commands ?? []) ?? [];
         assertEqual(commands.some((command) => command.includes("run-official-plugin-install.mjs") && command.includes("states/official-plugins.json")), true, "official plugin state-backed command present");
+        assertEqual(commands.some((command) => command.includes("ensure-gateway-running.mjs")), true, "official plugin post-install gateway reconciliation command present");
+        assertEqual(commands.some((command) => command.includes("ocm service restart")), false, "official plugin should not issue a second restart after install-triggered restart");
       }
     ));
     checks.push(await jsonCommandCheck(

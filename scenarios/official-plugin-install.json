@@ -13,6 +13,9 @@
   "states": [
     "official-plugins"
   ],
+  "auth": {
+    "mode": "skip"
+  },
   "timeoutMs": 240000,
   "thresholds": {
     "gatewayReadyMs": 45000,
@@ -56,21 +59,32 @@
     },
     {
       "id": "restart",
-      "title": "Restart After Official Plugin Install",
-      "intent": "Restart the gateway so OpenClaw loads persisted official plugin state without plugin load or dependency errors.",
+      "title": "Ensure Gateway After Official Plugin Install",
+      "intent": "Ensure the gateway is running after the plugin install-triggered restart so OpenClaw loads persisted official plugin state without plugin load or dependency errors.",
       "commands": [
-        "ocm service restart {env}",
+        "node {kovaRoot}/support/ensure-gateway-running.mjs --env {env} --artifact-dir {artifactDir} --timeout-ms 120000"
+      ],
+      "evidence": [
+        "post-install gateway start",
+        "restart readiness"
+      ],
+      "healthScope": "readiness"
+    },
+    {
+      "id": "post-restart-verify",
+      "title": "Verify Official Plugin After Restart",
+      "intent": "Verify the official plugin remains persisted after the gateway is ready.",
+      "commands": [
         "ocm service status {env} --json",
         "ocm @{env} -- plugins list",
         "ocm logs {env} --tail 400 --raw"
       ],
       "evidence": [
-        "restart readiness",
         "official plugin remains installed",
         "plugin load logs",
         "missing dependency scan"
       ],
-      "healthScope": "readiness"
+      "healthScope": "post-ready"
     }
   ],
   "proves": [
