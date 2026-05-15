@@ -45,7 +45,7 @@ import {
 import { captureProcessSnapshot, classifyRegistryRolesForProcess, classifySnapshotRolesForProcess, diffProcessSnapshots, summarizeResourceSamples } from "./collectors/resources.mjs";
 import { captureOpenClawStateSnapshot } from "./collectors/openclaw-state.mjs";
 import { buildReportSummary, renderMarkdownReport, renderPasteSummary, renderReportSummary, summarizeRecords } from "./reporting/report.mjs";
-import { buildUpgradeStateSnapshotInvariants } from "./runner.mjs";
+import { buildUpgradeLogDerivedInvariants, buildUpgradeStateSnapshotInvariants } from "./runner.mjs";
 import { compareReports, renderCompareSummary } from "./reporting/compare.mjs";
 import {
   ocmAt,
@@ -124,6 +124,7 @@ export async function runSelfCheck(flags = {}) {
     checks.push(evidenceLedgerGatingCheck());
     checks.push(await openClawStateSnapshotCheck(tmp));
     checks.push(upgradeStateSnapshotInvariantsCheck());
+    checks.push(upgradeLogDerivedInvariantsCheck());
     checks.push(localBuildTargetSetupResourceExclusionCheck());
     checks.push(await jsonCommandCheck("plan-json", "node bin/kova.mjs plan --json", (data) => {
       assertEqual(data.schemaVersion, "kova.plan.v1", "plan schema");
@@ -1075,6 +1076,64 @@ function upgradeSnapshotRecord({ pre, post }) {
       }]
     }]
   };
+}
+
+function upgradeLogDerivedInvariantsCheck() {
+  try {
+    const clean = buildUpgradeLogDerivedInvariants({
+      status: "PASS",
+      measurements: {
+        missingDependencyErrors: 0,
+        pluginLoadFailures: 0
+      },
+      phases: [{
+        id: "post-upgrade",
+        results: [{
+          command: "ocm @kova-self-check -- doctor --fix",
+          status: 0,
+          stdout: "doctor ok\n",
+          stderr: ""
+        }]
+      }]
+    });
+    assertEqual(clean.every((invariant) => invariant.status === "passed"), true, "clean upgrade log invariants pass");
+
+    const bad = buildUpgradeLogDerivedInvariants({
+      status: "PASS",
+      measurements: {
+        missingDependencyErrors: 2,
+        pluginLoadFailures: 1
+      },
+      phases: [{
+        id: "post-upgrade",
+        results: [{
+          command: "ocm @kova-self-check -- doctor --fix",
+          status: 0,
+          stdout: "",
+          stderr: ""
+        }]
+      }]
+    });
+    const byId = Object.fromEntries(bad.map((invariant) => [invariant.id, invariant]));
+    assertEqual(byId["no-missing-runtime-dependency-errors"].status, "failed", "missing dependency invariant fails");
+    assertEqual(byId["no-plugin-load-failures"].status, "failed", "plugin load invariant fails");
+    assertEqual(byId["doctor-output-captured"].status, "missing", "missing doctor output is incomplete proof");
+
+    return {
+      id: "upgrade-log-derived-invariants",
+      status: "PASS",
+      command: "evaluate upgrade log-derived invariants",
+      durationMs: 0
+    };
+  } catch (error) {
+    return {
+      id: "upgrade-log-derived-invariants",
+      status: "FAIL",
+      command: "evaluate upgrade log-derived invariants",
+      durationMs: 0,
+      message: error.message
+    };
+  }
 }
 
 function syntheticResourceSamples({ peakRssMb, maxCpuPercent, role }) {

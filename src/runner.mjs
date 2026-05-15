@@ -597,11 +597,91 @@ function attachEvidenceInvariants(record, scenario) {
   const invariants = [];
   if (scenario.surface === "upgrade-existing-user") {
     invariants.push(...buildUpgradeStateSnapshotInvariants(record));
+    invariants.push(...buildUpgradeLogDerivedInvariants(record));
   }
   if (invariants.length > 0) {
     record.evidenceInvariants = invariants;
   }
   return record;
+}
+
+export function buildUpgradeLogDerivedInvariants(record) {
+  if (record.status === "DRY-RUN" || record.status === "SKIPPED") {
+    return [];
+  }
+
+  const missingDependencyErrors = record.measurements?.missingDependencyErrors;
+  const pluginLoadFailures = record.measurements?.pluginLoadFailures;
+  const doctor = findCommandResult(record, (result) => result.command?.includes(" -- doctor"));
+
+  return [
+    zeroCountInvariant({
+      id: "no-missing-runtime-dependency-errors",
+      summary: "gateway logs and command output contain no missing runtime dependency errors",
+      actual: missingDependencyErrors,
+      metric: "missingDependencyErrors"
+    }),
+    zeroCountInvariant({
+      id: "no-plugin-load-failures",
+      summary: "gateway logs contain no plugin load failures",
+      actual: pluginLoadFailures,
+      metric: "pluginLoadFailures"
+    }),
+    {
+      id: "doctor-output-captured",
+      phaseId: doctor?.phaseId ?? "post-upgrade",
+      required: true,
+      status: doctorOutputStatus(doctor),
+      summary: "post-upgrade doctor output was captured for interpretation",
+      artifactPath: null,
+      reason: doctorOutputReason(doctor)
+    }
+  ];
+}
+
+function zeroCountInvariant({ id, summary, actual, metric }) {
+  if (!Number.isFinite(actual)) {
+    return {
+      id,
+      phaseId: "post-upgrade",
+      required: true,
+      status: "missing",
+      summary,
+      artifactPath: null,
+      reason: `${metric} measurement was not collected`
+    };
+  }
+  return {
+    id,
+    phaseId: "post-upgrade",
+    required: true,
+    status: actual === 0 ? "passed" : "failed",
+    summary,
+    artifactPath: null,
+    reason: actual === 0 ? null : `${metric} was ${actual}`
+  };
+}
+
+function doctorOutputStatus(result) {
+  if (!result) {
+    return "missing";
+  }
+  if (result.status !== 0) {
+    return "failed";
+  }
+  const output = `${result.stdout ?? ""}${result.stderr ?? ""}`.trim();
+  return output.length > 0 ? "passed" : "missing";
+}
+
+function doctorOutputReason(result) {
+  if (!result) {
+    return "doctor command result was not recorded";
+  }
+  if (result.status !== 0) {
+    return `doctor command exited ${result.status}`;
+  }
+  const output = `${result.stdout ?? ""}${result.stderr ?? ""}`.trim();
+  return output.length > 0 ? null : "doctor command produced no captured output";
 }
 
 export function buildUpgradeStateSnapshotInvariants(record) {
@@ -771,6 +851,20 @@ function findSnapshotResult(record, evidenceId) {
     for (const result of phase.results ?? []) {
       if (result.evidenceId === evidenceId) {
         return result;
+      }
+    }
+  }
+  return null;
+}
+
+function findCommandResult(record, predicate) {
+  for (const phase of record.phases ?? []) {
+    for (const result of phase.results ?? []) {
+      if (predicate(result)) {
+        return {
+          ...result,
+          phaseId: phase.id
+        };
       }
     }
   }
