@@ -76,9 +76,20 @@ import {
   checkRoleThresholds,
   checkTurnThreshold
 } from "./evaluation/violations.mjs";
+import { createSelfCheckProgress, renderSelfCheckReceipt } from "./reporting/render-selfcheck.mjs";
 
 export async function runSelfCheck(flags = {}) {
-  const checks = [];
+  const progress = createSelfCheckProgress({ flags });
+  const checks = new Proxy([], {
+    set(target, prop, value) {
+      target[prop] = value;
+      if (prop !== "length" && value && typeof value === "object" && typeof value.status === "string") {
+        try { progress.checkDone(value); } catch {}
+      }
+      return true;
+    },
+  });
+  progress.runStart();
   const tmp = await mkdtemp(join(tmpdir(), "kova-self-check-"));
 
   try {
@@ -574,10 +585,13 @@ export async function runSelfCheck(flags = {}) {
 
   if (flags.json) {
     console.log(JSON.stringify(result, null, 2));
-  } else {
+  } else if (flags.plain === true) {
     for (const check of result.checks) {
       console.log(`${check.status} ${check.id}${check.message ? `: ${check.message}` : ""}`);
     }
+  } else {
+    progress.runFinish({ ok, total: result.checks.length });
+    console.log(renderSelfCheckReceipt(result, flags));
   }
 
   if (!ok) {
