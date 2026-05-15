@@ -78,6 +78,7 @@ export async function executeScenario(scenario, context) {
 
   try {
     record.collectorArtifactDirs = await prepareCollectorArtifactDirs(artifactDir, context);
+    context.onPhase?.("target setup");
     const setupResults = await executeTargetSetup(context, envName, artifactDir);
     if (setupResults.length > 0) {
       record.phases.push({
@@ -105,6 +106,7 @@ export async function executeScenario(scenario, context) {
         authPolicy
       );
       if (authPreparePhase) {
+        context.onPhase?.("auth prepare");
         record.phases.push(authPreparePhase);
         if (authPreparePhase.results.some((result) => result.status !== 0)) {
           record.status = "BLOCKED";
@@ -114,6 +116,7 @@ export async function executeScenario(scenario, context) {
     }
 
     if (!scenarioFailed) {
+      context.onPhase?.("state prepare");
       const preparePhase = await executeStateLifecycleSteps(context, envName, scenario, "prepare", context.state?.prepare ?? [], artifactDir, null, authPolicy);
       if (preparePhase) {
         record.phases.push(preparePhase);
@@ -130,6 +133,7 @@ export async function executeScenario(scenario, context) {
           continue;
         }
 
+        context.onPhase?.(phase.title ?? phase.id);
         const commands = materializeScenarioPhaseCommands(phase, context, envName, artifactDir);
         const results = [];
         for (const [commandIndex, command] of commands.entries()) {
@@ -216,6 +220,7 @@ export async function executeScenario(scenario, context) {
 
     const shouldRetain = context.keepEnv || (context.retainOnFailure && record.status !== "PASS");
     if (!shouldRetain) {
+      context.onPhase?.("cleanup");
       const authCleanupPhase = await executeAuthPhase(
         buildAuthCleanupPhase(authPolicy, artifactDir),
         context,

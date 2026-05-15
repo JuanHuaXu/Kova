@@ -27,6 +27,8 @@ import { loadState } from "../registries/states.mjs";
 import { buildReportSummary, renderMarkdownReport, summarizeRecords } from "../reporting/report.mjs";
 import { buildDryRunRecord, createRunId, executeScenario } from "../runner.mjs";
 import { resolveTarget } from "../targets.mjs";
+import { createRunProgress } from "../reporting/render-run-progress.mjs";
+import { renderRunReceipt } from "../reporting/render-run-receipt.mjs";
 
 const reportSchemaVersion = "kova.report.v1";
 
@@ -84,6 +86,12 @@ export async function runScenarioCommand(flags) {
     auth
   };
   const records = [];
+  const progress = createRunProgress({ flags, mode: context.execute ? "execution" : "dry-run" });
+  progress.runStart({
+    scenarioCount: scenarios.length * repeat,
+    mode: context.execute ? "execution" : "dry-run",
+    target,
+  });
 
   for (const scenario of scenarios) {
     for (let index = 1; index <= repeat; index += 1) {
@@ -94,11 +102,14 @@ export async function runScenarioCommand(flags) {
           total: repeat
         }
       };
-      if (iterationContext.execute) {
-        records.push(await executeScenario(scenario, iterationContext));
-      } else {
-        records.push(buildDryRunRecord(scenario, iterationContext));
-      }
+      const iteration = { index, total: repeat };
+      progress.scenarioStart({ scenarioId: scenario.id, stateId: state.id, iteration });
+      iterationContext.onPhase = (title) => progress.phase({ title });
+      const record = iterationContext.execute
+        ? await executeScenario(scenario, iterationContext)
+        : buildDryRunRecord(scenario, iterationContext);
+      records.push(record);
+      progress.scenarioEnd({ scenarioId: scenario.id, stateId: state.id, iteration, status: record.status, skipReason: record.skipReason });
     }
   }
   const targetCleanup = await cleanupTargetRuntimeIfNeeded(targetPlan, records, {
@@ -160,6 +171,8 @@ export async function runScenarioCommand(flags) {
   await writeFile(jsonPath, `${JSON.stringify(report, null, 2)}\n`, "utf8");
   await writeFile(summaryPath, `${JSON.stringify(buildReportSummary(report), null, 2)}\n`, "utf8");
 
+  progress.runFinish({ total: report.summary?.total ?? records.length, statuses: report.summary?.statuses ?? {} });
+
   const mode = context.execute ? "execution" : "dry-run";
   if (flags.json) {
     console.log(JSON.stringify({
@@ -173,6 +186,11 @@ export async function runScenarioCommand(flags) {
       performance: summarizePerformanceReceipt(report.performance, report.baseline),
       summary: report.summary
     }, null, 2));
+    return;
+  }
+
+  if (!flags.plain) {
+    console.log(renderRunReceipt({ report, reportPath, jsonPath, summaryPath }, flags));
     return;
   }
 
