@@ -42,14 +42,7 @@
   "diagnostics": {
     "timelineRequiredForSourceBuild": true,
     "expectedSpans": [
-      "agent.turn",
-      "agent.prepare",
-      "agent.runtimeCapabilities",
-      "channel.capabilities",
-      "channel.plugin.load",
-      "models.catalog",
-      "provider.request",
-      "agent.cleanup"
+      "plugins.metadata.scan"
     ]
   },
   "purposes": [

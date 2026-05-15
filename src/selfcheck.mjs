@@ -48,6 +48,7 @@ import { captureProcessSnapshot, classifyRegistryRolesForProcess, classifySnapsh
 import { captureOpenClawStateSnapshot } from "./collectors/openclaw-state.mjs";
 import { buildReportSummary, renderMarkdownReport, renderPasteSummary, renderReportSummary, summarizeRecords } from "./reporting/report.mjs";
 import {
+  buildAgentCliLocalTurnEvidenceInvariants,
   buildGatewaySessionEvidenceInvariants,
   buildOfficialPluginInstallEvidenceInvariants,
   buildReleaseRuntimeStartupEvidenceInvariants,
@@ -402,8 +403,10 @@ export async function runSelfCheck(flags = {}) {
     checks.push(await gatewaySessionSurfaceContractCheck());
     checks.push(await releaseRuntimeStartupSurfaceContractCheck());
     checks.push(await officialPluginInstallSurfaceContractCheck());
+    checks.push(await agentCliLocalTurnSurfaceContractCheck());
     checks.push(releaseRuntimeStartupEvidenceInvariantCheck());
     checks.push(officialPluginInstallEvidenceInvariantCheck());
+    checks.push(agentCliLocalTurnEvidenceInvariantCheck());
     checks.push(await processSnapshotCheck(tmp));
     checks.push(roleThresholdEvaluationCheck());
     checks.push(thresholdPolicyCalibrationCheck());
@@ -3463,6 +3466,237 @@ function officialPluginInstallEvidenceInvariantCheck() {
       message: error.message
     };
   }
+}
+
+function agentCliLocalTurnEvidenceInvariantCheck() {
+  try {
+    const scenario = {
+      id: "agent-cold-warm-message",
+      surface: "agent-cli-local-turn",
+      agent: { expectedText: "KOVA_AGENT_OK" },
+      thresholds: {},
+      phases: [
+        { id: "provision", healthScope: "none" },
+        { id: "cold-agent-turn", healthScope: "post-ready" },
+        { id: "warm-agent-turn", healthScope: "post-ready" },
+        { id: "post-agent-health", healthScope: "post-ready" }
+      ]
+    };
+    const record = syntheticAgentCliLocalTurnRecord();
+    evaluateRecord(record, scenario, {
+      surface: {
+        thresholds: {},
+        diagnostics: { expectedSpans: ["plugins.metadata.scan"] }
+      },
+      targetPlan: { kind: "runtime" }
+    });
+    const invariants = buildAgentCliLocalTurnEvidenceInvariants(record, scenario);
+    assertEqual(invariants.length, 12, "agent CLI invariant count");
+    assertEqual(invariants.every((invariant) => invariant.status === "passed"), true, "complete agent CLI local turn evidence passes invariants");
+
+    const missingProviderRecord = syntheticAgentCliLocalTurnRecord();
+    missingProviderRecord.providerEvidence = { available: false, requestCount: 0, error: "provider request log not found" };
+    evaluateRecord(missingProviderRecord, scenario, {
+      surface: { thresholds: {}, diagnostics: { expectedSpans: [] } },
+      targetPlan: { kind: "runtime" }
+    });
+    const missingProviderInvariants = buildAgentCliLocalTurnEvidenceInvariants(missingProviderRecord, scenario);
+    const providerProof = missingProviderInvariants.find((invariant) => invariant.id === "agent-cli-provider-proof");
+    assertEqual(providerProof?.status, "missing", "missing provider proof is incomplete agent CLI evidence");
+
+    const nonLocalRecord = syntheticAgentCliLocalTurnRecord({
+      coldCommand: "ocm @kova -- agent --agent main --session-id kova-agent-cold-warm --message hi --json"
+    });
+    evaluateRecord(nonLocalRecord, scenario, {
+      surface: { thresholds: {}, diagnostics: { expectedSpans: [] } },
+      targetPlan: { kind: "runtime" }
+    });
+    const nonLocalInvariants = buildAgentCliLocalTurnEvidenceInvariants(nonLocalRecord, scenario);
+    const transportProof = nonLocalInvariants.find((invariant) => invariant.id === "agent-cli-local-transport-proof");
+    assertEqual(transportProof?.status, "failed", "non-local agent command fails local transport proof");
+
+    return {
+      id: "agent-cli-local-turn-evidence-invariants",
+      status: "PASS",
+      command: "evaluate agent CLI local turn evidence completeness invariants",
+      durationMs: 0
+    };
+  } catch (error) {
+    return {
+      id: "agent-cli-local-turn-evidence-invariants",
+      status: "FAIL",
+      command: "evaluate agent CLI local turn evidence completeness invariants",
+      durationMs: 0,
+      message: error.message
+    };
+  }
+}
+
+function syntheticAgentCliLocalTurnRecord({
+  coldCommand = "ocm @kova -- agent --local --agent main --session-id kova-agent-cold-warm --message hi --json",
+  warmCommand = "ocm @kova -- agent --local --agent main --session-id kova-agent-cold-warm --message hi --json"
+} = {}) {
+  return {
+    scenario: "agent-cold-warm-message",
+    surface: "agent-cli-local-turn",
+    status: "PASS",
+    auth: { mode: "mock", source: "mock", providerId: "openai" },
+    phases: [
+      {
+        id: "provision",
+        commands: ["ocm start kova --runtime stable --no-service --json"],
+        results: [{
+          command: "ocm start kova --runtime stable --no-service --json",
+          status: 0,
+          durationMs: 100,
+          stdout: "{\"gatewayPort\":43111,\"serviceRequested\":false}"
+        }],
+        metrics: { service: { gatewayState: "disabled", gatewayPort: 43111 } }
+      },
+      {
+        id: "cold-agent-turn",
+        commands: [coldCommand],
+        results: [{
+          command: coldCommand,
+          status: 0,
+          timedOut: false,
+          startedAt: "2026-05-15T10:00:01.000Z",
+          startedAtEpochMs: 1778839201000,
+          finishedAt: "2026-05-15T10:00:03.000Z",
+          finishedAtEpochMs: 1778839203000,
+          durationMs: 2000,
+          stdout: "{\"finalAssistantVisibleText\":\"KOVA_AGENT_OK\"}",
+          stderr: "",
+          resourceSamples: syntheticAgentCliResourceSamples("/tmp/kova/resources/cold-agent-turn-1.jsonl")
+        }],
+        metrics: {
+          logs: zeroLogMetrics(),
+          timeline: syntheticTimelineMetrics()
+        }
+      },
+      {
+        id: "warm-agent-turn",
+        commands: [warmCommand],
+        results: [{
+          command: warmCommand,
+          status: 0,
+          timedOut: false,
+          startedAt: "2026-05-15T10:00:10.000Z",
+          startedAtEpochMs: 1778839210000,
+          finishedAt: "2026-05-15T10:00:11.500Z",
+          finishedAtEpochMs: 1778839211500,
+          durationMs: 1500,
+          stdout: "{\"finalAssistantVisibleText\":\"KOVA_AGENT_OK\"}",
+          stderr: "",
+          resourceSamples: syntheticAgentCliResourceSamples("/tmp/kova/resources/warm-agent-turn-1.jsonl")
+        }],
+        metrics: {
+          logs: zeroLogMetrics(),
+          timeline: syntheticTimelineMetrics()
+        }
+      },
+      {
+        id: "post-agent-health",
+        commands: ["ocm @kova -- status"],
+        results: [{
+          command: "ocm @kova -- status",
+          status: 0,
+          durationMs: 100,
+          stdout: "OpenClaw env ok\n",
+          resourceSamples: syntheticAgentCliResourceSamples("/tmp/kova/resources/post-agent-health-1.jsonl")
+        }],
+        metrics: {
+          logs: {
+            ...zeroLogMetrics(),
+            artifacts: ["/tmp/kova/logs/gateway-tail.log"]
+          },
+          timeline: syntheticTimelineMetrics()
+        }
+      }
+    ],
+    providerEvidence: {
+      available: true,
+      requestCount: 2,
+      summaryPath: "/tmp/kova/provider/provider-evidence.json",
+      artifacts: ["/tmp/kova/mock-openai/requests.jsonl", "/tmp/kova/provider/provider-evidence.json"],
+      requests: [
+        {
+          requestId: "cold-provider",
+          receivedAt: "2026-05-15T10:00:02.000Z",
+          receivedAtEpochMs: 1778839202000,
+          respondedAt: "2026-05-15T10:00:02.050Z",
+          respondedAtEpochMs: 1778839202050,
+          firstByteLatencyMs: 5,
+          firstChunkLatencyMs: 5,
+          route: "/v1/responses",
+          model: "gpt-5.5",
+          status: 200,
+          statusClass: "2xx"
+        },
+        {
+          requestId: "warm-provider",
+          receivedAt: "2026-05-15T10:00:10.700Z",
+          receivedAtEpochMs: 1778839210700,
+          respondedAt: "2026-05-15T10:00:10.750Z",
+          respondedAtEpochMs: 1778839210750,
+          firstByteLatencyMs: 4,
+          firstChunkLatencyMs: 4,
+          route: "/v1/responses",
+          model: "gpt-5.5",
+          status: 200,
+          statusClass: "2xx"
+        }
+      ]
+    },
+    finalMetrics: {
+      service: { gatewayState: "disabled", gatewayPort: 43111 },
+      health: { ok: false, durationMs: null },
+      healthSummary: {
+        count: 0,
+        okCount: 0,
+        failureCount: 0,
+        minMs: null,
+        p50Ms: null,
+        p95Ms: null,
+        maxMs: null
+      },
+      logs: zeroLogMetrics(),
+      timeline: syntheticTimelineMetrics()
+    }
+  };
+}
+
+function syntheticAgentCliResourceSamples(artifactPath) {
+  return {
+    schemaVersion: "kova.resourceSamples.v1",
+    sampleCount: 1,
+    artifactPath,
+    peakTotalRssMb: 650,
+    maxTotalCpuPercent: 80,
+    peakCommandTreeRssMb: 650,
+    peakGatewayRssMb: 0,
+    byRole: {
+      "agent-cli": {
+        peakRssMb: 650,
+        maxCpuPercent: 80,
+        peakProcessCount: 1
+      },
+      "agent-process": {
+        peakRssMb: 650,
+        maxCpuPercent: 80,
+        peakProcessCount: 1
+      },
+      "command-tree": {
+        peakRssMb: 650,
+        maxCpuPercent: 80,
+        peakProcessCount: 1
+      }
+    },
+    topRolesByRss: [{ role: "agent-cli", peakRssMb: 650, maxCpuPercent: 80 }],
+    topRolesByCpu: [{ role: "agent-cli", peakRssMb: 650, maxCpuPercent: 80 }],
+    topByRss: [],
+    topByCpu: []
+  };
 }
 
 function syntheticOfficialPluginInstallRecord({ helperPayload = {}, includeInstallHelper = true } = {}) {
@@ -6609,6 +6843,41 @@ async function officialPluginInstallSurfaceContractCheck() {
       id: "official-plugin-install-surface-contract",
       status: "FAIL",
       command: "validate official plugin install surface diagnostics contract",
+      durationMs: 0,
+      message: error.message
+    };
+  }
+}
+
+async function agentCliLocalTurnSurfaceContractCheck() {
+  try {
+    const surface = JSON.parse(await readFile("surfaces/agent-cli-local-turn.json", "utf8"));
+    const expectedSpans = surface.diagnostics?.expectedSpans ?? [];
+    const staleSpans = [
+      "agent.turn",
+      "agent.prepare",
+      "agent.runtimeCapabilities",
+      "channel.capabilities",
+      "channel.plugin.load",
+      "models.catalog",
+      "provider.request",
+      "agent.cleanup"
+    ];
+    for (const span of staleSpans) {
+      assertEqual(expectedSpans.includes(span), false, `agent CLI surface must not require stale ${span} span`);
+    }
+    assertEqual(expectedSpans.includes("plugins.metadata.scan"), true, "agent CLI surface requires plugin metadata scan timeline span");
+    return {
+      id: "agent-cli-local-turn-surface-contract",
+      status: "PASS",
+      command: "validate agent CLI local turn surface diagnostics contract",
+      durationMs: 0
+    };
+  } catch (error) {
+    return {
+      id: "agent-cli-local-turn-surface-contract",
+      status: "FAIL",
+      command: "validate agent CLI local turn surface diagnostics contract",
       durationMs: 0,
       message: error.message
     };
