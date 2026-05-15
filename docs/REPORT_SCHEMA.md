@@ -136,6 +136,9 @@ known config, auth/model shape, plugin indexes, and plugin manifests with
 bounded reads, redacted secret-looking keys, byte counts, hashes, and truncation
 markers. They must not copy OpenClaw homes, workspaces, runtimes,
 `node_modules`, or package stores into Kova artifacts.
+Snapshots also expose compact semantic sections for runtime target context,
+service state, config keys/schema versions, auth provider and auth-method
+shape, model ids, workspace root fingerprints, and cleanup expectation.
 Scenarios can declare required snapshot obligations in
 `evidenceContract.snapshots`; executed snapshot phases appear as `snapshot`
 ledger entries and missing or unreadable required snapshots make the run
@@ -143,6 +146,13 @@ ledger entries and missing or unreadable required snapshots make the run
 Invariant checks appear as `invariant` ledger entries. A failed required
 invariant means Kova collected the proof and it showed bad OpenClaw behavior, so
 an otherwise passing record becomes `FAIL`.
+Cleanup evidence appears as `cleanup` ledger entries. Missing required cleanup
+proof makes an otherwise passing record `INCOMPLETE`; explicit `keep-env`
+retention is recorded as optional skipped cleanup evidence.
+Command results include `outputBudget` metadata with retained, omitted, limit,
+and truncation counts for stdout/stderr. Executed records include
+`evidenceArtifactBudget`; an over-budget retained evidence set appears as a
+required `artifact` ledger failure and makes the run `INCOMPLETE`.
 Summary JSON includes `proof`: record completeness counts, required obligation
 totals, category counts, and compact lists of missing or failed required
 obligations. Markdown reports render this as the Proof Completeness section
