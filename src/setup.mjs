@@ -10,6 +10,7 @@ import {
 import { platformInfo } from "./platform.mjs";
 import { artifactsDir, credentialsDir, liveEnvPath, providersPath, reportsDir } from "./paths.mjs";
 import { configureCredentialProvider, ensureCredentialStore } from "./auth.mjs";
+import { renderSetup } from "./reporting/render-setup.mjs";
 
 const requiredNodeMajor = 22;
 
@@ -56,7 +57,7 @@ export async function runSetup(flags = {}) {
 
   if (flags.json) {
     console.log(JSON.stringify(result, null, 2));
-  } else {
+  } else if (flags.plain === true) {
     for (const check of checks) {
       console.log(`${check.status} ${check.id}: ${check.message}`);
     }
@@ -65,6 +66,8 @@ export async function runSetup(flags = {}) {
     for (const command of result.nextCommands) {
       console.log(`  ${command}`);
     }
+  } else {
+    console.log(renderSetup(result, flags));
   }
 
   if (!ok) {
@@ -87,10 +90,29 @@ async function runAuthSetup(flags) {
     return;
   }
 
-  console.log(`PASS credentials-dir: ${credentialsDir}`);
-  console.log(`PASS providers: ${providersPath}`);
-  console.log(`PASS live-env: ${liveEnvPath}`);
-  console.log(`PASS provider ${response.auth.provider}: ${response.auth.method}`);
+  if (flags.plain === true) {
+    console.log(`PASS credentials-dir: ${credentialsDir}`);
+    console.log(`PASS providers: ${providersPath}`);
+    console.log(`PASS live-env: ${liveEnvPath}`);
+    console.log(`PASS provider ${response.auth.provider}: ${response.auth.method}`);
+    return;
+  }
+
+  const authResult = {
+    schemaVersion: "kova.setup.v1",
+    generatedAt: response.generatedAt,
+    mode: "auth",
+    ok: true,
+    auth: response.auth,
+    checks: [
+      { id: "credentials-dir", status: "PASS", message: credentialsDir },
+      { id: "providers",       status: "PASS", message: providersPath },
+      { id: "live-env",        status: "PASS", message: liveEnvPath },
+      { id: `provider:${response.auth.provider}`, status: "PASS", message: response.auth.method },
+    ],
+    nextCommands: ["kova self-check", "kova plan --json"],
+  };
+  console.log(renderSetup(authResult, flags));
 }
 
 async function setupAuth(flags) {
