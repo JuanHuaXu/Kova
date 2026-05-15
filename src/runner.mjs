@@ -6,6 +6,7 @@ import {
   scenarioAuthPolicy
 } from "./auth.mjs";
 import { runCleanupCommand } from "./cleanup.mjs";
+import { attachEvidenceLedger } from "./evidence-ledger.mjs";
 import { materializeCommands } from "./registries/scenarios.mjs";
 import { quoteShell } from "./commands.mjs";
 import { ocmEnvDestroy, ocmRuntimeBuildLocal } from "./ocm/commands.mjs";
@@ -31,7 +32,7 @@ export function buildDryRunRecord(scenario, context) {
   const artifactDir = join(artifactsDir, context.runId, envName);
   const authPolicy = scenarioAuthPolicy(context, scenario, context.state);
 
-  return {
+  return attachEvidenceLedger({
     scenario: scenario.id,
     surface: scenario.surface,
     title: scenario.title,
@@ -49,7 +50,7 @@ export function buildDryRunRecord(scenario, context) {
     profiling: profilingSummary(context),
     collectorArtifactDirs: collectorArtifactDirs(artifactDir),
     phases: buildPlannedPhases(scenario, context, envName, artifactDir, authPolicy)
-  };
+  });
 }
 
 export function buildSkippedRecord(scenario, context, reason) {
@@ -58,7 +59,7 @@ export function buildSkippedRecord(scenario, context, reason) {
   record.skipReason = reason;
   record.cleanup = "not-needed";
   record.phases = [];
-  return record;
+  return attachEvidenceLedger(record);
 }
 
 export async function executeScenario(scenario, context) {
@@ -243,6 +244,7 @@ export async function executeScenario(scenario, context) {
     }
 
     evaluateRecord(record, scenario, evaluatorContext(context, scenario));
+    attachEvidenceLedger(record);
   }
 
   return record;

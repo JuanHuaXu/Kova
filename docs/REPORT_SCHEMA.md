@@ -117,6 +117,8 @@ Important fields:
 - `thresholds`: scenario threshold contract
 - `collectorArtifactDirs`: stable per-record artifact directories used by
   collectors
+- `evidenceLedger`: compact machine-readable proof metadata for planned or
+  executed commands and later scenario proof obligations
 - `measurements`: evaluated measurements
 - `providerEvidence`: provider request timing, route/model/status summaries,
   optional token-like usage totals, and whether evidence came from mock-provider

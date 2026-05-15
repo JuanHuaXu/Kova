@@ -6679,6 +6679,12 @@ function validateReport(report) {
     assertEqual(report.performance?.repeat, 2, "report repeat count");
     assertEqual(report.performance?.groupCount, 1, "report performance group count");
     assertArrayNotEmpty(report.records, "report records");
+    const ledger = report.records[0]?.evidenceLedger;
+    assertEqual(ledger?.schemaVersion, "kova.evidenceLedger.v1", "evidence ledger schema");
+    assertEqual(ledger?.completeness, "not-evaluated", "evidence ledger initial completeness");
+    assertEqual((ledger?.summary?.required ?? 0) > 0, true, "evidence ledger required command entries");
+    assertEqual(ledger?.summary?.byStatus?.skipped > 0, true, "dry-run command ledger entries are skipped");
+    assertArrayNotEmpty(ledger?.entries, "evidence ledger entries");
     const dirs = report.records[0]?.collectorArtifactDirs;
     assertEqual(dirs?.schemaVersion, "kova.collectorArtifactDirs.v1", "collector artifact dirs schema");
     assertString(dirs?.resourceSamples, "collector resource samples dir");
