@@ -1,4 +1,5 @@
 import { platformCoverageKeys } from "../platform.mjs";
+import { RECORD_STATUS } from "../statuses.mjs";
 import { deriveCoveragePolicy } from "./coverage-policy.mjs";
 
 export function preflightGateRun({ entries, flags }) {
@@ -82,7 +83,7 @@ export function evaluateGate(report, profile, options = {}) {
   }
 
   for (const record of records) {
-    if (record.status === "PASS") {
+    if (record.status === RECORD_STATUS.PASS) {
       continue;
     }
     const severity = severityForRecord(record, policy);
@@ -97,10 +98,11 @@ export function evaluateGate(report, profile, options = {}) {
   const warningCards = cards.filter((card) => card.severity === "warning");
   const infoCards = cards.filter((card) => card.severity === "info");
   const blockedByHarness = blockingCards.some((card) =>
-    ["not-executed", "blocked", "skipped", "dry-run"].includes(card.kind)
+    ["not-executed", "blocked", "incomplete-proof", "skipped", "dry-run"].includes(card.kind)
   );
   const openClawBlockingFailures = blockingCards.filter((card) => card.kind === "openclaw-failure");
-  const incomplete = missingRequired.length > 0;
+  const incompleteProof = blockingCards.some((card) => card.kind === "incomplete-proof");
+  const incomplete = missingRequired.length > 0 || incompleteProof;
   const verdict = blockedByHarness
     ? "BLOCKED"
     : openClawBlockingFailures.length > 0
@@ -143,10 +145,10 @@ function outcomeForVerdict(verdict, purpose) {
     return verdict;
   }
   if (verdict === "SHIP") {
-    return "PASS";
+    return RECORD_STATUS.PASS;
   }
   if (verdict === "DO_NOT_SHIP") {
-    return "FAIL";
+    return RECORD_STATUS.FAIL;
   }
   return verdict;
 }
@@ -337,13 +339,16 @@ function summarizeBaselineComparison(comparison) {
 }
 
 function recordKind(record) {
-  if (record.status === "BLOCKED") {
+  if (record.status === RECORD_STATUS.BLOCKED) {
     return "blocked";
   }
-  if (record.status === "SKIPPED") {
+  if (record.status === RECORD_STATUS.INCOMPLETE) {
+    return "incomplete-proof";
+  }
+  if (record.status === RECORD_STATUS.SKIPPED) {
     return "skipped";
   }
-  if (record.status === "DRY-RUN") {
+  if (record.status === RECORD_STATUS.DRY_RUN) {
     return "dry-run";
   }
   return "openclaw-failure";
@@ -353,8 +358,11 @@ function impactForRecord(record, severity) {
   if (severity === "warning") {
     return "This does not block the release gate, but it should be reviewed before shipping.";
   }
-  if (record.status === "BLOCKED") {
+  if (record.status === RECORD_STATUS.BLOCKED) {
     return "The release gate could not complete enough evidence to approve the OpenClaw build.";
+  }
+  if (record.status === RECORD_STATUS.INCOMPLETE) {
+    return "Kova did not collect enough required proof to approve or reject the OpenClaw build.";
   }
   return "This is a blocking OpenClaw release risk until fixed or explicitly reclassified.";
 }

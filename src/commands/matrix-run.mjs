@@ -27,6 +27,7 @@ import {
 import { buildPerformanceSummary } from "../performance/stats.mjs";
 import { platformInfo } from "../platform.mjs";
 import { reportsDir } from "../paths.mjs";
+import { isNonPassingExecutionStatus } from "../statuses.mjs";
 import { loadRegistryContext } from "../registries/context.mjs";
 import { loadProfile } from "../registries/profiles.mjs";
 import { validateScenarioRun } from "../registries/scenarios.mjs";
@@ -302,7 +303,7 @@ async function runMatrixEntries(entries, runEntry, controls) {
     for (const entry of entries) {
       const entryRecords = await runEntry(entry);
       records.push(...entryRecords);
-      if (controls.failFast && entryRecords.some((record) => record.status === "FAIL" || record.status === "BLOCKED")) {
+      if (controls.failFast && entryRecords.some((record) => isNonPassingExecutionStatus(record.status))) {
         break;
       }
     }

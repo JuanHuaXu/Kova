@@ -107,7 +107,7 @@ Important fields:
 
 - `scenario`: stable scenario id
 - `title`: human title
-- `status`: `PASS`, `FAIL`, `BLOCKED`, `SKIPPED`, or `DRY-RUN`
+- `status`: `PASS`, `FAIL`, `INCOMPLETE`, `BLOCKED`, `SKIPPED`, or `DRY-RUN`
 - `target`: OpenClaw target selector
 - `from`: optional source selector
 - `state`: OpenClaw user-state fixture
@@ -713,7 +713,8 @@ Verdicts:
   incomplete, usually because this was a filtered gate slice or a platform/state
   requirement was missing.
 - `BLOCKED`: Kova cannot make a ship/no-ship decision, usually because the run
-  was not executed, skipped, or blocked by harness/provisioning behavior.
+  was not executed, skipped, missing required proof, or blocked by
+  harness/provisioning behavior.
 
 `outcome` is purpose-aware. For `release` gates it matches `verdict`. For
 non-release purposes, a passing complete gate reports `PASS`, a blocking

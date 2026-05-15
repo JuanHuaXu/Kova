@@ -2,6 +2,7 @@ import { summarizeAgentTurnBreakdownForMarkdown } from "../collectors/agent-turn
 import { agentCliPreProviderMarkdownRows } from "../collectors/agent-cli-attribution.mjs";
 import { gatewaySessionPreProviderMarkdownRows } from "../collectors/gateway-session-turn-attribution.mjs";
 import { healthTotalFailures } from "../health.mjs";
+import { RECORD_STATUS, findingSeverityForStatus } from "../statuses.mjs";
 
 const SUMMARY_SCHEMA = "kova.report.summary.v1";
 
@@ -313,7 +314,12 @@ export function buildReportSummary(report) {
   const records = report.records ?? [];
   const statuses = report.summary?.statuses ?? summarizeRecords(records).statuses;
   const findings = buildFindings(report);
-  const blockingFindingCount = findings.filter((finding) => finding.severity === "blocking" || finding.severity === "fail" || finding.severity === "blocked").length;
+  const blockingFindingCount = findings.filter((finding) =>
+    finding.severity === "blocking" ||
+    finding.severity === "fail" ||
+    finding.severity === "incomplete" ||
+    finding.severity === "blocked"
+  ).length;
   const warningFindingCount = findings.filter((finding) => finding.severity === "warning").length;
   const decision = buildDecision(report, statuses, findings, blockingFindingCount, warningFindingCount);
   const samples = records.map((record, index) => summarizeSample(record, index));
@@ -404,29 +410,39 @@ function buildDecision(report, statuses, findings, blockingFindingCount, warning
       warningFindingCount
     };
   }
-  if ((statuses.BLOCKED ?? 0) > 0) {
+  if ((statuses[RECORD_STATUS.BLOCKED] ?? 0) > 0) {
     const primary = findings.find((finding) => finding.severity === "blocked") ?? findings[0] ?? null;
     return {
-      verdict: "BLOCKED",
+      verdict: RECORD_STATUS.BLOCKED,
       ok: false,
       reason: primary?.summary ?? "one or more scenarios were blocked",
       blockingFindingCount,
       warningFindingCount
     };
   }
-  if ((statuses.FAIL ?? 0) > 0) {
+  if ((statuses[RECORD_STATUS.INCOMPLETE] ?? 0) > 0) {
+    const primary = findings.find((finding) => finding.severity === "incomplete") ?? findings[0] ?? null;
+    return {
+      verdict: RECORD_STATUS.INCOMPLETE,
+      ok: false,
+      reason: primary?.summary ?? "one or more scenarios were missing required proof",
+      blockingFindingCount,
+      warningFindingCount
+    };
+  }
+  if ((statuses[RECORD_STATUS.FAIL] ?? 0) > 0) {
     const primary = findings.find((finding) => finding.severity === "fail") ?? findings[0] ?? null;
     return {
-      verdict: "FAIL",
+      verdict: RECORD_STATUS.FAIL,
       ok: false,
       reason: primary?.summary ?? "one or more scenarios failed",
       blockingFindingCount,
       warningFindingCount
     };
   }
-  if ((statuses["DRY-RUN"] ?? 0) > 0 && Object.keys(statuses).length === 1) {
+  if ((statuses[RECORD_STATUS.DRY_RUN] ?? 0) > 0 && Object.keys(statuses).length === 1) {
     return {
-      verdict: "DRY-RUN",
+      verdict: RECORD_STATUS.DRY_RUN,
       ok: true,
       reason: "dry-run plan rendered without executing OpenClaw",
       blockingFindingCount,
@@ -434,7 +450,7 @@ function buildDecision(report, statuses, findings, blockingFindingCount, warning
     };
   }
   return {
-    verdict: "PASS",
+    verdict: RECORD_STATUS.PASS,
     ok: true,
     reason: "all executed scenarios passed",
     blockingFindingCount,
@@ -467,7 +483,7 @@ function buildFindings(report) {
     for (const violation of record.violations ?? []) {
       findings.push({
         id: violation.id ?? `${record.scenario}:${state ?? "none"}:${violation.metric ?? "violation"}:${index + 1}`,
-        severity: record.status === "BLOCKED" ? "blocked" : "fail",
+        severity: findingSeverityForStatus(record.status),
         kind: "violation",
         scenario: record.scenario ?? null,
         state,
@@ -500,10 +516,26 @@ function buildFindings(report) {
       });
     }
     const failed = firstFailedCommand(record);
-    if ((record.status === "FAIL" || record.status === "BLOCKED") && failed && (record.violations ?? []).length === 0) {
+    if (record.status === RECORD_STATUS.INCOMPLETE && (record.violations ?? []).length === 0) {
+      findings.push({
+        id: `${record.scenario}:${state ?? "none"}:incomplete:${index + 1}`,
+        severity: "incomplete",
+        kind: "evidence",
+        scenario: record.scenario ?? null,
+        state,
+        sampleIndex: record.repeat?.index ?? index + 1,
+        ownerArea: record.likelyOwner ?? null,
+        metric: null,
+        summary: record.incompleteReason ?? "required evidence was not collected",
+        expected: "all required proof obligations collected and evaluated",
+        actual: "incomplete proof",
+        evidence: (record.incompleteEvidence ?? []).slice(0, 3)
+      });
+    }
+    if ((record.status === RECORD_STATUS.FAIL || record.status === RECORD_STATUS.INCOMPLETE || record.status === RECORD_STATUS.BLOCKED) && failed && (record.violations ?? []).length === 0) {
       findings.push({
         id: `${record.scenario}:${state ?? "none"}:command:${index + 1}`,
-        severity: record.status === "BLOCKED" ? "blocked" : "fail",
+        severity: findingSeverityForStatus(record.status),
         kind: "command",
         scenario: record.scenario ?? null,
         state,
@@ -914,7 +946,11 @@ function buildFailureBrief(report) {
   const primaryCard = blockingCards.find((card) => card.kind === "openclaw-failure") ?? blockingCards[0] ?? null;
   const failedRecord = primaryCard
     ? records.find((record) => record.scenario === primaryCard.scenario && (record.state?.id ?? null) === (primaryCard.state ?? null))
-    : records.find((record) => record.status === "FAIL" || record.status === "BLOCKED");
+    : records.find((record) =>
+      record.status === RECORD_STATUS.FAIL ||
+      record.status === RECORD_STATUS.INCOMPLETE ||
+      record.status === RECORD_STATUS.BLOCKED
+    );
 
   if (!primaryCard && !failedRecord) {
     return null;
@@ -948,7 +984,11 @@ function buildRecommendedNextScenario(report) {
     null;
   const record = card
     ? records.find((item) => item.scenario === card.scenario && (item.state?.id ?? null) === (card.state ?? null))
-    : records.find((item) => item.status === "FAIL" || item.status === "BLOCKED");
+    : records.find((item) =>
+      item.status === RECORD_STATUS.FAIL ||
+      item.status === RECORD_STATUS.INCOMPLETE ||
+      item.status === RECORD_STATUS.BLOCKED
+    );
   const scenario = card?.scenario ?? record?.scenario;
   if (!scenario) {
     return null;
@@ -1218,7 +1258,7 @@ function healthSlowestText(measurements) {
 function buildFixerPrompt({ report, primaryBlocker, why, measurements, evidence, likelyOwner }) {
   const parts = [
     `Investigate OpenClaw release gate failure ${primaryBlocker}.`,
-    `Kova decision was ${report.gate?.verdict ?? "FAIL"} on ${report.platform?.os ?? "unknown"}-${report.platform?.arch ?? "unknown"}.`,
+    `Kova decision was ${report.gate?.verdict ?? RECORD_STATUS.FAIL} on ${report.platform?.os ?? "unknown"}-${report.platform?.arch ?? "unknown"}.`,
     `Primary evidence: ${why}.`
   ];
   if (evidence.length > 0) {

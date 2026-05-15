@@ -42,7 +42,7 @@ import {
   parseTimelineProviderRequestLog
 } from "./collectors/provider.mjs";
 import { captureProcessSnapshot, classifyRegistryRolesForProcess, classifySnapshotRolesForProcess, diffProcessSnapshots, summarizeResourceSamples } from "./collectors/resources.mjs";
-import { renderMarkdownReport, renderPasteSummary, renderReportSummary } from "./reporting/report.mjs";
+import { buildReportSummary, renderMarkdownReport, renderPasteSummary, renderReportSummary, summarizeRecords } from "./reporting/report.mjs";
 import { compareReports, renderCompareSummary } from "./reporting/compare.mjs";
 import {
   ocmAt,
@@ -117,6 +117,7 @@ export async function runSelfCheck(flags = {}) {
     checks.push(await commandTimeoutContractCheck());
     checks.push(ocmCommandBuildersCheck());
     checks.push(evaluationViolationHelpersCheck());
+    checks.push(statusFoundationCheck());
     checks.push(localBuildTargetSetupResourceExclusionCheck());
     checks.push(await jsonCommandCheck("plan-json", "node bin/kova.mjs plan --json", (data) => {
       assertEqual(data.schemaVersion, "kova.plan.v1", "plan schema");
@@ -720,6 +721,61 @@ function localBuildTargetSetupResourceExclusionCheck() {
       id: "local-build-target-setup-resource-exclusion",
       status: "FAIL",
       command: "evaluate local-build target setup resource exclusion",
+      durationMs: 0,
+      message: error.message
+    };
+  }
+}
+
+function statusFoundationCheck() {
+  try {
+    const record = {
+      scenario: "upgrade-existing-user",
+      surface: "upgrade-existing-user",
+      title: "Existing OpenClaw User Upgrade",
+      status: "INCOMPLETE",
+      state: { id: "old-release-user" },
+      likelyOwner: "Kova",
+      incompleteReason: "post-upgrade auth/model snapshot was not collected",
+      incompleteEvidence: ["post-auth-model-snapshot missing"],
+      phases: [],
+      measurements: {}
+    };
+    const report = {
+      schemaVersion: "kova.report.v1",
+      mode: "execution",
+      target: "runtime:stable",
+      records: [record],
+      summary: summarizeRecords([record])
+    };
+    assertEqual(report.summary.statuses.INCOMPLETE, 1, "summary counts incomplete records");
+
+    const summary = buildReportSummary(report);
+    assertEqual(summary.decision.verdict, "INCOMPLETE", "report summary incomplete verdict");
+    assertEqual(summary.decision.ok, false, "incomplete report summary is not ok");
+    assertEqual(summary.decision.blockingFindingCount, 1, "incomplete finding blocks summary");
+    assertEqual(summary.findings?.[0]?.severity, "incomplete", "incomplete finding severity");
+
+    const gate = evaluateGate(report, {
+      id: "release",
+      purpose: "release",
+      entries: [{ scenario: "upgrade-existing-user", state: "old-release-user" }]
+    });
+    assertEqual(gate.verdict, "BLOCKED", "incomplete record blocks release gate");
+    assertEqual(gate.ok, false, "incomplete release gate is not ok");
+    assertEqual(gate.complete, false, "incomplete release gate is incomplete");
+    assertEqual(gate.cards?.[0]?.kind, "incomplete-proof", "incomplete record gate card kind");
+    return {
+      id: "status-foundation",
+      status: "PASS",
+      command: "evaluate INCOMPLETE status handling",
+      durationMs: 0
+    };
+  } catch (error) {
+    return {
+      id: "status-foundation",
+      status: "FAIL",
+      command: "evaluate INCOMPLETE status handling",
       durationMs: 0,
       message: error.message
     };

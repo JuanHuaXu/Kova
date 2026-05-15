@@ -504,10 +504,11 @@ function statusRank(status) {
     PASS: 0,
     "DRY-RUN": 0,
     SKIPPED: 1,
-    FAIL: 2,
-    BLOCKED: 3
+    INCOMPLETE: 2,
+    FAIL: 3,
+    BLOCKED: 4
   };
-  return ranks[status] ?? 2;
+  return ranks[status] ?? 3;
 }
 
 function metricRegressions(baseline, current, thresholds) {

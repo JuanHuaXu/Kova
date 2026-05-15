@@ -214,7 +214,7 @@ Kova tests unless a human explicitly asks for that exact env to be changed.
 
 When reporting back to a human:
 
-- lead with `PASS`, `FAIL`, `BLOCKED`, or `SKIPPED`
+- lead with `PASS`, `FAIL`, `INCOMPLETE`, `BLOCKED`, or `SKIPPED`
 - include the scenario id and OpenClaw target
 - include the failing command only when there is a failure
 - include concise evidence from the JSON report
@@ -234,6 +234,8 @@ report when needed.
 
 - `PASS`: OpenClaw behavior met the scenario contract.
 - `FAIL`: OpenClaw ran but violated the scenario contract.
+- `INCOMPLETE`: Kova did not collect enough required proof to make a
+  pass/fail judgment.
 - `BLOCKED`: Kova, OCM, platform, or prerequisites prevented meaningful
   OpenClaw testing.
 - `SKIPPED`: scenario was intentionally not run.
