@@ -935,6 +935,7 @@ export function evaluateRecord(record, scenario, options = {}) {
     resourceTopByRss: resourceSummary.topByRss,
     resourceTopByCpu: resourceSummary.topByCpu,
     openclawTimelineAvailable: timelineSummary.available,
+    openclawTimelineArtifacts: timelineSummary.timelineArtifacts,
     openclawTimelineEventCount: timelineSummary.eventCount,
     openclawTimelineParseErrors: timelineSummary.parseErrorCount,
     openclawSlowestSpanName: timelineSummary.slowestSpanName,
