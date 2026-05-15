@@ -45,6 +45,7 @@ import {
 import { captureProcessSnapshot, classifyRegistryRolesForProcess, classifySnapshotRolesForProcess, diffProcessSnapshots, summarizeResourceSamples } from "./collectors/resources.mjs";
 import { captureOpenClawStateSnapshot } from "./collectors/openclaw-state.mjs";
 import { buildReportSummary, renderMarkdownReport, renderPasteSummary, renderReportSummary, summarizeRecords } from "./reporting/report.mjs";
+import { buildUpgradeStateSnapshotInvariants } from "./runner.mjs";
 import { compareReports, renderCompareSummary } from "./reporting/compare.mjs";
 import {
   ocmAt,
@@ -122,6 +123,7 @@ export async function runSelfCheck(flags = {}) {
     checks.push(statusFoundationCheck());
     checks.push(evidenceLedgerGatingCheck());
     checks.push(await openClawStateSnapshotCheck(tmp));
+    checks.push(upgradeStateSnapshotInvariantsCheck());
     checks.push(localBuildTargetSetupResourceExclusionCheck());
     checks.push(await jsonCommandCheck("plan-json", "node bin/kova.mjs plan --json", (data) => {
       assertEqual(data.schemaVersion, "kova.plan.v1", "plan schema");
@@ -988,6 +990,91 @@ async function openClawStateSnapshotCheck(tmp) {
       message: error.message
     };
   }
+}
+
+function upgradeStateSnapshotInvariantsCheck() {
+  try {
+    const baseSnapshot = {
+      runtime: { targetKind: "local-build", targetValueHash: "runtime-hash" },
+      auth: { providerIds: ["openai"], authMethodShapes: ["env-var"] },
+      models: { providerIds: ["openai"], modelIds: ["gpt-5.5"] },
+      workspace: { rootHashes: ["workspace-hash"] },
+      installedPluginIds: ["browser", "memory-core"],
+      pluginInstallIndexCount: 1,
+      pluginDirCount: 2
+    };
+    const record = upgradeSnapshotRecord({
+      pre: baseSnapshot,
+      post: {
+        ...baseSnapshot,
+        pluginDirCount: 3
+      }
+    });
+    const passing = buildUpgradeStateSnapshotInvariants(record);
+    assertEqual(passing.every((invariant) => invariant.status === "passed"), true, "preserved upgrade state invariants pass");
+
+    const failingRecord = upgradeSnapshotRecord({
+      pre: baseSnapshot,
+      post: {
+        ...baseSnapshot,
+        auth: { providerIds: [], authMethodShapes: [] },
+        models: { providerIds: [], modelIds: [] },
+        workspace: { rootHashes: [] },
+        installedPluginIds: ["browser"],
+        pluginInstallIndexCount: 0,
+        pluginDirCount: 1
+      }
+    });
+    const failing = buildUpgradeStateSnapshotInvariants(failingRecord);
+    const failedIds = failing.filter((invariant) => invariant.status === "failed").map((invariant) => invariant.id);
+    for (const id of [
+      "plugin-install-index-preserved",
+      "plugin-directory-count-not-decreased",
+      "provider-ids-preserved",
+      "model-ids-preserved",
+      "auth-method-shape-preserved",
+      "installed-plugin-ids-preserved",
+      "workspace-roots-preserved"
+    ]) {
+      assertEqual(failedIds.includes(id), true, `upgrade invariant ${id} fails on state loss`);
+    }
+
+    return {
+      id: "upgrade-state-snapshot-invariants",
+      status: "PASS",
+      command: "evaluate upgrade state snapshot invariants",
+      durationMs: 0
+    };
+  } catch (error) {
+    return {
+      id: "upgrade-state-snapshot-invariants",
+      status: "FAIL",
+      command: "evaluate upgrade state snapshot invariants",
+      durationMs: 0,
+      message: error.message
+    };
+  }
+}
+
+function upgradeSnapshotRecord({ pre, post }) {
+  return {
+    status: "PASS",
+    phases: [{
+      id: "evidence-source-runtime-snapshots",
+      results: [{
+        evidenceId: "snapshot:pre-upgrade-state",
+        evidenceArtifactPath: "/tmp/pre.json",
+        snapshot: pre
+      }]
+    }, {
+      id: "evidence-post-upgrade-snapshots",
+      results: [{
+        evidenceId: "snapshot:post-upgrade-state",
+        evidenceArtifactPath: "/tmp/post.json",
+        snapshot: post
+      }]
+    }]
+  };
 }
 
 function syntheticResourceSamples({ peakRssMb, maxCpuPercent, role }) {

@@ -596,7 +596,7 @@ function compactOpenClawStateSnapshot(stdout, artifactPath) {
 function attachEvidenceInvariants(record, scenario) {
   const invariants = [];
   if (scenario.surface === "upgrade-existing-user") {
-    invariants.push(...upgradeStateSnapshotInvariants(record));
+    invariants.push(...buildUpgradeStateSnapshotInvariants(record));
   }
   if (invariants.length > 0) {
     record.evidenceInvariants = invariants;
@@ -604,7 +604,7 @@ function attachEvidenceInvariants(record, scenario) {
   return record;
 }
 
-function upgradeStateSnapshotInvariants(record) {
+export function buildUpgradeStateSnapshotInvariants(record) {
   if (record.status === "DRY-RUN" || record.status === "SKIPPED") {
     return [];
   }
@@ -643,8 +643,112 @@ function upgradeStateSnapshotInvariants(record) {
     after: post.snapshot.pluginDirCount,
     artifactPath: post.evidenceArtifactPath
   }));
+  invariants.push(compareSnapshotSetInvariant({
+    id: "provider-ids-preserved",
+    phaseId: "evidence-post-upgrade-snapshots",
+    summary: "provider ids present before upgrade remain present after upgrade",
+    before: unionStrings(pre.snapshot.auth?.providerIds, pre.snapshot.models?.providerIds),
+    after: unionStrings(post.snapshot.auth?.providerIds, post.snapshot.models?.providerIds),
+    artifactPath: post.evidenceArtifactPath
+  }));
+  invariants.push(compareSnapshotSetInvariant({
+    id: "model-ids-preserved",
+    phaseId: "evidence-post-upgrade-snapshots",
+    summary: "model ids present before upgrade remain present after upgrade",
+    before: pre.snapshot.models?.modelIds,
+    after: post.snapshot.models?.modelIds,
+    artifactPath: post.evidenceArtifactPath
+  }));
+  invariants.push(compareSnapshotSetInvariant({
+    id: "auth-method-shape-preserved",
+    phaseId: "evidence-post-upgrade-snapshots",
+    summary: "auth method shape present before upgrade remains present after upgrade",
+    before: pre.snapshot.auth?.authMethodShapes,
+    after: post.snapshot.auth?.authMethodShapes,
+    artifactPath: post.evidenceArtifactPath
+  }));
+  invariants.push(compareSnapshotSetInvariant({
+    id: "installed-plugin-ids-preserved",
+    phaseId: "evidence-post-upgrade-snapshots",
+    summary: "installed plugin ids present before upgrade remain present after upgrade",
+    before: pre.snapshot.installedPluginIds,
+    after: post.snapshot.installedPluginIds,
+    artifactPath: post.evidenceArtifactPath
+  }));
+  invariants.push(compareSnapshotSetInvariant({
+    id: "workspace-roots-preserved",
+    phaseId: "evidence-post-upgrade-snapshots",
+    summary: "workspace root fingerprints present before upgrade remain present after upgrade",
+    before: pre.snapshot.workspace?.rootHashes,
+    after: post.snapshot.workspace?.rootHashes,
+    artifactPath: post.evidenceArtifactPath
+  }));
+  invariants.push(compareSnapshotEqualityInvariant({
+    id: "runtime-target-kind-stable",
+    phaseId: "evidence-post-upgrade-snapshots",
+    summary: "runtime target kind remains stable across upgrade",
+    before: pre.snapshot.runtime?.targetKind,
+    after: post.snapshot.runtime?.targetKind,
+    artifactPath: post.evidenceArtifactPath
+  }));
+  invariants.push(compareSnapshotEqualityInvariant({
+    id: "local-build-target-hash-stable",
+    phaseId: "evidence-post-upgrade-snapshots",
+    summary: "local-build target path fingerprint remains stable across upgrade",
+    before: pre.snapshot.runtime?.targetValueHash,
+    after: post.snapshot.runtime?.targetValueHash,
+    artifactPath: post.evidenceArtifactPath,
+    optionalWhenMissing: true
+  }));
 
   return invariants;
+}
+
+function compareSnapshotSetInvariant({ id, phaseId, summary, before, after, artifactPath }) {
+  const beforeValues = sortedUnique(before ?? []);
+  const afterValues = new Set(sortedUnique(after ?? []));
+  const missing = beforeValues.filter((value) => !afterValues.has(value));
+  return {
+    id,
+    phaseId,
+    required: true,
+    status: missing.length === 0 ? "passed" : "failed",
+    summary,
+    artifactPath,
+    reason: missing.length === 0 ? null : `missing after upgrade: ${missing.slice(0, 5).join(", ")}`
+  };
+}
+
+function compareSnapshotEqualityInvariant({ id, phaseId, summary, before, after, artifactPath, optionalWhenMissing = false }) {
+  if (optionalWhenMissing && (before === null || before === undefined) && (after === null || after === undefined)) {
+    return {
+      id,
+      phaseId,
+      required: true,
+      status: "passed",
+      summary,
+      artifactPath,
+      reason: null
+    };
+  }
+  const status = before === after ? "passed" : "failed";
+  return {
+    id,
+    phaseId,
+    required: true,
+    status,
+    summary,
+    artifactPath,
+    reason: status === "passed" ? null : `changed from ${before ?? "missing"} to ${after ?? "missing"}`
+  };
+}
+
+function sortedUnique(values) {
+  return [...new Set((values ?? []).filter((value) => typeof value === "string" && value.length > 0))].sort();
+}
+
+function unionStrings(...groups) {
+  return sortedUnique(groups.flatMap((group) => group ?? []));
 }
 
 function compareSnapshotCountInvariant({ id, phaseId, summary, before, after, artifactPath }) {
