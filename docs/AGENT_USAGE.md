@@ -46,6 +46,8 @@ product script, plugin, or extension surfaces. Package-script discovery defaults
 to `--script-scope product` so internal repo maintenance scripts do not drown
 out OpenClaw capability coverage. Treat unmodeled inventory entries as planning
 warnings until they are intentionally promoted to gate policy.
+Omit `--json` for the human dashboard view, and use `--plain` only for the
+legacy compact text output.
 
 3. Dry-run the intended scenario:
 
@@ -132,6 +134,9 @@ node bin/kova.mjs report paste reports/<run>.json
 node bin/kova.mjs report compare reports/<baseline>.json reports/<current>.json --json
 node bin/kova.mjs report bundle reports/<run>.json --json
 ```
+
+Omit `--json` for dashboard output. Use `--plain` when a downstream tool still
+expects the older compact text.
 
 ## Target Selection
 

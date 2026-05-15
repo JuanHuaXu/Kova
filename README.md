@@ -209,6 +209,8 @@ node bin/kova.mjs report bundle reports/<run>.json
 - JSON is for agents and CI.
 - Bundles are for handoff.
 - Paste summaries are for fixer prompts.
+- Console report commands render dashboards by default; add `--plain` when you
+  need the legacy compact text.
 
 ## Safety
 
@@ -239,6 +241,9 @@ node bin/kova.mjs inventory plan --openclaw-bin openclaw --openclaw-repo /path/t
 node bin/kova.mjs matrix plan --profile smoke --target runtime:stable --json
 node bin/kova.mjs matrix run --profile smoke --target runtime:stable --execute --json
 ```
+
+For a human console view, omit `--json`. Use `--plain` only when a script or
+transcript needs the older compact text output.
 
 `inventory plan` is planner-only. It compares discovered OpenClaw CLI commands,
 product-relevant package scripts, and manifests with Kova surfaces and reports

@@ -38,15 +38,15 @@ Usage:
   kova setup [--ci|--non-interactive] [--auth <mock|api-key|env-only|external-cli|oauth|skip>] [--provider <id>] [--env-var <name>] [--value <secret>] [--fallback-policy <mock|external-cli|none>] [--json]
   kova setup auth [--provider <id>] [--method <mock|api-key|env-only|external-cli|oauth|skip>] [--env-var <name>] [--value <secret>] [--fallback-policy <mock|external-cli|none>] [--json]
   kova self-check [--json]
-  kova plan [--scenario <id>] [--json]
-  kova inventory plan [--openclaw-bin <path>] [--openclaw-repo <path>] [--subcommands <a,b>] [--require-modeled <capability[,capability]>] [--script-scope <product|all|none>] [--max-subcommands <n>] [--max-warnings <n>] [--timeout-ms <n>] [--json]
+  kova plan [--scenario <id>] [--json|--plain]
+  kova inventory plan [--openclaw-bin <path>] [--openclaw-repo <path>] [--subcommands <a,b>] [--require-modeled <capability[,capability]>] [--script-scope <product|all|none>] [--max-subcommands <n>] [--max-warnings <n>] [--timeout-ms <n>] [--json|--plain]
   kova run --target <selector> [--from <selector>] [--source-env <env>] [--scenario <id>] [--state <id>] [--auth <mock|live|skip>] [--repeat <n>] [--baseline [path]] [--save-baseline [path] --reviewed-good] [--regression-thresholds <json>] [--report-dir <path>] [--health-samples <n>] [--readiness-interval-ms <n>] [--resource-sample-interval-ms <n>] [--deep-profile] [--node-profile] [--heap-snapshot] [--profile-on-failure] [--execute] [--keep-env] [--retain-on-failure] [--json]
-  kova matrix plan --profile <id> --target <selector> [--from <selector>] [--include <filter>] [--exclude <filter>] [--parallel <n>] [--json]
+  kova matrix plan --profile <id> --target <selector> [--from <selector>] [--include <filter>] [--exclude <filter>] [--parallel <n>] [--json|--plain]
   kova matrix run --profile <id> --target <selector> [--from <selector>] [--source-env <env>] [--include <filter>] [--exclude <filter>] [--auth <mock|live|skip>] [--parallel <n>] [--repeat <n>] [--baseline [path]] [--save-baseline [path] --reviewed-good] [--regression-thresholds <json>] [--fail-fast] [--gate] [--report-dir <path>] [--health-samples <n>] [--readiness-interval-ms <n>] [--resource-sample-interval-ms <n>] [--deep-profile] [--node-profile] [--heap-snapshot] [--profile-on-failure] [--execute] [--allow-exhaustive] [--keep-env] [--retain-on-failure] [--json]
-  kova report summarize <report.json> [--json]
+  kova report summarize <report.json> [--json|--plain]
   kova report paste <report.json>
-  kova report compare <baseline.json> <current.json> [--thresholds <json>] [--fixer] [--json]
-  kova report bundle <report.json> [--output-dir <path>] [--json]
+  kova report compare <baseline.json> <current.json> [--thresholds <json>] [--fixer] [--json|--plain]
+  kova report bundle <report.json> [--output-dir <path>] [--json|--plain]
   kova cleanup envs [--execute] [--json]
   kova cleanup artifacts [--older-than-days <n>] [--execute] [--json]
 
@@ -67,6 +67,7 @@ Notes:
   inventory package-script discovery defaults to --script-scope product; use all or none to widen or disable it.
   Executed exhaustive matrix runs require --allow-exhaustive.
   cleanup artifacts is dry-run by default and only targets Kova-owned run artifact dirs.
+  Human-facing plan and report commands render dashboards by default; use --plain for the legacy compact text.
   --repeat records independent samples and computes aggregate performance stats.
   --auth defaults to mock so every disposable env has deliberate model auth unless a scenario opts out.
   setup provider/auth choices accept either numbers from the prompt or names such as openai, anthropic, env-only, api-key.
