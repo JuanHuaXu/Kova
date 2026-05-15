@@ -5,6 +5,8 @@ import { bundleReport } from "../reporting/artifacts.mjs";
 import { compareReports, renderCompareFixerSummary, renderCompareSummary } from "../reporting/compare.mjs";
 import { buildReportSummary, renderPasteSummary, renderReportSummary } from "../reporting/report.mjs";
 import { renderAssessment } from "../reporting/render-assessment.mjs";
+import { renderCompareAssessment } from "../reporting/render-compare.mjs";
+import { renderBundleReceipt } from "../reporting/render-bundle.mjs";
 
 const REPORT_SUBCOMMANDS = new Set(["summarize", "paste", "compare", "bundle"]);
 
@@ -29,12 +31,18 @@ export async function runReportCommand(flags) {
       console.log(JSON.stringify(buildReportSummary(report), null, 2));
       return;
     }
-
-    console.log(renderReportSummary(report));
+    if (flags.plain) {
+      console.log(renderReportSummary(report));
+      return;
+    }
+    console.log(renderAssessment(report, flags));
     return;
   }
 
   if (subcommand === "paste") {
+    // Paste output stays plain text by design - it's meant to be copy-pasted
+    // into chat tools, bug reports, or fixer prompts. Adding ANSI escapes
+    // would defeat that purpose.
     const report = await readReport(required(firstPath, "report path"));
     console.log(renderPasteSummary(report));
     return;
@@ -55,8 +63,12 @@ export async function runReportCommand(flags) {
       return;
     }
 
-    console.log(`Bundle: ${relative(process.cwd(), receipt.outputPath)}`);
-    console.log(`SHA256: ${relative(process.cwd(), receipt.checksumPath)}`);
+    if (flags.plain) {
+      console.log(`Bundle: ${relative(process.cwd(), receipt.outputPath)}`);
+      console.log(`SHA256: ${relative(process.cwd(), receipt.checksumPath)}`);
+      return;
+    }
+    console.log(renderBundleReceipt(receipt, flags));
     return;
   }
 
@@ -74,7 +86,11 @@ async function compareReportsCommand(baselinePath, currentPath, flags) {
     return;
   }
 
-  console.log(flags.fixer ? renderCompareFixerSummary(comparison) : renderCompareSummary(comparison));
+  if (flags.plain || flags.fixer) {
+    console.log(flags.fixer ? renderCompareFixerSummary(comparison) : renderCompareSummary(comparison));
+  } else {
+    console.log(renderCompareAssessment(comparison, flags));
+  }
   if (!comparison.ok) {
     throw new Error("comparison found regressions");
   }

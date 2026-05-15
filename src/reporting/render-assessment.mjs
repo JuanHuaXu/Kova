@@ -6,7 +6,7 @@ import {
   makeUi, heavyBand, ruleSection, card, sideBySide,
   badge, gauge, statusGlyph, renderTable,
   formatPercent, computeDelta, classifyDelta,
-  visualWidth, repeat,
+  visualWidth, repeat, wrap,
 } from "../ui/index.mjs";
 import { buildReportSummary } from "./report.mjs";
 
@@ -94,14 +94,26 @@ function formatTimestamp(iso) {
 }
 
 function renderKpiStrip(summary, ui) {
-  const { c } = ui;
-  const cardWidth = Math.max(28, Math.floor((ui.width - 4) / 3));
+  const stack = ui.width < TARGET_WIDTH_FOR_DASHBOARD;
+  // When stacking, each card uses the full terminal width.
+  // Side-by-side splits the row into 3 columns with a 2-col gap between each.
+  const cardWidth = stack
+    ? Math.max(28, ui.width)
+    : Math.max(28, Math.floor((ui.width - 4) / 3));
 
   const proof = buildProofKpi(summary, ui, cardWidth);
   const health = buildHealthKpi(summary, ui, cardWidth);
   const perf = buildPerformanceKpi(summary, ui, cardWidth);
 
   return sideBySide([proof, health, perf], { width: ui.width, gap: 2, minWidth: TARGET_WIDTH_FOR_DASHBOARD });
+}
+
+// Compute a gauge width that fits inside the card alongside `label`.
+// Card inner content area is cardWidth - 4 (borders + " " padding each side).
+function gaugeWidthFor(cardWidth, label) {
+  const inner = Math.max(0, cardWidth - 4);
+  const labelLen = visualWidth(label);
+  return Math.max(4, Math.min(20, inner - labelLen - 1));
 }
 
 function buildProofKpi(summary, ui, width) {
@@ -113,8 +125,10 @@ function buildProofKpi(summary, ui, width) {
   const pct = total > 0 ? Math.round((satisfied / total) * 100) : null;
   const barColor = pct == null ? c.dim : pct >= 80 ? c.ok : pct >= 50 ? c.warn : c.err;
 
+  const label = total > 0 ? `${pct}%` : "";
+  const barW = gaugeWidthFor(width, label);
   const line1 = total > 0
-    ? `${barColor(gauge(satisfied, total, 20, ui))} ${c.bold(pct + "%")}`
+    ? `${barColor(gauge(satisfied, total, barW, ui))} ${c.bold(label)}`
     : c.dim("no required proof tracked");
   const line2 = total > 0
     ? c.dim(`${satisfied} of ${total} requirements`)
@@ -127,14 +141,19 @@ function buildHealthKpi(summary, ui, width) {
   const { c, g } = ui;
   const blocking = summary.decision?.blockingFindingCount ?? 0;
   const warning = summary.decision?.warningFindingCount ?? 0;
-  let state, line2;
-  if (blocking > 0) { state = c.err("unhealthy"); line2 = c.dim(`${blocking} blocking ${g.sep} ${warning} warning`); }
-  else if (warning > 0) { state = c.warn("watch"); line2 = c.dim(`${warning} warning`); }
-  else { state = c.ok("stable"); line2 = c.dim("no blocking findings"); }
+  const label = stateLabel(blocking, warning);
+  const line2Text = blocking > 0
+    ? `${blocking} blocking ${g.sep} ${warning} warning`
+    : warning > 0
+      ? `${warning} warning`
+      : "no blocking findings";
 
+  const total = 20;
   const filled = blocking > 0 ? 6 : warning > 0 ? 14 : 20;
   const barColor = blocking > 0 ? c.err : warning > 0 ? c.warn : c.ok;
-  const line1 = `${barColor(gauge(filled, 20, 20, ui))} ${c.bold(stateLabel(blocking, warning))}`;
+  const barW = gaugeWidthFor(width, label);
+  const line1 = `${barColor(gauge(filled, total, barW, ui))} ${c.bold(label)}`;
+  const line2 = c.dim(line2Text);
 
   return card({ title: "Health", width, lines: [line1, line2], ui });
 }
@@ -161,7 +180,8 @@ function buildPerformanceKpi(summary, ui, width) {
   else if (groups > 0) { state = "on target"; filled = 20; barColor = c.ok; }
   else { state = "no samples"; filled = 0; barColor = c.dim; }
 
-  const line1 = `${barColor(gauge(filled, 20, 20, ui))} ${c.bold(state)}`;
+  const barW = gaugeWidthFor(width, state);
+  const line1 = `${barColor(gauge(filled, 20, barW, ui))} ${c.bold(state)}`;
   const line2 = c.dim(`${groups} group${groups === 1 ? "" : "s"} ${ui.g.sep} ${summary.coverage?.recordCount ?? 0} record${(summary.coverage?.recordCount ?? 0) === 1 ? "" : "s"}`);
 
   return card({ title: "Performance", width, lines: [line1, line2], ui });
@@ -182,12 +202,14 @@ function renderFindings(summary, ui) {
     const summaryText = String(f.summary ?? "").trim();
     const evidence = (f.evidence ?? []).slice(0, 2).join("; ");
     const owner = f.ownerArea ? c.dim(` ${g.sep} ${f.ownerArea}`) : "";
-    const evidenceText = evidence ? "  " + c.dim(evidence) : "";
 
     lines.push(`  ${glyph} ${c.bold(truncatePlain(summaryText, ui.width - 20))}${owner}`);
-    if (scope || evidenceText) {
-      const meta = [scope ? c.dim(scope) : null, evidenceText ? evidenceText.trim() : null].filter(Boolean).join("  ");
-      lines.push(`    ${meta}`);
+    if (scope || evidence) {
+      const parts = [scope, evidence].filter(Boolean).join("  ");
+      const indentW = 4;
+      const avail = Math.max(20, ui.width - indentW);
+      const wrapped = wrap(parts, avail);
+      for (const w of wrapped) lines.push(repeat(" ", indentW) + c.dim(w));
     }
   }
 
@@ -282,8 +304,30 @@ function renderRecommendedNext(summary, ui) {
   const rec = summary.recommendedNextScenario;
   if (!rec) return null;
   const lines = [ruleSection("recommended next", ui.width, ui)];
-  lines.push(`  ${c.head(g.play)} ${c.bold(rec.scenario ?? "next scenario")}${rec.reason ? c.dim(`  ${g.sep} ` + rec.reason) : ""}`);
-  if (rec.command) lines.push(`  ${c.dim("$")} ${c.met(rec.command)}`);
+
+  const head = `  ${c.head(g.play)} ${c.bold(rec.scenario ?? "next scenario")}`;
+  if (rec.reason) {
+    const reasonText = `${g.sep} ${rec.reason}`;
+    const avail = Math.max(20, ui.width - visualWidth(head) - 3);
+    const wrapped = wrap(reasonText, avail);
+    lines.push(head + " " + c.dim(wrapped[0] ?? ""));
+    for (const cont of wrapped.slice(1)) {
+      lines.push(repeat(" ", visualWidth(head) + 1) + c.dim(cont));
+    }
+  } else {
+    lines.push(head);
+  }
+
+  if (rec.command) {
+    const prefix = `  ${c.dim("$")} `;
+    const indentWidth = visualWidth(prefix);
+    const avail = Math.max(20, ui.width - indentWidth);
+    const wrapped = wrap(rec.command, avail);
+    lines.push(prefix + c.met(wrapped[0] ?? ""));
+    for (const cont of wrapped.slice(1)) {
+      lines.push(repeat(" ", indentWidth) + c.met(cont));
+    }
+  }
   return lines.join("\n");
 }
 
