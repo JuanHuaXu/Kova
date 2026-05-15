@@ -884,6 +884,33 @@ export function buildUpgradeStateSnapshotInvariants(record) {
     artifactPath: post.evidenceArtifactPath,
     optionalWhenMissing: true
   }));
+  invariants.push(compareSnapshotEqualityInvariant({
+    id: "service-desired-state-preserved",
+    phaseId: "evidence-post-upgrade-snapshots",
+    summary: "service desired state remains stable across upgrade",
+    before: pre.snapshot.service?.desired,
+    after: post.snapshot.service?.desired,
+    artifactPath: post.evidenceArtifactPath,
+    optionalWhenMissing: true
+  }));
+  invariants.push(compareSnapshotEqualityInvariant({
+    id: "service-running-state-preserved",
+    phaseId: "evidence-post-upgrade-snapshots",
+    summary: "service running state remains stable across upgrade while pid and restart metadata may change",
+    before: pre.snapshot.service?.state,
+    after: post.snapshot.service?.state,
+    artifactPath: post.evidenceArtifactPath,
+    optionalWhenMissing: true
+  }));
+  invariants.push(compareSnapshotEqualityInvariant({
+    id: "service-readiness-preserved",
+    phaseId: "evidence-post-upgrade-snapshots",
+    summary: "service readiness remains stable across upgrade while pid and restart metadata may change",
+    before: pre.snapshot.service?.readiness,
+    after: post.snapshot.service?.readiness,
+    artifactPath: post.evidenceArtifactPath,
+    optionalWhenMissing: true
+  }));
 
   return invariants;
 }

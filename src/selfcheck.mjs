@@ -1173,6 +1173,7 @@ function upgradeStateSnapshotInvariantsCheck() {
   try {
     const baseSnapshot = {
       runtime: { targetKind: "local-build", targetValueHash: "runtime-hash" },
+      service: { desired: "running", state: "running", readiness: "ready", pid: 100, restartCount: 1 },
       auth: { providerIds: ["openai"], authMethodShapes: ["env-var"] },
       models: { providerIds: ["openai"], modelIds: ["gpt-5.5"] },
       workspace: { rootHashes: ["workspace-hash"] },
@@ -1184,6 +1185,7 @@ function upgradeStateSnapshotInvariantsCheck() {
       pre: baseSnapshot,
       post: {
         ...baseSnapshot,
+        service: { desired: "running", state: "running", readiness: "ready", pid: 200, restartCount: 2 },
         pluginDirCount: 3
       }
     });
@@ -1197,6 +1199,7 @@ function upgradeStateSnapshotInvariantsCheck() {
         auth: { providerIds: [], authMethodShapes: [] },
         models: { providerIds: [], modelIds: [] },
         workspace: { rootHashes: [] },
+        service: { desired: "running", state: "stopped", readiness: "not-ready", pid: 300, restartCount: 3 },
         installedPluginIds: ["browser"],
         pluginInstallIndexCount: 0,
         pluginDirCount: 1
@@ -1211,7 +1214,9 @@ function upgradeStateSnapshotInvariantsCheck() {
       "model-ids-preserved",
       "auth-method-shape-preserved",
       "installed-plugin-ids-preserved",
-      "workspace-roots-preserved"
+      "workspace-roots-preserved",
+      "service-running-state-preserved",
+      "service-readiness-preserved"
     ]) {
       assertEqual(failedIds.includes(id), true, `upgrade invariant ${id} fails on state loss`);
     }
