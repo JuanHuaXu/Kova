@@ -20,33 +20,46 @@ export function summarizeRecords(records) {
 
 export function renderMarkdownReport(report) {
   const summary = buildReportSummary(report);
+  const verdictBand = markdownVerdictBand(summary.decision.verdict);
+  const platformLine = `${summary.platform?.os ?? "unknown"} ${summary.platform?.release ?? ""} (${summary.platform?.arch ?? "unknown"}) · ${summary.platform?.node ?? "unknown"}`.trim();
+  const authLine = `${summary.run.auth?.mode ?? "unknown"}${summary.run.auth?.providerId ? ` (${summary.run.auth.providerId})` : ""}`;
+  const statusBreakdown = Object.entries(summary.statuses).map(([status, count]) => `${status}:${count}`).join(", ") || "none";
   const lines = [
     "# Kova OpenClaw Runtime Report",
     "",
+    `> ${verdictBand} — ${summary.decision.reason}`,
+    "",
     "## Verdict",
     "",
-    `- Verdict: ${summary.decision.verdict}`,
-    `- Reason: ${summary.decision.reason}`,
-    `- Blocking findings: ${summary.decision.blockingFindingCount}`,
-    `- Warnings: ${summary.decision.warningFindingCount}`,
+    "| Field | Value |",
+    "|---|---|",
+    `| Verdict | ${tableCell(summary.decision.verdict)} |`,
+    `| Reason | ${tableCell(summary.decision.reason)} |`,
+    `| Blocking findings | ${summary.decision.blockingFindingCount} |`,
+    `| Warnings | ${summary.decision.warningFindingCount} |`,
+    `| Records | ${summary.coverage.recordCount} (${tableCell(statusBreakdown)}) |`,
     "",
     ...formatProofCompletenessSection(summary.proof),
     "## Run",
     "",
-    `- Run ID: \`${summary.runId}\``,
-    `- Generated: ${summary.generatedAt ?? "unknown"}`,
-    `- Mode: ${summary.mode ?? "unknown"}`,
-    `- Target: \`${summary.target ?? "unknown"}\``,
-    `- Platform: ${summary.platform?.os ?? "unknown"} ${summary.platform?.release ?? ""} (${summary.platform?.arch ?? "unknown"}) · ${summary.platform?.node ?? "unknown"}`,
-    `- Repeat / parallel: ${summary.run.repeat ?? "unknown"} / ${summary.run.parallel ?? "unknown"}`,
-    `- Auth: ${summary.run.auth?.mode ?? "unknown"}${summary.run.auth?.providerId ? ` (${summary.run.auth.providerId})` : ""}`,
+    "| Field | Value |",
+    "|---|---|",
+    `| Run ID | \`${tableCell(summary.runId)}\` |`,
+    `| Generated | ${tableCell(summary.generatedAt ?? "unknown")} |`,
+    `| Mode | ${tableCell(summary.mode ?? "unknown")} |`,
+    `| Target | \`${tableCell(summary.target ?? "unknown")}\` |`,
+    `| Platform | ${tableCell(platformLine)} |`,
+    `| Repeat / parallel | ${tableCell(`${summary.run.repeat ?? "unknown"} / ${summary.run.parallel ?? "unknown"}`)} |`,
+    `| Auth | ${tableCell(authLine)} |`,
     "",
     "## Coverage",
     "",
-    `- Records: ${summary.coverage.recordCount}`,
-    `- Scenarios: ${summary.coverage.scenarioCount}`,
-    `- States: ${summary.coverage.stateCount}`,
-    ...Object.entries(summary.statuses).map(([status, count]) => `- ${status}: ${count}`),
+    "| Field | Value |",
+    "|---|---:|",
+    `| Records | ${summary.coverage.recordCount} |`,
+    `| Scenarios | ${summary.coverage.scenarioCount} |`,
+    `| States | ${summary.coverage.stateCount} |`,
+    ...Object.entries(summary.statuses).map(([status, count]) => `| ${tableCell(status)} | ${count} |`),
     ""
   ];
 
@@ -63,6 +76,20 @@ export function renderMarkdownReport(report) {
   lines.push(...formatTargetCleanupSummary(report.targetCleanup));
 
   return `${lines.join("\n")}\n`;
+}
+
+function markdownVerdictBand(verdict) {
+  const map = {
+    SHIP: "**✅ [SHIP] PASS**",
+    PASS: "**✅ [PASS]**",
+    DO_NOT_SHIP: "**❌ [DO-NOT-SHIP] FAIL**",
+    FAIL: "**❌ [FAIL]**",
+    PARTIAL: "**⚠️ [PARTIAL]**",
+    BLOCKED: "**⛔ [BLOCKED]**",
+    INCOMPLETE: "**◐ [INCOMPLETE]**",
+    DRY_RUN: "**◇ [DRY-RUN] PLANNED**"
+  };
+  return map[verdict] ?? `**[${verdict ?? "UNKNOWN"}]**`;
 }
 
 function formatFindingsSection(findings = []) {
