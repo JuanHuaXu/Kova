@@ -451,15 +451,17 @@ export async function runSelfCheck(flags = {}) {
     ));
     checks.push(await jsonCommandCheck(
       "dry-run-source-env-quoting-json",
-      `node bin/kova.mjs run --target runtime:stable --scenario upgrade-existing-user --source-env 'Team Env' --report-dir ${quoteShell(tmp)} --json`,
+      `node bin/kova.mjs run --target local-build:/tmp/openclaw --from runtime:2026.5.2 --scenario upgrade-existing-user --source-env 'Team Env' --report-dir ${quoteShell(tmp)} --json`,
       async (data) => {
         const report = JSON.parse(await readFile(data.jsonPath, "utf8"));
-        const command = report.records?.[0]?.phases
-          ?.flatMap((phase) => phase.commands ?? [])
-          ?.find((item) => item.includes("ocm env clone")) ?? "";
-        if (!command.includes("ocm env clone 'Team Env'")) {
-          throw new Error(`source env was not shell-quoted: ${command}`);
+        const commands = report.records?.[0]?.phases
+          ?.flatMap((phase) => phase.commands ?? []) ?? [];
+        const cloneCommand = commands.find((item) => item.includes("ocm env clone")) ?? "";
+        if (!cloneCommand.includes("ocm env clone 'Team Env'")) {
+          throw new Error(`source env was not shell-quoted: ${cloneCommand}`);
         }
+        assertEqual(commands.some((command) => command.includes("ocm upgrade") && /--runtime '?kova-local-/.test(command)), true, "existing-user upgrade uses target local-build runtime");
+        assertEqual(commands.some((command) => command.includes("ocm upgrade") && command.includes("2026.5.2")), false, "existing-user source selector is not executed as an upgrade");
         const record = report.records?.[0];
         const snapshotPhases = record?.phases?.filter((phase) => phase.evidenceKind === "snapshot") ?? [];
         assertEqual(snapshotPhases.length, 2, "upgrade dry-run includes required snapshot phases");

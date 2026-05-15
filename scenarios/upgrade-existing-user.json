@@ -52,16 +52,14 @@
     {
       "id": "source-runtime",
       "title": "Prepare Source Runtime",
-      "intent": "Optionally bind the clone to the source release and start it once to establish pre-upgrade state.",
+      "intent": "Inspect the cloned source state before any target upgrade action.",
       "commands": [
-        "ocm upgrade {env} {fromUpgradeSelector} --json",
         "ocm service status {env} --json"
       ],
       "evidence": [
-        "pre-upgrade runtime",
         "pre-upgrade gateway status"
       ],
-      "healthScope": "readiness"
+      "healthScope": "none"
     },
     {
       "id": "upgrade",
