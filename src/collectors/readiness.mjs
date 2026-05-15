@@ -37,6 +37,7 @@ export async function collectReadinessMetrics(port, options) {
     await sleep(Math.min(options.intervalMs, Math.max(0, deadline - Date.now())));
   } while (Date.now() <= deadline);
 
+  const effectiveListeningReadyAtMs = listeningReadyAtMs ?? healthReadyAtMs;
   return {
     schemaVersion: READINESS_SCHEMA,
     deadlineMs: options.timeoutMs,
@@ -44,12 +45,12 @@ export async function collectReadinessMetrics(port, options) {
     intervalMs: options.intervalMs,
     attempts: Math.max(listeningAttempts.length, healthAttempts.length),
     ready: healthReadyAtMs !== null,
-    listeningReady: listeningReadyAtMs !== null,
-    listeningReadyAtMs,
+    listeningReady: effectiveListeningReadyAtMs !== null,
+    listeningReadyAtMs: effectiveListeningReadyAtMs,
     healthReadyAtMs,
     classification: classifyReadiness({
       thresholdMs,
-      listeningReadyAtMs,
+      listeningReadyAtMs: effectiveListeningReadyAtMs,
       healthReadyAtMs
     }),
     listening: lastListening,
@@ -60,14 +61,14 @@ export async function collectReadinessMetrics(port, options) {
 }
 
 export function classifyReadiness({ thresholdMs, listeningReadyAtMs, healthReadyAtMs }) {
-  if (listeningReadyAtMs === null) {
-    return {
-      state: "hard-failure",
-      severity: "fail",
-      reason: "gateway TCP socket never accepted connections before the hard deadline"
-    };
-  }
   if (healthReadyAtMs === null) {
+    if (listeningReadyAtMs === null) {
+      return {
+        state: "hard-failure",
+        severity: "fail",
+        reason: "gateway TCP socket never accepted connections before the hard deadline"
+      };
+    }
     return {
       state: "unhealthy",
       severity: "fail",

@@ -38,6 +38,7 @@ import {
   attributedSpanIntervals,
   buildGatewaySessionPreProviderAttribution
 } from "./collectors/gateway-session-turn-attribution.mjs";
+import { classifyReadiness } from "./collectors/readiness.mjs";
 import {
   computeProviderTurnAttribution,
   parseProviderRequestLog,
@@ -5845,6 +5846,12 @@ function readinessClassificationCheck() {
       true,
       "readiness violation"
     );
+    const healthReadyClassification = classifyReadiness({
+      thresholdMs: 30000,
+      listeningReadyAtMs: null,
+      healthReadyAtMs: 6802
+    });
+    assertEqual(healthReadyClassification.state, "ready", "health success proves readiness even when raw TCP probe timed out first");
     return {
       id: "readiness-classification",
       status: "PASS",
