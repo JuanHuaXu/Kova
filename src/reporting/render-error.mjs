@@ -1,7 +1,7 @@
 // Pretty error formatter for the top-level CLI catch.
 
 import {
-  makeUi, heavyBand, ruleSection, badge, repeat,
+  makeUi, heavyBand, ruleSection, badge, repeat, withMargin,
 } from "../ui/index.mjs";
 import { listCommandIds } from "./render-help.mjs";
 
@@ -104,7 +104,7 @@ export function renderError(error, flags = {}, env = process.env, stream = proce
       }
     }
   }
-  return sections.join("\n");
+  return withMargin(sections.join("\n"), ui.leftPad);
 }
 
 function nearestCommand(input) {

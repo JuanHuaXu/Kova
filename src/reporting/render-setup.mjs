@@ -2,7 +2,7 @@
 
 import {
   makeUi, heavyBand, ruleSection, card, sideBySide,
-  badge, renderTable, repeat,
+  badge, renderTable, repeat, withMargin,
 } from "../ui/index.mjs";
 
 const TARGET_WIDTH_FOR_DASHBOARD = 100;
@@ -35,7 +35,7 @@ export function renderSetup(result, flags = {}, env = process.env, stream = proc
     sections.push("");
     sections.push(renderNext(result.nextCommands, ui));
   }
-  return sections.join("\n");
+  return withMargin(sections.join("\n"), ui.leftPad);
 }
 
 function deriveVerdict(result) {

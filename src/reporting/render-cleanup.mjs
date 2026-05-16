@@ -2,7 +2,7 @@
 
 import {
   makeUi, heavyBand, ruleSection, card, sideBySide,
-  badge, renderTable, repeat,
+  badge, renderTable, repeat, withMargin,
 } from "../ui/index.mjs";
 
 const TARGET_WIDTH_FOR_DASHBOARD = 100;
@@ -29,7 +29,7 @@ export function renderCleanupEnvs({ envs, results, execute }, flags = {}, env = 
 
   sections.push("");
   sections.push(renderHint(execute, envs.length === 0 ? "no-envs" : "envs", ui, { kind: "envs" }));
-  return sections.join("\n");
+  return withMargin(sections.join("\n"), ui.leftPad);
 }
 
 export function renderCleanupArtifacts({ candidates, results, execute, artifactsDir, olderThanDays }, flags = {}, env = process.env, stream = process.stdout) {
@@ -54,7 +54,7 @@ export function renderCleanupArtifacts({ candidates, results, execute, artifacts
 
   sections.push("");
   sections.push(renderHint(execute, candidates.length === 0 ? "none" : "candidates", ui, { kind: "artifacts", olderThanDays, artifactsDir }));
-  return sections.join("\n");
+  return withMargin(sections.join("\n"), ui.leftPad);
 }
 
 function deriveEnvsVerdict({ envs, results, execute }) {
