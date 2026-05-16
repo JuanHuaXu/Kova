@@ -1,6 +1,8 @@
 // Terminal capability detection + UI option resolution.
 // Pure stdlib. Honors NO_COLOR, FORCE_COLOR, CI, --color, --ascii, locale, TTY.
 
+import { resolveWidth } from "./width.mjs";
+
 const DEFAULT_WIDTH = 100;
 
 export function detectCapabilities(env = process.env, stream = process.stdout) {
@@ -33,7 +35,9 @@ function isCiEnv(env) {
 // Resolve UI options from CLI flags + environment.
 // flags.color: "auto" | "always" | "never" | true
 // flags.ascii: boolean
-// flags.width: number (override; useful for tests / snapshots)
+// flags.width: number | "full" | "auto" | "off" (cap; "full" disables the cap)
+// flags.align: "left" | "center"
+// env.KOVA_WIDTH / env.KOVA_ALIGN mirror the flags.
 export function resolveUiOptions(flags = {}, env = process.env, stream = process.stdout) {
   const caps = detectCapabilities(env, stream);
 
@@ -46,13 +50,16 @@ export function resolveUiOptions(flags = {}, env = process.env, stream = process
   const asciiFlag = flags.ascii === true || flags.ascii === "true";
   const ascii = asciiFlag || !caps.isUtf8;
 
-  const widthFlag = Number(flags.width);
-  const width = Number.isFinite(widthFlag) && widthFlag > 0 ? widthFlag : caps.width;
+  const { width, leftPad, capped, align } = resolveWidth(caps.width, flags, env);
 
   return {
     color,
     ascii,
     width,
+    leftPad,
+    align,
+    capped,
+    terminalWidth: caps.width,
     isTTY: caps.isTTY,
     isCI: caps.isCI,
     stream,

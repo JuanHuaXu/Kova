@@ -3,6 +3,7 @@
 //   import { makeUi } from "../ui/index.mjs";
 
 export { resolveUiOptions, detectCapabilities } from "./terminal.mjs";
+export { resolveWidth, withMargin, WIDTH_DEFAULT, WIDTH_MIN } from "./width.mjs";
 export { makeColor, stripAnsi } from "./color.mjs";
 export { makeGlyphs, statusGlyph } from "./glyphs.mjs";
 export {
