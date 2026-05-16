@@ -40,8 +40,11 @@ const UNICODE = {
   block: "▇",
   // Sparkline (low to high)
   spark: ["▁", "▂", "▃", "▄", "▅", "▆", "▇", "█"],
-  // Spinner frames (Braille)
+  // Spinner frames (legacy braille — retained for back-compat)
   spinner: ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"],
+  // Kova-brand spinner: pulse / heartbeat motif. Append-only-compatible
+  // (single line, overwritten in place by the next real event).
+  spinnerKovaPulse: ["▁", "▂", "▃", "▄", "▅", "▆", "▇", "█", "▇", "▆", "▅", "▄", "▃", "▂"],
 };
 
 const ASCII = {
@@ -77,6 +80,7 @@ const ASCII = {
   block: "#",
   spark: [".", ".", "-", "-", "=", "=", "#", "#"],
   spinner: ["|", "/", "-", "\\"],
+  spinnerKovaPulse: ["|", "/", "-", "\\"],
 };
 
 export function makeGlyphs(ui) {
