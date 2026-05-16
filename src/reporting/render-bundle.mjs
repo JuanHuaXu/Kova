@@ -1,6 +1,6 @@
 // kova report bundle <report.json> - confirmation panel.
 
-import { makeUi, heavyBand, ruleSection, badge, visualWidth, repeat, wrap, withMargin } from "../ui/index.mjs";
+import { makeUi, ruleSection, renderKovaHeader, visualWidth, repeat, wrap, withMargin } from "../ui/index.mjs";
 import { relative } from "node:path";
 
 export function renderBundleReceipt(receipt, flags = {}, env = process.env, stream = process.stdout) {
@@ -9,12 +9,11 @@ export function renderBundleReceipt(receipt, flags = {}, env = process.env, stre
   const cwd = process.cwd();
 
   const sections = [];
-  sections.push(heavyBand({
-    badgeText: badge("BUNDLED", "PASS", ui),
-    status: "OK",
-    title: "KOVA BUNDLE",
+  sections.push(renderKovaHeader({
+    surface: "report bundle",
+    verdict: "OK",
+    headline: `bundled ${receipt.artifactIndex?.fileCount ?? receipt.included?.length ?? 0} file${(receipt.artifactIndex?.fileCount ?? receipt.included?.length ?? 0) === 1 ? "" : "s"}`,
     meta: receipt.runId ? `run: ${receipt.runId}` : "",
-    width: ui.width,
     ui,
   }));
   sections.push("");

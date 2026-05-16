@@ -1,12 +1,11 @@
 // Final receipt panel for kova run and kova matrix run TTY output.
 
 import {
-  makeUi, heavyBand, ruleSection, card, sideBySide,
-  badge, renderTable, visualWidth, repeat, withMargin,
+  makeUi, ruleSection, renderKovaHeader, kpiStrip,
+  renderTable, repeat, withMargin,
 } from "../ui/index.mjs";
 import { relative } from "node:path";
 
-const TARGET_WIDTH_FOR_DASHBOARD = 120;
 const TOP_RECORDS = 12;
 
 export function renderRunReceipt({ report, reportPath, jsonPath, summaryPath }, flags = {}, env = process.env, stream = process.stdout) {
@@ -44,24 +43,28 @@ export function renderMatrixRunReceipt({ report, reportPath, jsonPath, summaryPa
 
 function renderBand(report, ui, { kind }) {
   const { g } = ui;
-  const mode = String(report.mode ?? "dry-run").toUpperCase();
+  const mode = String(report.mode ?? "dry-run").toLowerCase();
   const verdict = verdictForReport(report);
   const meta = [
-    `mode: ${mode.toLowerCase()}`,
+    `mode: ${mode}`,
     report.target ? `target: ${report.target}` : null,
     report.runId ? `runId: ${report.runId}` : null,
-  ].filter(Boolean).join(`  ${g.sep}  `);
-  const title = kind === "matrix"
-    ? (report.profile?.title ?? "KOVA MATRIX RUN")
-    : "KOVA RUN";
-  return heavyBand({
-    badgeText: badge(verdict.label, verdict.tone, ui),
-    status: verdict.status,
-    title,
-    meta,
-    width: ui.width,
-    ui,
-  });
+  ].filter(Boolean).join(` ${g.sep} `);
+  const surface = kind === "matrix" ? "matrix run" : "run";
+  const headline = buildRunHeadline(report);
+  return renderKovaHeader({ surface, verdict: verdict.label, headline, meta, ui });
+}
+
+function buildRunHeadline(report) {
+  const statuses = report.summary?.statuses ?? {};
+  const total = report.summary?.total ?? 0;
+  const pass = statuses.PASS ?? 0;
+  const fail = statuses.FAIL ?? 0;
+  const dry = statuses["DRY-RUN"] ?? 0;
+  if (report.mode === "dry-run") return `${dry || total} planned`;
+  if (fail > 0) return `${fail} failed of ${total}`;
+  if (pass === total && total > 0) return `${total} passed`;
+  return `${pass}/${total} passed`;
 }
 
 function verdictForReport(report) {
@@ -83,7 +86,6 @@ function verdictForReport(report) {
 }
 
 function renderKpiStrip(report, ui, opts = {}) {
-  const { c } = ui;
   const statuses = report.summary?.statuses ?? {};
   const total = report.summary?.total ?? 0;
   const pass = statuses.PASS ?? 0;
@@ -91,41 +93,36 @@ function renderKpiStrip(report, ui, opts = {}) {
   const blocked = statuses.BLOCKED ?? 0;
   const skip = statuses.SKIP ?? 0;
   const dry = statuses["DRY-RUN"] ?? 0;
-
-  const stack = ui.width < TARGET_WIDTH_FOR_DASHBOARD;
-  const cardCount = 4;
-  const cardWidth = stack
-    ? Math.max(20, ui.width)
-    : Math.max(20, Math.floor((ui.width - (cardCount - 1) * 2) / cardCount));
-
-  const passDisplay = report.mode === "dry-run"
-    ? card({ title: "Dry-run", width: cardWidth, ui, lines: [c.bold(String(dry)), c.dim("planned")] })
-    : card({ title: "Passed",  width: cardWidth, ui, lines: [pass > 0 ? c.ok(c.bold(String(pass))) : c.dim("0"), c.dim("scenarios")] });
-
-  const failDisplay = card({ title: "Failed", width: cardWidth, ui,
-    lines: [
-      fail > 0 ? c.err(c.bold(String(fail))) : c.dim("0"),
-      c.dim(blocked > 0 ? `+${blocked} blocked` : (skip > 0 ? `+${skip} skipped` : "—")),
-    ],
-  });
-
   const perf = report.performance ?? {};
-  const perfDisplay = card({ title: "Performance", width: cardWidth, ui,
-    lines: [
-      c.bold(`${perf.groupCount ?? 0} ${pluralize("group", perf.groupCount ?? 0)}`),
-      perf.unstableGroupCount > 0
-        ? c.warn(`${perf.unstableGroupCount} unstable`)
-        : c.dim(`repeat=${perf.repeat ?? 1}`),
-    ],
-  });
 
-  const totalDisplay = card({ title: opts.matrix ? "Entries" : "Total", width: cardWidth, ui,
-    lines: [c.bold(String(total)), c.dim(report.mode === "dry-run" ? "planned" : "executed")],
-  });
+  const passItem = report.mode === "dry-run"
+    ? { label: "Dry-run", value: String(dry), hint: "planned", tone: "neutral", bar: { filled: dry, total: Math.max(total, dry) } }
+    : { label: "Passed", value: String(pass), hint: "scenarios", tone: pass > 0 ? "ok" : "dim", bar: { filled: pass, total: Math.max(total, pass) } };
 
-  return sideBySide([totalDisplay, passDisplay, failDisplay, perfDisplay], {
-    width: ui.width, gap: 2, minWidth: TARGET_WIDTH_FOR_DASHBOARD,
-  });
+  const failHint = blocked > 0 ? `+${blocked} blocked` : (skip > 0 ? `+${skip} skipped` : null);
+  const failItem = {
+    label: "Failed", value: String(fail), hint: failHint, tone: fail > 0 ? "err" : "dim",
+    bar: { filled: fail, total: Math.max(total, fail) },
+  };
+
+  const perfHint = perf.unstableGroupCount > 0
+    ? `${perf.unstableGroupCount} unstable`
+    : `repeat=${perf.repeat ?? 1}`;
+  const perfItem = {
+    label: "Performance",
+    value: `${perf.groupCount ?? 0} ${pluralize("group", perf.groupCount ?? 0)}`,
+    hint: perfHint,
+    tone: perf.unstableGroupCount > 0 ? "warn" : "neutral",
+  };
+
+  const totalItem = {
+    label: opts.matrix ? "Entries" : "Total",
+    value: String(total),
+    hint: report.mode === "dry-run" ? "planned" : "executed",
+    tone: "neutral",
+  };
+
+  return kpiStrip([totalItem, passItem, failItem, perfItem], ui);
 }
 
 function renderGate(gate, ui) {
