@@ -1,122 +1,140 @@
-// Default kova report renderer - the showcase surface.
-// Consumes the existing buildReportSummary() model unchanged and emits a
-// dashboard-rich ANSI assessment for stdout. Honors --color and --ascii.
+// `kova report` renderer — the showcase surface.
+//
+// Renders the scenario-spine assessment from a report JSON:
+//
+//   ╔═══════════════════════════════════════════════════╗
+//   ║  KOVA  ·  report                                  ║
+//   ╚═══════════════════════════════════════════════════╝
+//      [FAIL]  1/3 scenarios failed · 5 samples · stable (±3%)
+//      run kova-2026-… · target runtime:stable · profile smoke
+//
+//   ─── scenarios ───────────────────────────────────────
+//   scenario          samples  verdict   worst metric
+//     fresh-install   5/5      PASS      —
+//     agent-cold-warm 4/5      FAIL      agent.turn.ms over by 240 ms
+//
+//   ─── agent-cold-warm ─────────── [FAIL] · 5 samples ───
+//     Phases:   (table)
+//     Metrics:  (table — auto-picks columns by sample count)
+//     Findings: (list)
+//     Proves:   (list, when present)
+//
+//   ─── next ────────────────────────────────────────────
+//     → kova report --full <path>
+//
+// Compact (default): scenario blocks render only for failed/blocked
+// scenarios; passed ones collapse into the roll-up.
+// --full: every scenario gets a full block.
 
 import {
-  makeUi, ruleSection, renderKovaHeader, kpiStrip,
-  gauge, statusGlyph, renderTable,
-  formatPercent, computeDelta, classifyDelta,
-  visualWidth, repeat, wrap, withMargin,
+  makeUi, ruleSection, renderKovaHeader,
+  scenariosRollup, scenarioRule, metricsTable, phasesBlock,
+  findingsBlock, provesBlock, buildVerdictHeadline,
+  withMargin,
 } from "../ui/index.mjs";
 import { buildReportSummary } from "./report.mjs";
+import { aggregateScenarios, runConfidence } from "./scenario-aggregate.mjs";
 
-const TOP_FINDINGS = 6;
-const TOP_REGRESSIONS = 8;
+const TOP_METRICS_COMPACT = 5;
 
 export function renderAssessment(report, flags = {}, env = process.env, stream = process.stdout) {
   const ui = makeUi(flags, env, stream);
   const summary = buildReportSummary(report);
-  return withMargin(renderFromSummary(summary, ui), ui.leftPad);
+  const scenarios = aggregateScenarios(report, summary.findings);
+  const isFull = !!flags.full;
+  return withMargin(renderFromSummary({ summary, scenarios, isFull }, ui), ui.leftPad);
 }
 
-// Exposed for tests and snapshot coverage.
-export function renderFromSummary(summary, ui) {
-  const width = ui.width;
+// Exposed for tests and downstream callers.
+export function renderFromSummary(input, ui) {
+  // Back-compat: callers used to pass just the summary; accept that too.
+  const summary = input.summary ?? input;
+  const scenarios = input.scenarios ?? aggregateScenarios({ records: [] }, summary.findings);
+  const isFull = input.isFull ?? false;
+
   const sections = [];
-
-  sections.push(renderBand(summary, ui));
+  sections.push(renderHeader(summary, scenarios, ui));
   sections.push("");
-  sections.push(renderKpiStrip(summary, ui));
+  sections.push(renderMeta(summary, ui));
 
-  const findings = renderFindings(summary, ui);
-  if (findings) { sections.push(""); sections.push(findings); }
+  const rollup = renderScenariosRollup(scenarios, ui);
+  if (rollup) {
+    sections.push("");
+    sections.push(ruleSection("scenarios", ui.width, ui));
+    sections.push(indentBlock(rollup, 2));
+  }
 
-  const perf = renderPerformance(summary, ui);
-  if (perf) { sections.push(""); sections.push(perf); }
+  for (const sc of scenarios) {
+    if (!isFull && sc.verdict === "PASS") continue;
+    sections.push("");
+    sections.push(renderScenarioBlock(sc, ui, isFull));
+  }
 
-  const next = renderRecommendedNext(summary, ui);
-  if (next) { sections.push(""); sections.push(next); }
-
-  sections.push("");
-  sections.push(renderFooter(summary, ui));
-
+  const next = renderNext(summary, scenarios, isFull, ui);
+  if (next) {
+    sections.push("");
+    sections.push(ruleSection("next", ui.width, ui));
+    sections.push(next);
+  }
   return sections.join("\n");
 }
 
-function renderBand(summary, ui) {
+// ----- header / meta -----
+
+function renderHeader(summary, scenarios, ui) {
   const verdict = String(summary.decision?.verdict ?? "UNKNOWN").toUpperCase();
-  const shipLabel = deriveShipLabel(verdict, summary);
-  const headline = buildHeadline(summary, ui);
-  const meta = formatBandMeta(summary, ui);
+  const shipLabel = deriveVerdictBadge(verdict, summary);
+  const conf = runConfidence(scenarios);
+  const failed = scenarios.filter((s) => s.verdict === "FAIL" || s.verdict === "BLOCKED").length;
+  const incomplete = scenarios.filter((s) => s.verdict === "INCOMPLETE").length;
+  const totalScn = scenarios.length;
+  const sampleTotal = scenarios.reduce((a, s) => a + (s.total ?? 0), 0);
+  const sampleFailed = scenarios.reduce((a, s) => a + Math.max(0, (s.total ?? 0) - (s.passed ?? 0)), 0);
+  // Pluralize against the count actually referenced in each clause so
+  // "1 scenario failed" reads correctly while "3 scenarios passed" still works.
+  const scopeText = failed > 0
+    ? `${failed} ${pluralize(failed, "scenario")} failed${totalScn > failed ? ` of ${totalScn}` : ""}`
+    : incomplete > 0
+      ? `${incomplete} ${pluralize(incomplete, "scenario")} incomplete${totalScn > incomplete ? ` of ${totalScn}` : ""}`
+      : `${totalScn} ${pluralize(totalScn, "scenario")} passed`;
+  const samplesText = sampleFailed > 0
+    ? `${sampleFailed}/${sampleTotal} ${pluralize(sampleTotal, "sample")} failed`
+    : `${sampleTotal} ${pluralize(sampleTotal, "sample")}`;
+
+  const headline = buildVerdictHeadline({
+    scope: scopeText,
+    samples: samplesText,
+    confidence: conf.label,
+    sep: ui.g.sep,
+  });
 
   return renderKovaHeader({
     surface: "report",
     verdict: shipLabel,
     headline,
-    meta,
+    meta: "",
     ui,
   });
 }
 
-function buildHeadline(summary, ui) {
-  const sep = ` ${ui.g.sep} `;
-  const blocking = summary.decision?.blockingFindingCount ?? 0;
-  const warning = summary.decision?.warningFindingCount ?? 0;
-  const regressions = summary.performance?.baselineRegressionCount ?? 0;
+function renderMeta(summary, ui) {
+  const { c, g } = ui;
+  const sep = ` ${g.sep} `;
   const parts = [];
-  if (blocking > 0) parts.push(`${blocking} blocking`);
-  if (warning > 0) parts.push(`${warning} warning`);
-  if (regressions > 0) parts.push(`${regressions} perf regression${regressions === 1 ? "" : "s"}`);
-  if (parts.length === 0) {
-    const proofTotal = summary.proof?.requiredTotal ?? 0;
-    return proofTotal > 0 ? "all checks passed" : "ready";
-  }
-  return parts.join(sep);
-}
-
-function deriveShipLabel(verdict, summary) {
-  if (summary.gate?.verdict) return String(summary.gate.verdict).toUpperCase();
-  switch (verdict) {
-    case "PASS": return "SHIP";
-    case "FAIL": return "DO_NOT_SHIP";
-    case "INCOMPLETE": return "PARTIAL";
-    case "BLOCKED": return "BLOCKED";
-    case "DRY_RUN":
-    case "DRY-RUN":
-      return "DRY-RUN";
-    default: return verdict;
-  }
-}
-
-function formatBandMeta(summary, ui) {
-  const sep = ` ${ui.g.sep} `;
+  if (summary.runId) parts.push(`run ${summary.runId}`);
+  if (summary.target) parts.push(`target ${summary.target}`);
   const profile = normalizeProfile(summary.run?.profile);
-  const primaryScenario = summary.samples?.[0]?.scenario;
-  const showScenario = primaryScenario && summary.coverage?.scenarioCount === 1;
-  const timestamp = summary.reportGeneratedAt ? formatTimestamp(summary.reportGeneratedAt) : null;
-
-  const variants = [
-    [profile && `profile: ${profile}`, showScenario && primaryScenario, summary.target, summary.runId, timestamp],
-    [profile && `profile: ${profile}`, summary.target, summary.runId, timestamp],
-    [profile && `profile: ${profile}`, summary.target, timestamp],
-    [summary.target, timestamp],
-    [summary.runId],
-  ];
-
-  const budget = Math.max(20, ui.width - 6);
-  for (const v of variants) {
-    const line = v.filter(Boolean).join(sep);
-    if (visualWidth(line) <= budget) return line;
-  }
-  const fallback = (summary.runId || summary.target || "").toString();
-  return truncatePlain(fallback, budget);
+  if (profile) parts.push(`profile ${profile}`);
+  if (summary.reportGeneratedAt) parts.push(formatTimestamp(summary.reportGeneratedAt));
+  if (parts.length === 0) return "";
+  return "  " + c.dim(parts.join(sep));
 }
 
-function normalizeProfile(profile) {
-  if (!profile) return null;
-  if (typeof profile === "string") return profile;
-  if (typeof profile === "object") return profile.id ?? profile.name ?? profile.title ?? null;
-  return String(profile);
+function normalizeProfile(p) {
+  if (!p) return null;
+  if (typeof p === "string") return p;
+  if (typeof p === "object") return p.id ?? p.name ?? p.title ?? null;
+  return String(p);
 }
 
 function formatTimestamp(iso) {
@@ -127,271 +145,104 @@ function formatTimestamp(iso) {
   } catch { return iso; }
 }
 
-function renderKpiStrip(summary, ui) {
-  return kpiStrip([
-    buildProofKpi(summary),
-    buildHealthKpi(summary),
-    buildPerformanceKpi(summary),
-  ], ui);
+function deriveVerdictBadge(verdict, summary) {
+  if (summary.gate?.verdict) return String(summary.gate.verdict).toUpperCase();
+  switch (verdict) {
+    case "PASS": return "PASS";
+    case "FAIL": return "FAIL";
+    case "INCOMPLETE": return "PARTIAL";
+    case "BLOCKED": return "BLOCKED";
+    case "DRY_RUN":
+    case "DRY-RUN":
+      return "DRY-RUN";
+    default: return verdict;
+  }
 }
 
-function buildProofKpi(summary) {
-  const total = summary.proof?.requiredTotal ?? 0;
-  const missing = summary.proof?.requiredMissing ?? 0;
-  const failed = summary.proof?.requiredFailed ?? 0;
-  const satisfied = Math.max(0, total - missing - failed);
-  if (total === 0) {
-    return { label: "Proof", value: "n/a", hint: "no required proof tracked", tone: "dim" };
-  }
-  const pct = Math.round((satisfied / total) * 100);
-  const tone = pct >= 80 ? "ok" : pct >= 50 ? "warn" : "err";
-  return {
-    label: "Proof",
-    value: `${pct}%`,
-    hint: `${satisfied}/${total}`,
-    tone,
-    bar: { filled: satisfied, total },
-  };
+// ----- scenarios roll-up -----
+
+function renderScenariosRollup(scenarios, ui) {
+  if (scenarios.length === 0) return "";
+  const rows = scenarios.map((sc) => ({
+    id: sc.id,
+    passed: sc.passed,
+    total: sc.total,
+    verdict: sc.verdict,
+    worst: sc.verdict === "PASS" ? null : sc.worst,
+  }));
+  return scenariosRollup({ rows, ui });
 }
 
-function buildHealthKpi(summary) {
-  const blocking = summary.decision?.blockingFindingCount ?? 0;
-  const warning = summary.decision?.warningFindingCount ?? 0;
-  if (blocking > 0) {
-    return {
-      label: "Health", value: "unhealthy",
-      hint: `${blocking} blocking · ${warning} warning`,
-      tone: "err",
-      bar: { filled: 3, total: 10 },
-    };
-  }
-  if (warning > 0) {
-    return {
-      label: "Health", value: "watch", hint: `${warning} warning`,
-      tone: "warn",
-      bar: { filled: 7, total: 10 },
-    };
-  }
-  return {
-    label: "Health", value: "stable", hint: "no blocking findings",
-    tone: "ok",
-    bar: { filled: 10, total: 10 },
-  };
-}
+// ----- per-scenario block -----
 
-function buildPerformanceKpi(summary) {
-  const perf = summary.performance;
-  if (!perf) {
-    return { label: "Performance", value: "n/a", hint: "no performance data", tone: "dim" };
-  }
-  const groups = perf.groupCount ?? 0;
-  const unstable = perf.unstableGroupCount ?? 0;
-  const regressions = perf.baselineRegressionCount ?? 0;
-  const recordCount = summary.coverage?.recordCount ?? 0;
-  const hint = `${groups}g · ${recordCount}r`;
-  if (regressions > 0) {
-    return {
-      label: "Performance",
-      value: `${regressions} regression${regressions === 1 ? "" : "s"}`,
-      hint, tone: "err",
-      bar: { filled: 3, total: 10 },
-    };
-  }
-  if (unstable > 0) {
-    return {
-      label: "Performance", value: `${unstable} unstable`, hint, tone: "warn",
-      bar: { filled: 6, total: 10 },
-    };
-  }
-  if (groups > 0) {
-    return {
-      label: "Performance", value: "on target", hint, tone: "ok",
-      bar: { filled: 10, total: 10 },
-    };
-  }
-  return { label: "Performance", value: "no samples", hint, tone: "dim" };
-}
+function renderScenarioBlock(sc, ui, isFull) {
+  const lines = [];
+  lines.push(scenarioRule({ id: sc.id, verdict: sc.verdict, samples: sc.total, ui }));
 
-function renderFindings(summary, ui) {
-  const { c, g } = ui;
-  const findings = summary.findings ?? [];
-  if (findings.length === 0) return null;
-
-  const top = findings.slice(0, TOP_FINDINGS);
-  const lines = [ruleSection("findings", ui.width, ui)];
-
-  for (const f of top) {
-    const sev = severityToStatus(f.severity);
-    const glyph = colorize(c, sev, statusGlyph(g, sev));
-    const scope = formatFindingScope(f);
-    const summaryText = String(f.summary ?? "").trim();
-    const evidence = (f.evidence ?? []).slice(0, 2).join("; ");
-    const owner = f.ownerArea ? c.dim(` ${g.sep} ${f.ownerArea}`) : "";
-
-    lines.push(`  ${glyph} ${c.bold(truncatePlain(summaryText, ui.width - 20))}${owner}`);
-    if (scope || evidence) {
-      const parts = [scope, evidence].filter(Boolean).join("  ");
-      const indentW = 4;
-      const avail = Math.max(20, ui.width - indentW);
-      const wrapped = wrap(parts, avail);
-      for (const w of wrapped) lines.push(repeat(" ", indentW) + c.dim(w));
-    }
+  if (sc.phases && sc.phases.length > 0) {
+    lines.push("");
+    lines.push("  " + ui.c.dim("Phases"));
+    lines.push(indentBlock(phasesBlock({ phases: sc.phases, ui }), 4));
   }
 
-  const more = findings.length - top.length;
-  if (more > 0) lines.push(`  ${c.dim(`+ ${more} more finding${more === 1 ? "" : "s"} in JSON report`)}`);
+  const metricsToShow = isFull
+    ? sc.metrics
+    : sc.metrics.slice(0, TOP_METRICS_COMPACT);
+  if (metricsToShow.length > 0) {
+    lines.push("");
+    lines.push("  " + ui.c.dim("Metrics"));
+    lines.push(indentBlock(metricsTable({ rows: metricsToShow, sampleCount: sc.total, ui }), 4));
+    const hidden = sc.metrics.length - metricsToShow.length;
+    if (hidden > 0) lines.push("    " + ui.c.dim(`+ ${hidden} more metric${hidden === 1 ? "" : "s"} (--full)`));
+  }
+
+  if (sc.findings && sc.findings.length > 0) {
+    lines.push("");
+    lines.push("  " + ui.c.dim("Findings"));
+    const findingsLimit = isFull ? null : 5;
+    lines.push(indentBlock(findingsBlock({ findings: sc.findings, ui, limit: findingsLimit }), 2));
+  }
+
+  if (sc.proves && sc.proves.length > 0) {
+    lines.push("");
+    lines.push("  " + ui.c.dim("Proves"));
+    lines.push(indentBlock(provesBlock({ claims: sc.proves, ui }), 2));
+  }
 
   return lines.join("\n");
 }
 
-function formatFindingScope(f) {
-  const parts = [];
-  if (f.scenario) parts.push(f.scenario);
-  if (f.state) parts.push(f.state);
-  return parts.join("/");
-}
+// ----- next hint -----
 
-function severityToStatus(sev) {
-  switch (String(sev).toLowerCase()) {
-    case "blocking":
-    case "fail":
-      return "FAIL";
-    case "incomplete":
-      return "INCOMPLETE";
-    case "blocked":
-      return "BLOCKED";
-    case "warning":
-    case "diagnostic-gap":
-      return "INCOMPLETE";
-    default:
-      return "SKIPPED";
-  }
-}
-
-function colorize(c, status, text) {
-  switch (status) {
-    case "PASS": case "SHIP": return c.ok(text);
-    case "FAIL": case "DO_NOT_SHIP": return c.err(text);
-    case "INCOMPLETE": case "PARTIAL": return c.warn(text);
-    case "BLOCKED": return c.block(text);
-    default: return c.dim(text);
-  }
-}
-
-function renderPerformance(summary, ui) {
-  const { c } = ui;
-  const regressions = summary.performance?.regressions ?? [];
-  if (regressions.length === 0) return null;
-
-  const rows = regressions.slice(0, TOP_REGRESSIONS).map((r) => {
-    const baseline = r.baselineMedian ?? r.baselineP95;
-    const current = r.currentMedian ?? r.currentP95;
-    const delta = computeDelta(baseline, current);
-    const cls = classifyDelta(delta, { direction: "lower-better" });
-    const deltaText = delta == null ? "—" : formatPercent(delta, { withSign: true });
-    const deltaColored = cls === "better" ? c.pos(deltaText) : cls === "worse" ? c.neg(deltaText) : c.dim(deltaText);
-    const verdictText = cls === "better" ? c.pos("better") : cls === "worse" ? c.neg("worse") : c.dim("stable");
-    return {
-      metric: c.bold(r.metric ?? "(unknown)"),
-      baseline: formatMetricValue(baseline),
-      current: formatMetricValue(current),
-      delta: deltaColored,
-      verdict: verdictText,
-    };
-  });
-
-  const header = ruleSection("performance", ui.width, ui);
-  const table = renderTable({
-    columns: [
-      { key: "metric",   header: c.dim("metric"),   align: "left",  minWidth: 28 },
-      { key: "baseline", header: c.dim("baseline"), align: "right", minWidth: 10 },
-      { key: "current",  header: c.dim("current"),  align: "right", minWidth: 10 },
-      { key: "delta",    header: c.dim("Δ"),        align: "right", minWidth: 8 },
-      { key: "verdict",  header: c.dim("verdict"),  align: "left",  minWidth: 8 },
-    ],
-    rows,
-    gap: 3,
-  });
-  return [header, indentBlock(table, 2)].join("\n");
-}
-
-function formatMetricValue(value) {
-  if (value == null || Number.isNaN(Number(value))) return "—";
-  const n = Number(value);
-  if (Number.isInteger(n) && Math.abs(n) < 10000) return String(n);
-  if (Math.abs(n) >= 1000) return n.toLocaleString("en-US");
-  if (Math.abs(n) >= 10) return n.toFixed(1);
-  return n.toFixed(2);
-}
-
-function renderRecommendedNext(summary, ui) {
+function renderNext(summary, scenarios, isFull, ui) {
   const { c, g } = ui;
+  const lines = [];
+  const failed = scenarios.filter((s) => s.verdict === "FAIL" || s.verdict === "BLOCKED");
+  if (!isFull && failed.length > 0 && summary.runId) {
+    lines.push(`  ${c.head(g.arrow)} ${c.dim("kova report --full")} ${c.met(reportPath(summary))}`);
+  }
   const rec = summary.recommendedNextScenario;
-  if (!rec) return null;
-  const lines = [ruleSection("recommended next", ui.width, ui)];
-
-  const head = `  ${c.head(g.play)} ${c.bold(rec.scenario ?? "next scenario")}`;
-  if (rec.reason) {
-    const reasonText = `${g.sep} ${rec.reason}`;
-    const avail = Math.max(20, ui.width - visualWidth(head) - 3);
-    const wrapped = wrap(reasonText, avail);
-    lines.push(head + " " + c.dim(wrapped[0] ?? ""));
-    for (const cont of wrapped.slice(1)) {
-      lines.push(repeat(" ", visualWidth(head) + 1) + c.dim(cont));
-    }
-  } else {
-    lines.push(head);
+  if (rec?.command) {
+    lines.push(`  ${c.head(g.arrow)} ${c.met(rec.command)}`);
   }
-
-  if (rec.command) {
-    const prefix = `  ${c.dim("$")} `;
-    const indentWidth = visualWidth(prefix);
-    const avail = Math.max(20, ui.width - indentWidth);
-    const wrapped = wrap(rec.command, avail);
-    lines.push(prefix + c.met(wrapped[0] ?? ""));
-    for (const cont of wrapped.slice(1)) {
-      lines.push(repeat(" ", indentWidth) + c.met(cont));
-    }
+  if (summary.runId) {
+    lines.push(`  ${c.head(g.arrow)} ${c.dim("kova report bundle")} ${c.met(summary.runId)}`);
   }
+  if (lines.length === 0) return "";
   return lines.join("\n");
 }
 
-function renderFooter(summary, ui) {
-  const { c, g } = ui;
-  const recordCount = summary.coverage?.recordCount ?? 0;
-  const scenarioCount = summary.coverage?.scenarioCount ?? 0;
-  const variants = [
-    [
-      `run ${summary.runId ?? "?"}`,
-      `${recordCount} record${recordCount === 1 ? "" : "s"}`,
-      `${scenarioCount} scenario${scenarioCount === 1 ? "" : "s"}`,
-      summary.runId && `kova report bundle ${summary.runId}`,
-    ],
-    [
-      `run ${summary.runId ?? "?"}`,
-      `${recordCount} record${recordCount === 1 ? "" : "s"}`,
-      `${scenarioCount} scenario${scenarioCount === 1 ? "" : "s"}`,
-    ],
-    [`run ${summary.runId ?? "?"}`, `${recordCount}r`, `${scenarioCount}s`],
-    [`run ${summary.runId ?? "?"}`],
-  ];
-  const prefix = `Kova ${g.sep} report ${g.sep} `;
-  const budget = ui.width;
-  for (const v of variants) {
-    const tail = v.filter(Boolean).join(` ${g.sep} `);
-    const line = prefix + tail;
-    if (visualWidth(line) <= budget) return c.dim(line);
-  }
-  return c.dim(truncatePlain(prefix + (summary.runId ?? "?"), budget));
+function reportPath(summary) {
+  return summary.runId ? `<path-to-${summary.runId}.json>` : "<report.json>";
 }
 
-function truncatePlain(text, max) {
-  if (max <= 4) return text;
-  if (visualWidth(text) <= max) return text;
-  return text.slice(0, max - 1) + "…";
+// ----- helpers -----
+
+function pluralize(n, word) {
+  return n === 1 ? word : word + "s";
 }
 
 function indentBlock(text, n) {
-  const pad = repeat(" ", n);
+  const pad = " ".repeat(n);
   return String(text).split("\n").map((line) => pad + line).join("\n");
 }
