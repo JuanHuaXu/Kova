@@ -78,6 +78,12 @@ Notes:
   --deep-profile enables Node CPU/heap/trace profiling, OpenClaw timeline envs,
   heap snapshots, diagnostic reports, and denser resource sampling.
   setup includes auth. Use --non-interactive or --ci for scripts and agents.
+
+Rendering:
+  --width <n|full|auto>  Soft-cap output width (default 80; use full to fill terminal). KOVA_WIDTH overrides.
+  --align <left|center>  Horizontal alignment when content is narrower than the terminal (default left). KOVA_ALIGN overrides.
+  --color <auto|always|never>  Color control. NO_COLOR / FORCE_COLOR also respected.
+  --ascii                Force ASCII glyph fallback instead of Unicode.
 `);
 }
 
