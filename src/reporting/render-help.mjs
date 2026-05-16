@@ -1,7 +1,7 @@
 // TTY help renderer for `kova help` / `kova <cmd> --help`.
 
 import {
-  makeUi, heavyBand, ruleSection, badge, repeat, withMargin,
+  makeUi, ruleSection, renderKovaHeader, repeat, withMargin,
 } from "../ui/index.mjs";
 
 const COMMANDS = [
@@ -194,12 +194,12 @@ export function renderHelp(commandId, flags = {}, env = process.env, stream = pr
 function renderTopLevelHelp(ui) {
   const { c, g } = ui;
   const out = [];
-  out.push(heavyBand({
-    badgeText: badge("KOVA", "PASS", ui),
-    status: "HELP",
-    title: "OPENCLAW RUNTIME VALIDATION LAB",
+  out.push(renderKovaHeader({
+    surface: "help",
+    verdict: null,
+    headline: "OpenClaw runtime validation lab",
     meta: "kova help <command>  for details",
-    width: ui.width, ui,
+    ui,
   }));
   out.push("");
   out.push(ruleSection("commands", ui.width, ui));
@@ -234,12 +234,12 @@ function renderTopLevelHelp(ui) {
 function renderCommandHelp(cmd, ui) {
   const { c, g } = ui;
   const out = [];
-  out.push(heavyBand({
-    badgeText: badge("HELP", "PASS", ui),
-    status: cmd.id.toUpperCase(),
-    title: cmd.title.toUpperCase(),
-    meta: cmd.blurb,
-    width: ui.width, ui,
+  out.push(renderKovaHeader({
+    surface: `help ${cmd.id}`,
+    verdict: null,
+    headline: cmd.blurb,
+    meta: "",
+    ui,
   }));
   out.push("");
   out.push(ruleSection("usage", ui.width, ui));

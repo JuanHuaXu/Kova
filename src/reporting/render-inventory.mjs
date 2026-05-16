@@ -1,11 +1,10 @@
 // kova inventory plan - OpenClaw inventory dashboard.
 
 import {
-  makeUi, heavyBand, ruleSection, card, sideBySide,
-  badge, statusGlyph, visualWidth, repeat, wrap, withMargin,
+  makeUi, ruleSection, renderKovaHeader, kpiStrip,
+  statusGlyph, visualWidth, repeat, wrap, withMargin,
 } from "../ui/index.mjs";
 
-const TARGET_WIDTH_FOR_DASHBOARD = 120;
 const TOP_WARNINGS = 12;
 
 export function renderInventoryPlan(plan, flags = {}, env = process.env, stream = process.stdout) {
@@ -29,49 +28,28 @@ export function renderInventoryPlan(plan, flags = {}, env = process.env, stream 
 function renderBand(plan, ui) {
   const cov = plan.coverage ?? {};
   const ok = cov.ok !== false;
-  const status = ok ? "READY" : "NEEDS_WORK";
-  const labelBadge = ok ? "INVENTORY_OK" : "INVENTORY_GAP";
+  const verdict = ok ? "OK" : "GAP";
   const meta = `${cov.discoveredCount ?? 0} discovered ${ui.g.sep} ${cov.matchedCount ?? 0} matched`;
-  return heavyBand({
-    badgeText: badge(labelBadge, ok ? "PASS" : "INCOMPLETE", ui),
-    status,
-    title: "OPENCLAW INVENTORY",
-    meta,
-    width: ui.width,
-    ui,
-  });
+  const unmodeled = cov.unmodeledCount ?? 0;
+  const headline = ok
+    ? `${cov.modeledSurfaceCount ?? 0} surfaces modeled`
+    : `${unmodeled} unmodeled`;
+  return renderKovaHeader({ surface: "inventory", verdict, headline, meta, ui });
 }
 
 function renderKpiStrip(plan, ui) {
-  const { c } = ui;
   const cov = plan.coverage ?? {};
-  const stack = ui.width < TARGET_WIDTH_FOR_DASHBOARD;
-  const cardCount = 4;
-  const cardWidth = stack
-    ? Math.max(20, ui.width)
-    : Math.max(20, Math.floor((ui.width - (cardCount - 1) * 2) / cardCount));
-
-  return sideBySide([
-    card({ title: "Modeled",   width: cardWidth, ui, lines: [c.bold(String(cov.modeledSurfaceCount ?? 0)), c.dim("surfaces")] }),
-    card({ title: "Matched",   width: cardWidth, ui,
-      lines: [
-        (cov.matchedCount ?? 0) > 0 ? c.ok(c.bold(String(cov.matchedCount))) : c.dim(String(cov.matchedCount ?? 0)),
-        c.dim("discovered"),
-      ],
-    }),
-    card({ title: "Unmodeled", width: cardWidth, ui,
-      lines: [
-        (cov.unmodeledCount ?? 0) > 0 ? c.warn(c.bold(String(cov.unmodeledCount))) : c.dim(String(cov.unmodeledCount ?? 0)),
-        c.dim("need model"),
-      ],
-    }),
-    card({ title: "Warnings",  width: cardWidth, ui,
-      lines: [
-        (cov.warnings?.length ?? 0) > 0 ? c.warn(c.bold(String(cov.warnings.length))) : c.dim("0"),
-        c.dim((cov.warnings?.length ?? 0) > 0 ? "see below" : "clean"),
-      ],
-    }),
-  ], { width: ui.width, gap: 2, minWidth: TARGET_WIDTH_FOR_DASHBOARD });
+  const matched = cov.matchedCount ?? 0;
+  const unmodeled = cov.unmodeledCount ?? 0;
+  const warnings = cov.warnings?.length ?? 0;
+  const modeled = cov.modeledSurfaceCount ?? 0;
+  const denom = Math.max(modeled, matched + unmodeled, 1);
+  return kpiStrip([
+    { label: "Modeled",   value: String(modeled), hint: "surfaces",    tone: "neutral" },
+    { label: "Matched",   value: String(matched),   hint: "discovered",  tone: matched > 0 ? "ok" : "dim", bar: { filled: matched, total: denom } },
+    { label: "Unmodeled", value: String(unmodeled), hint: "need model",  tone: unmodeled > 0 ? "warn" : "dim", bar: { filled: unmodeled, total: denom } },
+    { label: "Warnings",  value: String(warnings),  hint: warnings > 0 ? "see below" : "clean", tone: warnings > 0 ? "warn" : "dim" },
+  ], ui);
 }
 
 function renderSources(plan, ui) {

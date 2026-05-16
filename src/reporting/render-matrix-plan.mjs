@@ -1,11 +1,10 @@
 // kova matrix plan - resolved matrix view.
 
 import {
-  makeUi, heavyBand, ruleSection, card, sideBySide,
-  badge, renderTable, visualWidth, repeat, withMargin,
+  makeUi, ruleSection, renderKovaHeader, kpiStrip,
+  renderTable, repeat, withMargin,
 } from "../ui/index.mjs";
 
-const TARGET_WIDTH_FOR_DASHBOARD = 120;
 const TOP_ENTRIES = 20;
 
 export function renderMatrixPlan(planJson, flags = {}, env = process.env, stream = process.stdout) {
@@ -31,41 +30,37 @@ function renderBand(planJson, ui) {
     planJson.target ? `target: ${planJson.target}` : null,
     planJson.from ? `from: ${planJson.from}` : null,
   ].filter(Boolean).join(` ${g.sep} `);
-  return heavyBand({
-    badgeText: badge("PLAN", "PASS", ui),
-    status: "READY",
-    title: profile.title ?? "KOVA MATRIX PLAN",
+  const entries = planJson.entries ?? [];
+  const runnable = entries.filter((e) => !e.skipReason).length;
+  return renderKovaHeader({
+    surface: "matrix plan",
+    verdict: "PLAN",
+    headline: `${runnable} runnable ${ui.g.sep} ${entries.length} entries`,
     meta,
-    width: ui.width,
     ui,
   });
 }
 
 function renderKpiStrip(planJson, ui) {
-  const stack = ui.width < TARGET_WIDTH_FOR_DASHBOARD;
-  const cardWidth = stack ? Math.max(28, ui.width) : Math.max(28, Math.floor((ui.width - 4) / 3));
-
   const entries = planJson.entries ?? [];
   const runnable = entries.filter((e) => !e.skipReason).length;
   const skipped = entries.filter((e) => e.skipReason).length;
   const total = entries.length;
-  const { c } = ui;
-
-  return sideBySide([
-    card({ title: "Total",    width: cardWidth, ui, lines: [c.bold(String(total)), c.dim("entries")] }),
-    card({ title: "Runnable", width: cardWidth, ui,
-      lines: [
-        runnable === total ? c.ok(c.bold(String(runnable))) : c.bold(String(runnable)),
-        c.dim(ui.ascii ? "scenarios x states" : "scenarios × states"),
-      ],
-    }),
-    card({ title: "Skipped",  width: cardWidth, ui,
-      lines: [
-        skipped > 0 ? c.warn(c.bold(String(skipped))) : c.dim(String(skipped)),
-        c.dim(skipped > 0 ? "platform/target gates" : "none"),
-      ],
-    }),
-  ], { width: ui.width, gap: 2, minWidth: TARGET_WIDTH_FOR_DASHBOARD });
+  return kpiStrip([
+    { label: "Total", value: String(total), hint: "entries", tone: "neutral" },
+    {
+      label: "Runnable", value: String(runnable),
+      hint: ui.ascii ? "scenarios x states" : "scenarios × states",
+      tone: runnable === total ? "ok" : "neutral",
+      bar: { filled: runnable, total: Math.max(total, 1) },
+    },
+    {
+      label: "Skipped", value: String(skipped),
+      hint: skipped > 0 ? "platform/target gates" : "none",
+      tone: skipped > 0 ? "warn" : "dim",
+      bar: { filled: skipped, total: Math.max(total, 1) },
+    },
+  ], ui);
 }
 
 function renderEntries(planJson, ui) {

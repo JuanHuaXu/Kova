@@ -2,11 +2,10 @@
 // Consumes the JSON shape produced by runPlanCommand --json.
 
 import {
-  makeUi, heavyBand, ruleSection, card, sideBySide,
-  badge, renderTable, visualWidth, repeat, wrap, withMargin,
+  makeUi, ruleSection, renderKovaHeader, kpiStrip,
+  renderTable, repeat, wrap, withMargin,
 } from "../ui/index.mjs";
 
-const TARGET_WIDTH_FOR_DASHBOARD = 120;
 const TOP_SCENARIOS = 12;
 
 export function renderPlan(planJson, flags = {}, env = process.env, stream = process.stdout) {
@@ -34,31 +33,24 @@ function renderBand(planJson, ui) {
     platform.arch,
     platform.node,
   ].filter(Boolean).join(` ${ui.g.sep} `);
-  return heavyBand({
-    badgeText: badge("REGISTRY", "PASS", ui),
-    status: "READY",
-    title: "KOVA PLAN",
+  const scenarios = planJson.scenarios?.length ?? 0;
+  const surfaces = planJson.surfaces?.length ?? 0;
+  return renderKovaHeader({
+    surface: "plan",
+    verdict: null,
+    headline: `${scenarios} scenarios ${ui.g.sep} ${surfaces} surfaces`,
     meta,
-    width: ui.width,
     ui,
   });
 }
 
 function renderKpiStrip(planJson, ui) {
-  const stack = ui.width < TARGET_WIDTH_FOR_DASHBOARD;
-  const cardCount = 4;
-  const cardWidth = stack
-    ? Math.max(20, ui.width)
-    : Math.max(20, Math.floor((ui.width - (cardCount - 1) * 2) / cardCount));
-
-  const c = ui.c;
-  const cards = [
-    card({ title: "Scenarios", width: cardWidth, ui, lines: [c.bold(String(planJson.scenarios?.length ?? 0)), c.dim("registered")] }),
-    card({ title: "States",    width: cardWidth, ui, lines: [c.bold(String(planJson.states?.length ?? 0)),    c.dim("registered")] }),
-    card({ title: "Profiles",  width: cardWidth, ui, lines: [c.bold(String(planJson.profiles?.length ?? 0)),  c.dim("matrix")] }),
-    card({ title: "Surfaces",  width: cardWidth, ui, lines: [c.bold(String(planJson.surfaces?.length ?? 0)),  c.dim("OpenClaw")] }),
-  ];
-  return sideBySide(cards, { width: ui.width, gap: 2, minWidth: TARGET_WIDTH_FOR_DASHBOARD });
+  return kpiStrip([
+    { label: "Scenarios", value: String(planJson.scenarios?.length ?? 0), hint: "registered", tone: "neutral" },
+    { label: "States",    value: String(planJson.states?.length ?? 0),    hint: "registered", tone: "neutral" },
+    { label: "Profiles",  value: String(planJson.profiles?.length ?? 0),  hint: "matrix",     tone: "neutral" },
+    { label: "Surfaces",  value: String(planJson.surfaces?.length ?? 0),  hint: "OpenClaw",   tone: "neutral" },
+  ], ui);
 }
 
 function renderSurfacesByOwner(planJson, ui) {
