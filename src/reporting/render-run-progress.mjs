@@ -1,10 +1,20 @@
-// Live-ish progress emitter for kova run / kova matrix run.
+// Live-log progress emitter for kova run / kova matrix run.
 //
-// On TTY: stylized lines with status glyphs.
-// On CI/non-TTY: plain "[start] ... / [done] ..." lines.
-// When --json or --plain is set, the emitter is a no-op.
+// Append-only event stream (not redraw). Every sample emits a line so the
+// log replays cleanly in CI and during long matrix runs. Each line carries
+// a bracketed event prefix so logs can be grepped/filtered downstream:
 //
-// This is not a spinner — it logs discrete events so logs replay sanely in CI.
+//   [RUN]       mode opened
+//   [START]     sample opened
+//   [PHASE]     phase boundary inside a sample
+//   [DONE]      sample closed (with verdict + elapsed)
+//   [FINISH]    run closed (with status counts + elapsed)
+//
+// On TTY we add color + glyphs; on CI/non-TTY the same bracket prefixes
+// stay so the events parse uniformly. --json / --plain / --no-progress
+// silence the emitter (the receipt still prints).
+//
+// This file owns event formatting only; the run command owns the data.
 
 import { makeUi } from "../ui/index.mjs";
 
@@ -26,27 +36,34 @@ export function createRunProgress({ flags = {}, env = process.env, stream = proc
     return `${(ms / 1000).toFixed(1)}s`;
   }
 
+  // Bracket prefix — Kova brand line. Always the first visible token on a
+  // progress event so logs are grep-able even without color.
+  function tag(label, tone = c.head) {
+    return tone(`[${label}]`);
+  }
+
   return {
     runStart({ scenarioCount, mode: m, target, profile }) {
-      const tag = (m ?? mode).toUpperCase();
-      const head = c.head(`[${tag}]`);
+      const tag1 = tag((m ?? mode).toUpperCase());
       const parts = [];
       if (profile) parts.push(`profile ${c.bold(profile)}`);
       parts.push(`${c.bold(scenarioCount)} ${scenarioCount === 1 ? "entry" : "entries"}`);
       if (target) parts.push(`target ${c.bold(target)}`);
-      stream.write(`${head} ${parts.join(`  ${g.sep}  `)}\n`);
+      stream.write(`${tag1} ${parts.join(`  ${g.sep}  `)}\n`);
     },
 
     scenarioStart({ scenarioId, stateId, iteration }) {
       const key = entryKey(scenarioId, stateId, iteration);
       t0.set(key, process.hrtime.bigint());
       const iter = iteration && iteration.total > 1 ? c.dim(` [${iteration.index}/${iteration.total}]`) : "";
-      stream.write(`  ${c.head(g.play)} ${c.bold(scenarioId)}${c.dim(` ${g.sep} ${stateId}`)}${iter}\n`);
+      stream.write(`${tag("START", c.head)}  ${c.bold(scenarioId)}${c.dim(` ${g.sep} ${stateId}`)}${iter}\n`);
     },
 
-    phase({ title }) {
+    phase({ title, scenarioId, stateId }) {
       if (!title) return;
-      stream.write(`      ${c.dim(g.bullet)} ${c.dim(title)}\n`);
+      const scope = [scenarioId, stateId].filter(Boolean).join("/");
+      const where = scope ? c.dim(`  ${g.sep} ${scope}`) : "";
+      stream.write(`${tag("PHASE", c.dim)}  ${c.dim(title)}${where}\n`);
     },
 
     scenarioEnd({ scenarioId, stateId, iteration, status, skipReason }) {
@@ -54,31 +71,42 @@ export function createRunProgress({ flags = {}, env = process.env, stream = proc
       const dur = t0.has(key) ? fmtDuration(elapsedMs(t0.get(key))) : "—";
       t0.delete(key);
       const iter = iteration && iteration.total > 1 ? c.dim(` [${iteration.index}/${iteration.total}]`) : "";
-      const { glyph, label } = classify(status, skipReason, c, g);
+      const { label, tone } = classify(status, skipReason, c);
       const tail = skipReason ? c.dim(`  ${g.sep} ${skipReason}`) : c.dim(`  ${g.sep} ${dur}`);
-      stream.write(`  ${glyph} ${c.bold(scenarioId)}${c.dim(` ${g.sep} ${stateId}`)}${iter}  ${label}${tail}\n`);
+      stream.write(`${tag("DONE", tone)}   ${c.bold(scenarioId)}${c.dim(` ${g.sep} ${stateId}`)}${iter}  ${label}${tail}\n`);
     },
 
     runFinish({ total, statuses }) {
       const dur = fmtDuration(elapsedMs(start));
-      const counts = Object.entries(statuses ?? {})
-        .map(([k, v]) => `${k}=${v}`)
-        .join("  ");
-      stream.write(`${c.head(g.arrow)} ${c.dim(`finished ${total} ${total === 1 ? "entry" : "entries"} in ${dur}`)}${counts ? c.dim(`  ${g.sep}  ${counts}`) : ""}\n`);
+      const fail = (statuses?.FAIL ?? 0) > 0;
+      const tone = fail ? c.err : c.ok;
+      const counts = formatCounts(statuses, c);
+      stream.write(`${tag("FINISH", tone)} ${c.dim(`${total} ${total === 1 ? "entry" : "entries"} in ${dur}`)}${counts ? c.dim(`  ${g.sep}  `) + counts : ""}\n`);
     },
   };
 }
 
-function classify(status, skipReason, c, g) {
-  if (skipReason) return { glyph: c.dim(g.pause), label: c.dim("SKIP") };
+function classify(status, skipReason, c) {
+  if (skipReason) return { label: c.dim("SKIP"), tone: c.dim };
   switch (String(status ?? "").toUpperCase()) {
-    case "PASS":   return { glyph: c.ok(g.check),  label: c.ok("PASS") };
-    case "FAIL":   return { glyph: c.err(g.cross), label: c.err("FAIL") };
-    case "BLOCKED":return { glyph: c.warn(g.warn), label: c.warn("BLOCKED") };
-    case "DRY-RUN":return { glyph: c.head(g.diamond), label: c.dim("DRY-RUN") };
-    case "SKIP":   return { glyph: c.dim(g.pause), label: c.dim("SKIP") };
-    default:       return { glyph: c.dim(g.bullet), label: c.dim(String(status ?? "?")) };
+    case "PASS":    return { label: c.ok("PASS"),     tone: c.ok };
+    case "FAIL":    return { label: c.err("FAIL"),    tone: c.err };
+    case "BLOCKED": return { label: c.warn("BLOCKED"),tone: c.warn };
+    case "DRY-RUN": return { label: c.dim("DRY-RUN"), tone: c.head };
+    case "SKIP":    return { label: c.dim("SKIP"),    tone: c.dim };
+    default:        return { label: c.dim(String(status ?? "?")), tone: c.dim };
   }
+}
+
+function formatCounts(statuses, c) {
+  if (!statuses) return "";
+  const parts = [];
+  for (const [k, v] of Object.entries(statuses)) {
+    if (!v) continue;
+    const color = k === "FAIL" ? c.err : k === "PASS" ? c.ok : k === "BLOCKED" ? c.warn : c.dim;
+    parts.push(color(`${k}=${v}`));
+  }
+  return parts.join(c.dim("  "));
 }
 
 function entryKey(scenarioId, stateId, iteration) {
