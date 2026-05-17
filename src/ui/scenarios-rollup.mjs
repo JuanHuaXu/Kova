@@ -54,7 +54,7 @@ export function scenariosRollup({ rows, matrix = false, compare = false, ui } = 
   if (compare) cols.push({ key: "delta", header: c.dim("Δ"), align: "right", minWidth: 7 });
   cols.push({ key: "worst", header: c.dim("worst metric"), align: "left", minWidth: 0 });
 
-  return renderTable({ columns: cols, rows: shaped, gap: 2 });
+  return renderTable({ columns: cols, rows: shaped, gap: 2, maxWidth: ui?.width ?? null });
 }
 
 function formatWorst(worst, c) {

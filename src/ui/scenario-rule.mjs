@@ -32,9 +32,10 @@ export function scenarioRule({ id, verdict = "", samples = null, note = "", ui }
 
   const prefixW = visualWidth(prefix);
   const rightW = visualWidth(right);
-  const fillW = Math.max(3, width - prefixW - rightW - (right ? 2 : 0));
+  const trailingLen = 3;
+  const fillW = Math.max(3, width - prefixW - rightW - (right ? 2 : 0) - (right ? trailingLen : 0));
   const fill = repeat(g.hLight, fillW);
-  const trailing = repeat(g.hLight, 3);
+  const trailing = repeat(g.hLight, trailingLen);
   if (!right) {
     return c.dim(prefix + fill);
   }

@@ -40,7 +40,7 @@ const MANY_SAMPLES = 20;
 //       delta,     // percent (signed); null when N/A
 //       threshold, status,
 //     }
-export function metricsTable({ rows, sampleCount = 1, compare = false, ui, gap = 3 } = {}) {
+export function metricsTable({ rows, sampleCount = 1, compare = false, ui, gap = 3, indent = 0 } = {}) {
   if (!rows || rows.length === 0) return "";
   const c = ui.c;
   const cols = compare
@@ -51,7 +51,8 @@ export function metricsTable({ rows, sampleCount = 1, compare = false, ui, gap =
         ? fewSampleColumns(c)
         : singleSampleColumns(c);
   const shaped = rows.map((r) => compare ? shapeCompareRow(r, ui) : shapeRow(r, sampleCount, ui));
-  return renderTable({ columns: cols, rows: shaped, gap });
+  const maxWidth = ui.width ? Math.max(20, ui.width - indent) : null;
+  return renderTable({ columns: cols, rows: shaped, gap, maxWidth });
 }
 
 export { MANY_SAMPLES };
@@ -60,44 +61,44 @@ export { MANY_SAMPLES };
 
 function singleSampleColumns(c) {
   return [
-    { key: "label",     header: c.dim("metric"),    align: "left",  minWidth: 24 },
-    { key: "value",     header: c.dim("value"),     align: "right", minWidth: 10 },
-    { key: "threshold", header: c.dim("threshold"), align: "right", minWidth: 10 },
-    { key: "status",    header: c.dim("status"),    align: "left",  minWidth: 8 },
+    { key: "label",     header: c.dim("metric"),    align: "left",  minWidth: 16 },
+    { key: "value",     header: c.dim("value"),     align: "right", minWidth: 8 },
+    { key: "threshold", header: c.dim("threshold"), align: "right", minWidth: 9 },
+    { key: "status",    header: c.dim("status"),    align: "left",  minWidth: 6 },
   ];
 }
 
 function fewSampleColumns(c) {
   return [
-    { key: "label",     header: c.dim("metric"),    align: "left",  minWidth: 24 },
-    { key: "median",    header: c.dim("median"),    align: "right", minWidth: 9 },
-    { key: "stdev",     header: c.dim("±σ"),        align: "right", minWidth: 7 },
-    { key: "max",       header: c.dim("max"),       align: "right", minWidth: 9 },
-    { key: "threshold", header: c.dim("threshold"), align: "right", minWidth: 10 },
-    { key: "status",    header: c.dim("status"),    align: "left",  minWidth: 8 },
+    { key: "label",     header: c.dim("metric"),    align: "left",  minWidth: 16 },
+    { key: "median",    header: c.dim("median"),    align: "right", minWidth: 8 },
+    { key: "stdev",     header: c.dim("±σ"),        align: "right", minWidth: 6 },
+    { key: "max",       header: c.dim("max"),       align: "right", minWidth: 8 },
+    { key: "threshold", header: c.dim("threshold"), align: "right", minWidth: 9 },
+    { key: "status",    header: c.dim("status"),    align: "left",  minWidth: 6 },
   ];
 }
 
 function manySampleColumns(c) {
   return [
-    { key: "label",     header: c.dim("metric"),    align: "left",  minWidth: 24 },
-    { key: "median",    header: c.dim("median"),    align: "right", minWidth: 9 },
-    { key: "stdev",     header: c.dim("±σ"),        align: "right", minWidth: 7 },
-    { key: "p95",       header: c.dim("p95"),       align: "right", minWidth: 9 },
-    { key: "max",       header: c.dim("max"),       align: "right", minWidth: 9 },
-    { key: "threshold", header: c.dim("threshold"), align: "right", minWidth: 10 },
-    { key: "status",    header: c.dim("status"),    align: "left",  minWidth: 8 },
+    { key: "label",     header: c.dim("metric"),    align: "left",  minWidth: 16 },
+    { key: "median",    header: c.dim("median"),    align: "right", minWidth: 8 },
+    { key: "stdev",     header: c.dim("±σ"),        align: "right", minWidth: 6 },
+    { key: "p95",       header: c.dim("p95"),       align: "right", minWidth: 8 },
+    { key: "max",       header: c.dim("max"),       align: "right", minWidth: 8 },
+    { key: "threshold", header: c.dim("threshold"), align: "right", minWidth: 9 },
+    { key: "status",    header: c.dim("status"),    align: "left",  minWidth: 6 },
   ];
 }
 
 function compareColumns(c) {
   return [
-    { key: "label",     header: c.dim("metric"),    align: "left",  minWidth: 24 },
-    { key: "baseline",  header: c.dim("baseline"),  align: "right", minWidth: 10 },
-    { key: "current",   header: c.dim("current"),   align: "right", minWidth: 10 },
-    { key: "delta",     header: c.dim("Δ"),         align: "right", minWidth: 8 },
-    { key: "threshold", header: c.dim("threshold"), align: "right", minWidth: 10 },
-    { key: "status",    header: c.dim("status"),    align: "left",  minWidth: 8 },
+    { key: "label",     header: c.dim("metric"),    align: "left",  minWidth: 14 },
+    { key: "baseline",  header: c.dim("baseline"),  align: "right", minWidth: 9 },
+    { key: "current",   header: c.dim("current"),   align: "right", minWidth: 9 },
+    { key: "delta",     header: c.dim("Δ"),         align: "right", minWidth: 7 },
+    { key: "threshold", header: c.dim("threshold"), align: "right", minWidth: 9 },
+    { key: "status",    header: c.dim("status"),    align: "left",  minWidth: 6 },
   ];
 }
 
