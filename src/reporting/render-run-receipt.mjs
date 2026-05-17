@@ -164,7 +164,7 @@ function renderScenarios(report, ui, opts = {}) {
     passed: s.passed,
     total: s.total,
     verdict: s.verdict,
-    worst: s.worst ? { label: s.worst.message ?? s.worst.metric ?? "violation", tone: "err" } : null,
+    worst: s.worst ?? null,
   }));
 
   return [

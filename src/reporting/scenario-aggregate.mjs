@@ -100,6 +100,7 @@ export function aggregateScenarios(report, findings = []) {
       phases: aggregatePhases(samples),
       metrics: aggregateMetrics(samples),
       findings: findingsByScenario.get(id) ?? [],
+      proves: deriveProves(first, verdict),
       worst: findWorstViolation(samples),
     });
   }
@@ -210,14 +211,60 @@ function parseThreshold(expected) {
 function findWorstViolation(samples) {
   for (const s of samples) {
     const v = (s.violations ?? [])[0];
-    if (v) {
-      return {
-        label: v.message ?? v.metric ?? "violation",
-        tone: "err",
-      };
-    }
+    if (v) return summarizeViolation(v);
   }
   return null;
+}
+
+// Surface one claim per scenario derived from its declared objective.
+// The objective sentence rides on every record (set by the runner), so
+// we read it from the first sample and stamp the scenario verdict on it.
+// status SKIPPED → no objective sentence on record (rare).
+function deriveProves(record, verdict) {
+  const objective = typeof record?.objective === "string" ? record.objective.trim() : "";
+  if (!objective) return [];
+  const status = verdict === "PASS" ? "PASS"
+    : verdict === "FAIL" ? "FAIL"
+    : verdict === "BLOCKED" ? "BLOCKED"
+    : verdict === "DRY-RUN" ? "SKIPPED"
+    : "INCOMPLETE";
+  return [{ claim: objective, status }];
+}
+
+// Compact worst-metric headline for rollup tables. Trades the raw
+// violation message (which can be 100+ chars of prose) for a tight
+// "<metric.label> · <actual>${unit} > <threshold>${unit}" form when
+// kind=threshold, falling back to a truncated message otherwise.
+function summarizeViolation(v) {
+  const metricKey = v.metric ?? null;
+  const label = (metricKey && METRIC_LABELS[metricKey]) || metricKey || "violation";
+  const unit = (metricKey && METRIC_UNITS[metricKey]) || "";
+  const tone = "err";
+
+  if (v.kind === "threshold") {
+    const actual = formatMetricNumber(v.actual);
+    const threshold = formatThreshold(v.expected);
+    if (actual != null && threshold != null) {
+      return { label, note: `${actual}${unit} > ${threshold}${unit}`, tone };
+    }
+  }
+
+  const msg = typeof v.message === "string" ? v.message : "";
+  const trimmed = msg.length > 60 ? `${msg.slice(0, 57)}…` : msg;
+  return { label, note: trimmed, tone };
+}
+
+function formatMetricNumber(value) {
+  const n = typeof value === "number" ? value : Number(value);
+  if (!Number.isFinite(n)) return null;
+  if (Math.abs(n) >= 1000) return n.toLocaleString("en-US", { maximumFractionDigits: 0 });
+  if (Math.abs(n) >= 10) return n.toLocaleString("en-US", { maximumFractionDigits: 1 });
+  return n.toLocaleString("en-US", { maximumFractionDigits: 2 });
+}
+
+function formatThreshold(expected) {
+  const n = parseThreshold(expected);
+  return n == null ? null : formatMetricNumber(n);
 }
 
 function groupFindingsByScenario(findings) {
