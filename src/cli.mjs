@@ -1,3 +1,15 @@
+// Flags that never accept a value. Listed explicitly so the parser
+// doesn't greedily consume the next positional argument (e.g. so
+// `kova report --full <path>` still leaves <path> as a positional).
+// Use snake_case to match the post-replaceAll key form below.
+const BOOLEAN_FLAGS = new Set([
+  "full", "json", "plain", "fixer",
+  "execute", "ci", "non_interactive", "gate", "fail_fast", "allow_exhaustive",
+  "keep_env", "retain_on_failure", "profile_on_failure",
+  "deep_profile", "node_profile", "heap_snapshot",
+  "ascii", "no_color", "reviewed_good", "version",
+]);
+
 export function parseFlags(argv) {
   const flags = { _: [] };
 
@@ -14,6 +26,11 @@ export function parseFlags(argv) {
 
     if (inlineValue !== undefined) {
       flags[key] = inlineValue;
+      continue;
+    }
+
+    if (BOOLEAN_FLAGS.has(key)) {
+      flags[key] = true;
       continue;
     }
 
