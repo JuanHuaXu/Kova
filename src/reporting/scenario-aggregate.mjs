@@ -16,7 +16,7 @@ import { summarizeSamples, classifyConfidence } from "../ui/confidence.mjs";
 
 // Metrics we always surface (when present) as scenario headline metrics,
 // even if they have no threshold attached. Order = display order.
-const HEADLINE_METRICS = [
+export const HEADLINE_METRICS = [
   "agentTurnMs",
   "coldReadyMs",
   "warmReadyMs",
@@ -28,7 +28,7 @@ const HEADLINE_METRICS = [
   "eventLoopDelayMs",
 ];
 
-const METRIC_LABELS = {
+export const METRIC_LABELS = {
   agentTurnMs: "agent.turn.ms",
   coldReadyMs: "cold.ready.ms",
   warmReadyMs: "warm.ready.ms",
@@ -40,7 +40,7 @@ const METRIC_LABELS = {
   eventLoopDelayMs: "event-loop.max.ms",
 };
 
-const METRIC_UNITS = {
+export const METRIC_UNITS = {
   agentTurnMs: "ms",
   coldReadyMs: "ms",
   warmReadyMs: "ms",
@@ -51,6 +51,13 @@ const METRIC_UNITS = {
   cpuPercentMax: "%",
   eventLoopDelayMs: "ms",
 };
+
+// Direction lookup: for everything we track, lower is better.
+// We expose this so callers (compare renderer) can color deltas correctly
+// without re-encoding the rule.
+export function metricDirection(_id) {
+  return "lower-better";
+}
 
 // aggregateScenarios(report) -> [{ id, title, verdict, samples, passed,
 //   phases, metrics, findings, ownerArea, confidence }]
