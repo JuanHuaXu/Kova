@@ -92,7 +92,7 @@ async function compareReportsCommand(baselinePath, currentPath, flags) {
     console.log(renderCompareAssessment(comparison, flags));
   }
   if (!comparison.ok) {
-    throw new Error("comparison found regressions");
+    process.exitCode = 1;
   }
 }
 

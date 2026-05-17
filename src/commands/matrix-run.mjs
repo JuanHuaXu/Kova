@@ -315,7 +315,7 @@ async function buildRepeatRecords(entry, context, callback) {
 
 function failGateIfNeeded(gate) {
   if (gate && gate.verdict !== "SHIP") {
-    throw new Error(`gate outcome: ${gate.outcome ?? gate.verdict}`);
+    process.exitCode = 1;
   }
 }
 
