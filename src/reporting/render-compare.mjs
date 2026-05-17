@@ -49,11 +49,11 @@ export function renderCompareFromComparison(comparison, ui, opts = {}) {
   const rollup = renderRollup(comparison, ui);
   if (rollup) { sections.push(""); sections.push(rollup); }
 
-  const findings = renderFindings(comparison, ui, isFull);
-  if (findings) { sections.push(""); sections.push(findings); }
-
   const scenarios = renderAffectedScenarios(comparison, ui, isFull);
   if (scenarios) { sections.push(""); sections.push(scenarios); }
+
+  const findings = renderFindings(comparison, ui, isFull);
+  if (findings) { sections.push(""); sections.push(findings); }
 
   sections.push("");
   sections.push(renderNext(comparison, ui));

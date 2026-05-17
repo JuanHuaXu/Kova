@@ -13,11 +13,6 @@
 scenario                 samples  verdict            Δ  worst metric
 release-runtime-startup        —  [REGRESSED]       +3  nodeProfileTopFunctionM…
 
-─── findings ───────────────────────────────────────────────────────────────────
-
-  + ✗ peak RSS 904.5 MB (cap 900 MB)
-      release-runtime-startup/fresh peakRssMb: 904.5; cpuPercentMax: 150.1
-
 ─── release-runtime-startup ────────────────────── [REGRESSED] · FAIL → FAIL ───
 
 metric                    baseline       current         Δ    threshold   status
@@ -27,6 +22,11 @@ heapSnapshotBytes                0   128,809,325         —   52,428,800   OVER
 cold.ready.ms               158 ms        703 ms   +344.9%            —   —
 pluginsListMs                1,145         1,438    +25.6%            —   —
 resourcePeakGatewayRs…         287           349    +21.6%            —   —
+
+─── findings ───────────────────────────────────────────────────────────────────
+
+  + ✗ peak RSS 904.5 MB (cap 900 MB)
+      release-runtime-startup/fresh peakRssMb: 904.5; cpuPercentMax: 150.1
 
 ─── next ───────────────────────────────────────────────────────────────────────
 
