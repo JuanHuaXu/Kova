@@ -19,6 +19,7 @@
 import { renderTable } from "./tables.mjs";
 import { badge } from "./badges.mjs";
 import { visualWidth, truncate } from "./text.mjs";
+import { METRIC_LABELS } from "../reporting/scenario-aggregate.mjs";
 
 // scenariosRollup({ rows, matrix, ui }) -> string
 //
@@ -71,7 +72,8 @@ function formatWorstCell(worst, c, termWidth) {
   if (!worst) return { cell: c.dim("—"), after: null };
   if (typeof worst === "string") return { cell: worst, after: null };
 
-  const { label, note, tone } = worst;
+  const { label: rawLabel, note, tone } = worst;
+  const label = shortenMetricLabel(rawLabel);
   const color = tone === "err" ? c.err
     : tone === "warn" ? c.warn
     : tone === "ok" ? c.ok
@@ -94,6 +96,19 @@ function formatWorstCell(worst, c, termWidth) {
 function isCompactThreshold(note) {
   // Matches "<num><unit?> <op> <num><unit?>" e.g. "988.8MB > 900MB", "97% > 80%".
   return /^[\d.,+\-]+\S* (?:>|<|≥|≤|>=|<=) [\d.,+\-]+\S*$/.test(note);
+}
+
+// Strip the verbose `resourceByRole.<role>.<metric>` path down to
+// "<role> <metric.label>". The continuation line below the row still
+// carries the threshold detail, but the cell now identifies both the
+// scope (role) and the metric kind without the noisy field-path prefix.
+function shortenMetricLabel(label) {
+  if (typeof label !== "string") return label;
+  const m = label.match(/^resourceByRole\.([^.]+)\.([^.]+)$/);
+  if (!m) return label;
+  const [, role, metricKey] = m;
+  const friendly = METRIC_LABELS[metricKey] ?? metricKey;
+  return `${role} ${friendly}`;
 }
 
 function colorDelta(text, c) {
