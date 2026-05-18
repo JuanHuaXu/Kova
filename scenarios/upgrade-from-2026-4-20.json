@@ -41,7 +41,6 @@
       "intent": "Use the real OCM upgrade path to bind and reconcile the cloned env on OpenClaw 2026.4.20 before the target upgrade.",
       "commands": [
         "ocm upgrade {env} --version 2026.4.20 --json",
-        "ocm service status {env} --json",
         "ocm @{env} -- status"
       ],
       "evidence": [
@@ -73,8 +72,7 @@
       "commands": [
         "ocm @{env} -- status",
         "ocm @{env} -- plugins list",
-        "ocm @{env} -- doctor --fix",
-        "ocm logs {env} --tail 300 --raw"
+        "ocm @{env} -- doctor --fix"
       ],
       "evidence": [
         "status output",
