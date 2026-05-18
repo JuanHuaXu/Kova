@@ -23,6 +23,7 @@ import {
   executeStateLifecycleSteps,
   executeStateSetupAfterPhase
 } from "./run/state-lifecycle.mjs";
+import { executeAuthPhase } from "./run/auth-phase.mjs";
 import { executeEvidenceSnapshotPhase } from "./run/evidence-snapshots.mjs";
 import {
   buildPlannedPhases,
@@ -35,7 +36,6 @@ import { collectProviderEvidence } from "./collectors/provider.mjs";
 import { evaluateRecord } from "./evaluator.mjs";
 import {
   measurementScopeForPhase,
-  normalizeMeasurementScope,
   phaseDriverKind,
   phaseResultStatus,
   tagCommandResult
@@ -368,28 +368,6 @@ function classifyEnvDestroyCleanup(result) {
   }
 
   return "destroy-failed";
-}
-
-async function executeAuthPhase(phase, context, envName, artifactDir, authPolicy) {
-  if (!phase) {
-    return null;
-  }
-  const results = [];
-  for (const [commandIndex, command] of phase.commands.entries()) {
-    results.push(await runScenarioCommand(command, context, envName, artifactDir, phase.id, commandIndex, authPolicy));
-  }
-  return {
-    ...phase,
-    measurementScope: normalizeMeasurementScope(phase.measurementScope, phase.id),
-    driverKind: phaseDriverKind(phase),
-    results,
-    metrics: await collectEnvMetrics(envName, metricOptions(context, null, { id: phase.id }, artifactDir, {
-      kind: "auth-phase",
-      measurementScope: normalizeMeasurementScope(phase.measurementScope, phase.id),
-      collectionIntent: phase.collectionIntent ?? null,
-      resultStatus: phaseResultStatus(results)
-    }))
-  };
 }
 
 async function executeTargetSetup(context, envName, artifactDir) {
