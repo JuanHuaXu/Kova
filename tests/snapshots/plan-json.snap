@@ -6150,7 +6150,6 @@
           "intent": "Create a disposable env through the real stable channel before upgrading to the local release-shaped runtime.",
           "commands": [
             "ocm start {env} --channel stable --json",
-            "ocm service status {env} --json",
             "ocm @{env} -- status"
           ],
           "evidence": [
@@ -6180,11 +6179,9 @@
           "title": "Post-Local-Build Upgrade Checks",
           "intent": "Verify the local build handles plugin indexes, runtime deps, doctor recovery, and gateway readiness after upgrade.",
           "commands": [
-            "ocm service status {env} --json",
             "ocm @{env} -- status",
             "ocm @{env} -- plugins list",
-            "ocm @{env} -- doctor --fix",
-            "ocm logs {env} --tail 400 --raw"
+            "ocm @{env} -- doctor --fix"
           ],
           "evidence": [
             "gateway state",
