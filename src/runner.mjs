@@ -36,17 +36,15 @@ import {
 import { collectEnvMetrics, collectNodeProfileMetrics } from "./metrics.mjs";
 import { collectorArtifactDirs, prepareCollectorArtifactDirs } from "./collectors/artifacts.mjs";
 import { collectProviderEvidence } from "./collectors/provider.mjs";
-import { resolveCollectionPolicy } from "./collection-policy.mjs";
 import { evaluateRecord } from "./evaluator.mjs";
 import {
   measurementScopeForPhase,
   normalizeMeasurementScope,
   phaseDriverKind,
   phaseResultStatus,
-  readinessHardTimeoutForPhase,
-  readinessThresholdForPhase,
   tagCommandResult
 } from "./measurement-contract.mjs";
+import { metricOptions } from "./run/metric-options.mjs";
 import { artifactsDir } from "./paths.mjs";
 import { assertKovaEnvName } from "./safety.mjs";
 import { join } from "node:path";
@@ -481,35 +479,6 @@ async function executeEvidenceSnapshotPhase(context, envName, scenario, afterPha
       measurementScope: phase.measurementScope,
       resultStatus: phaseResultStatus(results)
     }))
-  };
-}
-
-function metricOptions(context, scenario, phase, artifactDir, policyContext = {}) {
-  const readinessThresholdMs = readinessThresholdForPhase(scenario, phase);
-  const measurementScope = policyContext.measurementScope ?? normalizeMeasurementScope(phase?.measurementScope, phase?.id);
-  return {
-    timeoutMs: context.timeoutMs,
-    healthSamples: context.healthSamples,
-    healthIntervalMs: context.healthIntervalMs,
-    readinessThresholdMs,
-    readinessTimeoutMs: readinessHardTimeoutForPhase(scenario, phase, readinessThresholdMs),
-    readinessIntervalMs: context.readinessIntervalMs,
-    heapSnapshot: context.heapSnapshot === true && context.deepProfile !== true,
-    diagnosticReport: false,
-    artifactDir,
-    collectorArtifactDirs: collectorArtifactDirs(artifactDir),
-    collectionPolicy: resolveCollectionPolicy({
-      kind: policyContext.kind,
-      scenario: scenario?.id ?? null,
-      surface: scenario?.surface ?? null,
-      phaseId: phase?.id ?? null,
-      phaseHealthScope: phase?.healthScope ?? null,
-      measurementScope,
-      resultStatus: policyContext.resultStatus ?? null,
-      collectionIntent: policyContext.collectionIntent ?? phase?.collectionIntent ?? null,
-      lifecycleKind: policyContext.lifecycleKind ?? null,
-      lifecycleCommandScope: policyContext.lifecycleCommandScope ?? null
-    })
   };
 }
 
