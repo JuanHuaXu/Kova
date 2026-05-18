@@ -80,7 +80,7 @@ export function compareReports(baseline, current, options = {}) {
         baselineSampleCount: 0,
         currentSampleCount: currentGroup.length,
         regressions: [],
-        metrics: metricDeltas([], currentGroup)
+        metrics: metricDeltas([], currentGroup, thresholds)
       });
       continue;
     }
@@ -112,7 +112,7 @@ export function compareReports(baseline, current, options = {}) {
       baselineSampleCount: baselineGroup.length,
       currentSampleCount: currentGroup.length,
       regressions,
-      metrics: metricDeltas(baselineGroup, currentGroup)
+      metrics: metricDeltas(baselineGroup, currentGroup, thresholds)
     });
   }
 
@@ -604,7 +604,7 @@ function addIncreaseRegression(regressions, baseline, current, metric, tolerance
   });
 }
 
-function metricDeltas(baselineRecords, currentRecords) {
+function metricDeltas(baselineRecords, currentRecords, thresholds = {}) {
   const metrics = {};
   for (const metric of [
     "peakRssMb",
@@ -684,18 +684,22 @@ function metricDeltas(baselineRecords, currentRecords) {
   ]) {
     const baseline = summarizeMetricRecords(baselineRecords, metric);
     const current = summarizeMetricRecords(currentRecords, metric);
-    addMetricDelta(metrics, metric, baseline, current, "median");
+    const tolerance = typeof thresholds[metric] === "number" ? thresholds[metric] : null;
+    const repeatedMaxOnly = tolerance !== null && usesRepeatedMaxOnly(baseline, current, tolerance);
+    if (!repeatedMaxOnly) {
+      addMetricDelta(metrics, metric, baseline, current, "median", tolerance);
+    }
     if (baseline.count > 1 || current.count > 1) {
-      addMetricDelta(metrics, `${metric}.max`, baseline, current, "max");
-      if (baseline.p95 !== null || current.p95 !== null) {
-        addMetricDelta(metrics, `${metric}.p95`, baseline, current, "p95");
+      addMetricDelta(metrics, `${metric}.max`, baseline, current, "max", tolerance);
+      if (!repeatedMaxOnly && (baseline.p95 !== null || current.p95 !== null)) {
+        addMetricDelta(metrics, `${metric}.p95`, baseline, current, "p95", tolerance);
       }
     }
   }
   return metrics;
 }
 
-function addMetricDelta(metrics, id, baseline, current, stat) {
+function addMetricDelta(metrics, id, baseline, current, stat, tolerance = null) {
   const baselineValue = baseline?.[stat] ?? null;
   const currentValue = current?.[stat] ?? null;
   metrics[id] = {
@@ -703,6 +707,7 @@ function addMetricDelta(metrics, id, baseline, current, stat) {
     baseline: baselineValue,
     current: currentValue,
     delta: typeof baselineValue === "number" && typeof currentValue === "number" ? currentValue - baselineValue : null,
+    tolerance,
     baselineStats: compactMetricStats(baseline),
     currentStats: compactMetricStats(current)
   };

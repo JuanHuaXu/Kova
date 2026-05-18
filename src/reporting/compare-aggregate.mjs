@@ -66,8 +66,8 @@ export function pickAffectedScenarios(comparison) {
 //
 // Strategy: rank metrics by signed delta (worse first), then prefer ones in
 // HEADLINE_METRICS or in the regressions list. Use percent delta for the
-// table; threshold is omitted (compareReports uses tolerance, not absolute
-// thresholds; status comes from regressions list).
+// table; tolerance comes from compareReports when a metric has a configured
+// compare gate.
 export function scenarioMetricRows(scenario, { limit = 6 } = {}) {
   const metrics = scenario?.metrics ?? {};
   const regressionByMetric = new Map((scenario?.regressions ?? [])
@@ -85,11 +85,13 @@ export function scenarioMetricRows(scenario, { limit = 6 } = {}) {
       : null;
     const absoluteDelta = typeof b === "number" && typeof cur === "number" ? cur - b : null;
     const reg = regressionByMetric.get(id);
+    const tolerance = typeof m.tolerance === "number" ? m.tolerance : reg?.tolerance ?? null;
     const status = compareMetricStatus({
       regressed: !!reg,
       deltaPct,
       absoluteDelta,
       direction: metricDirection(parsed.base),
+      tolerance,
     });
     rows.push({
       id,
@@ -100,7 +102,7 @@ export function scenarioMetricRows(scenario, { limit = 6 } = {}) {
       current: cur,
       delta: deltaPct,
       absoluteDelta,
-      threshold: reg?.tolerance ?? null,
+      threshold: tolerance,
       status,
       headline: HEADLINE_METRICS.includes(parsed.base),
       regressed: !!reg,
@@ -122,14 +124,22 @@ export function compareMetricRowOrder(a, b) {
   return a.id.localeCompare(b.id);
 }
 
-function compareMetricStatus({ regressed, deltaPct, absoluteDelta, direction }) {
+function compareMetricStatus({ regressed, deltaPct, absoluteDelta, direction, tolerance }) {
   if (regressed) return "OVER";
   const delta = deltaPct ?? absoluteDelta;
   if (typeof delta !== "number" || !Number.isFinite(delta)) return "—";
+  if (!isMeaningfulDelta(deltaPct, absoluteDelta)) return "—";
   const worse = direction === "lower-better" ? delta > 0 : delta < 0;
   const better = direction === "lower-better" ? delta < 0 : delta > 0;
-  if (worse && isMeaningfulDelta(deltaPct, absoluteDelta)) return "WATCH";
-  if (better && isMeaningfulDelta(deltaPct, absoluteDelta)) return "PASS";
+  if (typeof tolerance === "number" && Number.isFinite(tolerance)) {
+    if (worse) {
+      return Math.abs(absoluteDelta ?? delta) > tolerance ? "OVER" : "PASS";
+    }
+    if (better) return "PASS";
+    return "—";
+  }
+  if (worse) return "WATCH";
+  if (better) return "PASS";
   return "—";
 }
 

@@ -951,19 +951,20 @@ function compareMetricOrderingCheck() {
       scenario: "gateway-performance",
       state: "fresh",
       regressions: [
-        { kind: "metric", metric: "cpuPercentMax", baseline: 76.8, current: 124.5, delta: 47.7, tolerance: 25 },
         { kind: "metric", metric: "postReadyHealthFailures.max", baseline: 0, current: 3, delta: 3, tolerance: 0 }
       ],
       metrics: {
-        cpuPercentMax: { baseline: 76.8, current: 124.5 },
-        "postReadyHealthFailures.max": { baseline: 0, current: 3 },
+        cpuPercentMax: { baseline: 100, current: 123, tolerance: 25 },
+        "postReadyHealthFailures.max": { baseline: 0, current: 3, tolerance: 0 },
         modelsListMs: { baseline: 1034, current: 2496 },
         readinessHealthReadyMs: { baseline: 2342, current: 1859 },
         gatewayRestartCount: { baseline: 6, current: 6 }
       }
     }, { limit: Infinity });
-    assertEqual(rows.map((row) => row.status).join(","), "OVER,OVER,WATCH,PASS", "compare rows sort by status class");
-    assertEqual(rows.map((row) => row.id).join(","), "cpuPercentMax,postReadyHealthFailures.max,modelsListMs,readinessHealthReadyMs", "compare rows omit unchanged rows");
+    assertEqual(rows.map((row) => row.status).join(","), "OVER,WATCH,PASS,PASS", "compare rows sort by status class");
+    assertEqual(rows.map((row) => row.id).join(","), "postReadyHealthFailures.max,modelsListMs,cpuPercentMax,readinessHealthReadyMs", "compare rows omit unchanged rows");
+    assertEqual(rows.find((row) => row.id === "cpuPercentMax").threshold, 25, "within-tolerance metric retains tolerance");
+    assertEqual(rows.find((row) => row.id === "cpuPercentMax").status, "PASS", "within-tolerance worse metric passes");
     assertEqual(rows.find((row) => row.id === "postReadyHealthFailures.max").absoluteDelta, 3, "zero-baseline count delta retained");
     return {
       id: "compare-metric-ordering",

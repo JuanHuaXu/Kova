@@ -97,7 +97,7 @@ function compareColumns(c) {
     { key: "baseline",  header: c.dim("baseline"),  align: "right", minWidth: 9 },
     { key: "current",   header: c.dim("current"),   align: "right", minWidth: 9 },
     { key: "delta",     header: c.dim("Δ"),         align: "right", minWidth: 7 },
-    { key: "threshold", header: c.dim("threshold"), align: "right", minWidth: 9 },
+    { key: "threshold", header: c.dim("tolerance"), align: "right", minWidth: 9 },
     { key: "status",    header: c.dim("status"),    align: "left",  minWidth: 6 },
   ];
 }
