@@ -1,5 +1,6 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
+import { isNoLogsOutput } from "../command-results.mjs";
 import { runCommand } from "../commands.mjs";
 import { ocmLogs } from "../ocm/commands.mjs";
 
@@ -8,6 +9,7 @@ export const LOG_METRICS_SCHEMA = "kova.logMetrics.v1";
 export async function collectLogMetrics(envName, timeoutMs, artifactDir) {
   const result = await runCommand(ocmLogs(envName, { tail: 200 }), { timeoutMs });
   const text = `${result.stdout ?? ""}\n${result.stderr ?? ""}`;
+  const noLogsAvailable = result.status !== 0 && isNoLogsOutput(text);
   const timestamps = collectTimestamps(text);
   const stdoutSnippet = boundedLogSnippet(result.stdout, 4000);
   const stderrSnippet = boundedLogSnippet(result.stderr, 4000);
@@ -20,7 +22,10 @@ export async function collectLogMetrics(envName, timeoutMs, artifactDir) {
   }
   return {
     schemaVersion: LOG_METRICS_SCHEMA,
-    commandStatus: result.status,
+    commandStatus: noLogsAvailable ? 0 : result.status,
+    originalCommandStatus: noLogsAvailable ? result.status : null,
+    optional: noLogsAvailable,
+    note: noLogsAvailable ? "optional log collection found no env logs" : null,
     durationMs: result.durationMs,
     timedOut: result.timedOut,
     firstTimestamp: timestamps.first,

@@ -61,6 +61,7 @@ import {
   buildUpgradeStateSnapshotInvariants
 } from "./evidence/invariants.mjs";
 import {
+  isNoLogsOutput,
   normalizeOptionalCommandResult
 } from "./command-results.mjs";
 import { compareReports, renderCompareSummary } from "./reporting/compare.mjs";
@@ -9021,6 +9022,7 @@ function optionalNoLogsCommandCheck() {
       stdout: "",
       stderr: "ocm: no logs exist for env \"kova-empty-logs\" across stdout or stderr"
     });
+    assertEqual(isNoLogsOutput(`${result.stdout ?? ""}\n${result.stderr ?? ""}`), true, "missing logs output is detected");
     assertEqual(result.status, 0, "missing logs are normalized to optional success");
     assertEqual(result.originalStatus, 1, "original log command status retained");
     assertEqual(result.optional, true, "optional marker set");
