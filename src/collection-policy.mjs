@@ -20,8 +20,23 @@ export function fullCollectionPolicy(reason = "full collection preserves existin
     mode: "full",
     reason,
     context: normalizePolicyContext(context),
+    readiness: "wait",
+    healthSamples: true,
     collectors: Object.fromEntries(ENV_COLLECTOR_IDS.map((id) => [id, true])),
     skipped: []
+  };
+}
+
+export function postReadyHealthCollectionPolicy(reason, context = {}) {
+  return {
+    schemaVersion: COLLECTION_POLICY_SCHEMA,
+    mode: "post-ready-health",
+    reason,
+    context: normalizePolicyContext(context),
+    readiness: "none",
+    healthSamples: true,
+    collectors: Object.fromEntries(ENV_COLLECTOR_IDS.map((id) => [id, true])),
+    skipped: ["readiness-wait"]
   };
 }
 
@@ -31,6 +46,8 @@ export function skippedEnvCollectionPolicy(reason, context = {}) {
     mode: "skip-env",
     reason,
     context: normalizePolicyContext(context),
+    readiness: "none",
+    healthSamples: false,
     collectors: Object.fromEntries(ENV_COLLECTOR_IDS.map((id) => [id, false])),
     skipped: [...ENV_COLLECTOR_IDS]
   };
@@ -42,6 +59,12 @@ export function resolveCollectionPolicy(context = {}) {
       (context.phaseId === "auth-prepare" || context.phaseId === "auth-cleanup")) {
     return skippedEnvCollectionPolicy(
       "successful auth setup boundary phase does not need env metrics; final and product phase metrics remain full",
+      context
+    );
+  }
+  if (context.kind === "scenario-phase" && context.phaseHealthScope === "post-ready") {
+    return postReadyHealthCollectionPolicy(
+      "post-ready phase samples health without repeating startup readiness wait",
       context
     );
   }
