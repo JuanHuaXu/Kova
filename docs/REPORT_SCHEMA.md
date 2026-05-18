@@ -217,6 +217,10 @@ collectors were intended to run for that metrics capture. A `full` policy means
 all env collectors remain enabled. A `skip-env` policy is currently limited to
 successful auth prepare/cleanup boundary phases; each disabled collector must
 appear in `collectionPolicy.skipped` and as a `SKIPPED` collector receipt.
+`post-ready-health` means the phase keeps service, process, health samples,
+logs, timeline, diagnostics, and node-profile scans, but intentionally skips the
+startup readiness wait. Those phases still contribute to
+`measurements.health.postReadySamples`.
 
 Records expose `collectorArtifactDirs` with schema
 `kova.collectorArtifactDirs.v1`. This makes artifact ownership explicit for
