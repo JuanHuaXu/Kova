@@ -109,9 +109,12 @@ function shapeRow(r, sampleCount, ui) {
   const unit = r.unit ? ` ${r.unit}` : "";
   const fmt = (v) => v == null ? "—" : formatNumber(v) + unit;
   const status = colorStatus(c, r.status);
+  // Child rows (role-scoped sub-metrics under a parent) render dim and
+  // unbolded so the hierarchy reads cleanly under the parent label.
+  const labelFmt = r.isChild ? c.dim : c.bold;
   if (sampleCount === 1) {
     return {
-      label:     c.bold(r.label),
+      label:     labelFmt(r.label),
       value:     fmt(r.value),
       threshold: fmt(r.threshold),
       status,
@@ -119,11 +122,11 @@ function shapeRow(r, sampleCount, ui) {
   }
   const s = r.stats ?? {};
   return {
-    label:     c.bold(r.label),
-    median:    fmt(s.median),
-    stdev:     s.stdev == null ? "—" : "±" + formatNumber(s.stdev) + unit,
-    p95:       fmt(s.p95),
-    max:       fmt(s.max),
+    label:     labelFmt(r.label),
+    median:    r.isChild ? fmt(r.value) : fmt(s.median),
+    stdev:     r.isChild ? "—" : (s.stdev == null ? "—" : "±" + formatNumber(s.stdev) + unit),
+    p95:       r.isChild ? "—" : fmt(s.p95),
+    max:       r.isChild ? "—" : fmt(s.max),
     threshold: fmt(r.threshold),
     status,
   };

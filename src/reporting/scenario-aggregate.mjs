@@ -150,11 +150,43 @@ function aggregateMetrics(samples) {
   // Collect every metric mentioned in a violation, plus the curated
   // headline metrics that have at least one numeric value present.
   const metrics = new Map();
+  // Role-scoped violations attach as child rows under their parent metric
+  // (e.g. resourceByRole.runtime-management.peakRssMb is a child of peakRssMb).
+  // Surfacing them in the metrics table prevents the contradictory shape
+  // where the top-level metric reads PASS while findings say FAIL.
+  const roleChildren = new Map(); // parentKey -> Map<role, {role, threshold, actual}>
 
   // Violated metrics first (with threshold + status)
   for (const s of samples) {
     for (const v of s.violations ?? []) {
-      if (v.kind !== "threshold" || !v.metric) continue;
+      if (!v.metric) continue;
+      const roleMatch = v.metric.match(/^resourceByRole\.([^.]+)\.(.+)$/);
+      if (roleMatch) {
+        const [, role, parentKey] = roleMatch;
+        // Ensure the parent metric appears in the table so the children
+        // have a row to nest under, even if its sample-level status PASSed.
+        if (!metrics.has(parentKey)) {
+          metrics.set(parentKey, {
+            label: METRIC_LABELS[parentKey] ?? parentKey,
+            unit: METRIC_UNITS[parentKey] ?? null,
+            direction: "lower-better",
+            threshold: null,
+            status: "PASS",
+          });
+        }
+        if (!roleChildren.has(parentKey)) roleChildren.set(parentKey, new Map());
+        const byRole = roleChildren.get(parentKey);
+        if (!byRole.has(role)) {
+          const actualNum = typeof v.actual === "number" ? v.actual : Number(v.actual);
+          byRole.set(role, {
+            role,
+            threshold: parseThreshold(v.expected),
+            actual: Number.isFinite(actualNum) ? actualNum : null,
+          });
+        }
+        continue;
+      }
+      if (v.kind !== "threshold") continue;
       const key = v.metric;
       if (!metrics.has(key)) {
         metrics.set(key, {
@@ -185,18 +217,38 @@ function aggregateMetrics(samples) {
   const rows = [];
   for (const [key, meta] of metrics) {
     const values = samples.map((s) => s.measurements?.[key]).filter((v) => v != null && Number.isFinite(Number(v)));
-    if (values.length === 0) continue;
-    const stats = summarizeSamples(values);
+    if (values.length === 0 && !roleChildren.has(key)) continue;
+    const stats = values.length > 0 ? summarizeSamples(values) : null;
     rows.push({
       key,
       label: meta.label,
       unit: meta.unit,
       direction: meta.direction,
-      value: stats.n === 1 ? stats.median : null,
-      stats: stats.n > 1 ? { median: stats.median, stdev: stats.stdev, p95: stats.p95, max: stats.max } : null,
+      value: stats && stats.n === 1 ? stats.median : null,
+      stats: stats && stats.n > 1 ? { median: stats.median, stdev: stats.stdev, p95: stats.p95, max: stats.max } : null,
       threshold: meta.threshold,
       status: meta.status,
     });
+    // Emit per-role child rows directly after their parent. Each child
+    // carries its own threshold + FAIL status so the row tells the full
+    // story without forcing the reader to cross-reference findings.
+    const children = roleChildren.get(key);
+    if (children) {
+      for (const child of children.values()) {
+        rows.push({
+          key: `${key}#${child.role}`,
+          parentKey: key,
+          label: `  ↳ ${child.role}`,
+          unit: meta.unit,
+          direction: meta.direction,
+          value: child.actual,
+          stats: null,
+          threshold: child.threshold,
+          status: "FAIL",
+          isChild: true,
+        });
+      }
+    }
   }
   return rows;
 }

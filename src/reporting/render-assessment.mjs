@@ -37,6 +37,26 @@ import { aggregateScenarios, runConfidence } from "./scenario-aggregate.mjs";
 
 const TOP_METRICS_COMPACT = 5;
 
+// Slice metrics for compact mode while keeping role-child rows attached
+// to their parent. Counting only top-level (non-child) rows toward the
+// budget preserves the parent/child grouping in the output.
+function compactMetricSlice(metrics, budget) {
+  const out = [];
+  let topCount = 0;
+  for (const m of metrics) {
+    if (m.isChild) {
+      if (out.length > 0 && out[out.length - 1] && (out[out.length - 1].key === m.parentKey || out[out.length - 1].parentKey === m.parentKey)) {
+        out.push(m);
+      }
+      continue;
+    }
+    if (topCount >= budget) break;
+    out.push(m);
+    topCount += 1;
+  }
+  return out;
+}
+
 export function renderAssessment(report, flags = {}, env = process.env, stream = process.stdout) {
   const ui = makeUi(flags, env, stream);
   const summary = buildReportSummary(report);
@@ -199,7 +219,7 @@ function renderScenarioBlock(sc, ui, isFull) {
 
   const metricsToShow = isFull
     ? sc.metrics
-    : sc.metrics.slice(0, TOP_METRICS_COMPACT);
+    : compactMetricSlice(sc.metrics, TOP_METRICS_COMPACT);
   if (metricsToShow.length > 0) {
     lines.push("");
     lines.push("  " + ui.c.dim("Metrics"));
