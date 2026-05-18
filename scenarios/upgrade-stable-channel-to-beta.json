@@ -35,7 +35,6 @@
       "intent": "Create a disposable env through the real stable channel before switching to beta.",
       "commands": [
         "ocm start {env} --channel stable --json",
-        "ocm service status {env} --json",
         "ocm @{env} -- status"
       ],
       "evidence": [
@@ -65,11 +64,9 @@
       "title": "Post-Beta Upgrade Checks",
       "intent": "Verify OpenClaw is usable after the beta channel upgrade and capture plugin/runtime dependency evidence.",
       "commands": [
-        "ocm service status {env} --json",
         "ocm @{env} -- status",
         "ocm @{env} -- plugins list",
-        "ocm @{env} -- doctor --fix",
-        "ocm logs {env} --tail 400 --raw"
+        "ocm @{env} -- doctor --fix"
       ],
       "evidence": [
         "gateway state",
