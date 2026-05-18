@@ -36,6 +36,12 @@ const cases = [
   { name: "compare-pass-vs-fail-full", args: ["report", "compare", "--full", PASS_REPORT, FAIL_REPORT] },
   { name: "plan-default", args: ["plan"] },
   { name: "help-default", args: ["help"] },
+  // JSON contracts (agent-facing). Locks the machine-readable shape so
+  // future renderer-only changes can't silently drift the JSON payload.
+  { name: "report-fail-json", args: ["report", "--json", FAIL_REPORT] },
+  { name: "report-pass-json", args: ["report", "--json", PASS_REPORT] },
+  { name: "compare-json", args: ["report", "compare", "--json", PASS_REPORT, FAIL_REPORT] },
+  { name: "plan-json", args: ["plan", "--json"] },
 ];
 
 function normalize(out) {

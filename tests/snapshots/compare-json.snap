@@ -1,0 +1,550 @@
+{
+  "schemaVersion": "kova.compare.v1",
+  "generatedAt": "<iso>",
+  "baseline": {
+    "runId": "kova-2026-04-30T031128Z",
+    "mode": "execution",
+    "profile": null,
+    "target": "local-build:<home>/WorkSpace/ShakkerNerd/OpenSource/OpenClaw/shakker-claw",
+    "targetKind": "local-build",
+    "generatedAt": "<iso>",
+    "statuses": {
+      "FAIL": 1
+    },
+    "decision": {
+      "verdict": "FAIL",
+      "ok": false,
+      "reason": "gateway hard failure: gateway TCP socket never accepted connections before the hard deadline",
+      "blockingFindingCount": 1,
+      "warningFindingCount": 0
+    },
+    "findingCount": 1,
+    "groupCount": 1,
+    "sampleCount": 1
+  },
+  "current": {
+    "runId": "kova-2026-04-30T040505Z",
+    "mode": "execution",
+    "profile": null,
+    "target": "local-build:<home>/WorkSpace/ShakkerNerd/OpenSource/OpenClaw/shakker-claw",
+    "targetKind": "local-build",
+    "generatedAt": "<iso>",
+    "statuses": {
+      "FAIL": 1
+    },
+    "decision": {
+      "verdict": "FAIL",
+      "ok": false,
+      "reason": "peak RSS 904.5 MB exceeded threshold 900 MB",
+      "blockingFindingCount": 2,
+      "warningFindingCount": 0
+    },
+    "findingCount": 2,
+    "groupCount": 1,
+    "sampleCount": 1
+  },
+  "thresholds": {
+    "missingDependencyErrors": 0,
+    "pluginLoadFailures": 0,
+    "peakRssMb": 100,
+    "cpuPercentMax": 25,
+    "coldReadyMs": 5000,
+    "warmReadyMs": 3000,
+    "upgradeMs": 10000,
+    "statusMs": 1000,
+    "pluginsListMs": 1000,
+    "modelsListMs": 3000,
+    "agentTurnMs": 10000,
+    "coldAgentTurnMs": 10000,
+    "warmAgentTurnMs": 5000,
+    "agentColdWarmDeltaMs": 10000,
+    "coldPreProviderMs": 5000,
+    "warmPreProviderMs": 2500,
+    "agentMetadataScanCount": 5,
+    "agentMetadataScanTotalMs": 1000,
+    "agentEventLoopMaxMs": 250,
+    "agentSessionPollCount": 10,
+    "tcpConnectMaxMs": 250,
+    "readinessListeningMs": 3000,
+    "readinessHealthReadyMs": 5000,
+    "readinessFailures": 0,
+    "startupHealthFailures": 0,
+    "postReadyHealthFailures": 0,
+    "finalHealthFailures": 0,
+    "startupHealthP95Ms": 1000,
+    "postReadyHealthP95Ms": 1000,
+    "gatewayRestartCount": 0,
+    "providerTimeoutMentions": 0,
+    "eventLoopDelayMentions": 0,
+    "metadataScanMentions": 10,
+    "configNormalizationMentions": 10,
+    "pluginMetadataScanCount": 10,
+    "configNormalizationCount": 10,
+    "runtimeDepsStagingMs": 5000,
+    "eventLoopDelayMs": 250,
+    "providerModelTimingMs": 5000,
+    "diagnosticArtifactBytes": 26214400,
+    "heapSnapshotBytes": 52428800,
+    "resourcePeakCommandTreeRssMb": 100,
+    "resourcePeakGatewayRssMb": 100,
+    "resourcePeakTrackedRssMb": 100,
+    "resourceCpuPercentMaxTracked": 25,
+    "openclawTimelineParseErrors": 0,
+    "openclawSlowestSpanMs": 5000,
+    "openclawEventLoopMaxMs": 250,
+    "openclawProviderRequestMaxMs": 5000,
+    "openclawChildProcessFailedCount": 0,
+    "nodeProfileArtifactBytes": 104857600,
+    "nodeProfileTopFunctionMs": 5000
+  },
+  "sourceRelease": null,
+  "ok": false,
+  "regressionCount": 4,
+  "scenarioRegressionCount": 3,
+  "statusChanges": {
+    "changes": [],
+    "improvements": [],
+    "regressions": []
+  },
+  "findingChanges": {
+    "new": [
+      {
+        "id": "release-runtime-startup:fresh:peakRssMb:1",
+        "severity": "fail",
+        "kind": "violation",
+        "scenario": "release-runtime-startup",
+        "state": "fresh",
+        "sampleIndex": 1,
+        "ownerArea": "OpenClaw",
+        "metric": "peakRssMb",
+        "summary": "peak RSS 904.5 MB exceeded threshold 900 MB",
+        "expected": null,
+        "actual": 904.5,
+        "evidence": [
+          "peakRssMb: 904.5",
+          "cpuPercentMax: 150.1",
+          "resourcePeakCpuAtMs: 1437",
+          "topCpuFunction: (idle) 309157.19ms",
+          "topHeapFunction: readFileSync 19.2MB",
+          "missingDependencyErrors: 0",
+          "pluginLoadFailures: 0",
+          "CPU peaked at 150.1% around 1437ms"
+        ]
+      }
+    ],
+    "resolved": [],
+    "unchangedCount": 1
+  },
+  "improvementCount": 0,
+  "scenarios": [
+    {
+      "key": "release-runtime-startup:fresh",
+      "scenario": "release-runtime-startup",
+      "state": "fresh",
+      "status": "REGRESSED",
+      "currentStatus": "FAIL",
+      "baselineStatus": "FAIL",
+      "regressions": [
+        {
+          "kind": "metric",
+          "metric": "diagnosticArtifactBytes",
+          "baseline": 0,
+          "current": 128880485,
+          "delta": 128880485,
+          "tolerance": 26214400,
+          "message": "diagnosticArtifactBytes increased by 128880485 (0 -> 128880485), over tolerance 26214400"
+        },
+        {
+          "kind": "metric",
+          "metric": "heapSnapshotBytes",
+          "baseline": 0,
+          "current": 128809325,
+          "delta": 128809325,
+          "tolerance": 52428800,
+          "message": "heapSnapshotBytes increased by 128809325 (0 -> 128809325), over tolerance 52428800"
+        },
+        {
+          "kind": "metric",
+          "metric": "nodeProfileTopFunctionMs",
+          "baseline": 145175.04,
+          "current": 309157.19,
+          "delta": 163982.15,
+          "tolerance": 5000,
+          "message": "nodeProfileTopFunctionMs increased by 163982.15 (145175.04 -> 309157.19), over tolerance 5000"
+        }
+      ],
+      "metrics": {
+        "peakRssMb": {
+          "baseline": 826.3,
+          "current": 904.5,
+          "delta": 78.20000000000005
+        },
+        "cpuPercentMax": {
+          "baseline": 143.1,
+          "current": 150.1,
+          "delta": 7
+        },
+        "coldReadyMs": {
+          "baseline": 158,
+          "current": 703,
+          "delta": 545
+        },
+        "warmReadyMs": {
+          "baseline": null,
+          "current": null,
+          "delta": null
+        },
+        "upgradeMs": {
+          "baseline": null,
+          "current": null,
+          "delta": null
+        },
+        "statusMs": {
+          "baseline": 2092,
+          "current": 2237,
+          "delta": 145
+        },
+        "pluginsListMs": {
+          "baseline": 1145,
+          "current": 1438,
+          "delta": 293
+        },
+        "modelsListMs": {
+          "baseline": null,
+          "current": null,
+          "delta": null
+        },
+        "agentTurnMs": {
+          "baseline": null,
+          "current": null,
+          "delta": null
+        },
+        "coldAgentTurnMs": {
+          "baseline": null,
+          "current": null,
+          "delta": null
+        },
+        "warmAgentTurnMs": {
+          "baseline": null,
+          "current": null,
+          "delta": null
+        },
+        "agentColdWarmDeltaMs": {
+          "baseline": null,
+          "current": null,
+          "delta": null
+        },
+        "coldPreProviderMs": {
+          "baseline": null,
+          "current": null,
+          "delta": null
+        },
+        "warmPreProviderMs": {
+          "baseline": null,
+          "current": null,
+          "delta": null
+        },
+        "agentColdWarmPreProviderDeltaMs": {
+          "baseline": null,
+          "current": null,
+          "delta": null
+        },
+        "coldPreProviderAttributedMs": {
+          "baseline": null,
+          "current": null,
+          "delta": null
+        },
+        "warmPreProviderAttributedMs": {
+          "baseline": null,
+          "current": null,
+          "delta": null
+        },
+        "coldPreProviderUnattributedMs": {
+          "baseline": null,
+          "current": null,
+          "delta": null
+        },
+        "warmPreProviderUnattributedMs": {
+          "baseline": null,
+          "current": null,
+          "delta": null
+        },
+        "coldPreProviderAttributionCoverage": {
+          "baseline": null,
+          "current": null,
+          "delta": null
+        },
+        "warmPreProviderAttributionCoverage": {
+          "baseline": null,
+          "current": null,
+          "delta": null
+        },
+        "coldProviderFinalMs": {
+          "baseline": null,
+          "current": null,
+          "delta": null
+        },
+        "warmProviderFinalMs": {
+          "baseline": null,
+          "current": null,
+          "delta": null
+        },
+        "agentMetadataScanCount": {
+          "baseline": null,
+          "current": null,
+          "delta": null
+        },
+        "agentMetadataScanTotalMs": {
+          "baseline": null,
+          "current": null,
+          "delta": null
+        },
+        "agentMetadataScanMaxMs": {
+          "baseline": null,
+          "current": null,
+          "delta": null
+        },
+        "agentEventLoopMaxMs": {
+          "baseline": null,
+          "current": null,
+          "delta": null
+        },
+        "agentEventLoopSampleCount": {
+          "baseline": null,
+          "current": null,
+          "delta": null
+        },
+        "agentSessionPollCount": {
+          "baseline": null,
+          "current": null,
+          "delta": null
+        },
+        "agentSessionPollErrorCount": {
+          "baseline": null,
+          "current": null,
+          "delta": null
+        },
+        "tcpConnectMaxMs": {
+          "baseline": 0,
+          "current": 1,
+          "delta": 1
+        },
+        "readinessListeningMs": {
+          "baseline": null,
+          "current": null,
+          "delta": null
+        },
+        "readinessHealthReadyMs": {
+          "baseline": null,
+          "current": null,
+          "delta": null
+        },
+        "startupHealthP95Ms": {
+          "baseline": null,
+          "current": null,
+          "delta": null
+        },
+        "postReadyHealthP95Ms": {
+          "baseline": null,
+          "current": null,
+          "delta": null
+        },
+        "startupHealthFailures": {
+          "baseline": null,
+          "current": null,
+          "delta": null
+        },
+        "postReadyHealthFailures": {
+          "baseline": null,
+          "current": null,
+          "delta": null
+        },
+        "finalHealthFailures": {
+          "baseline": null,
+          "current": null,
+          "delta": null
+        },
+        "readinessFailures": {
+          "baseline": 1,
+          "current": 1,
+          "delta": 0
+        },
+        "missingDependencyErrors": {
+          "baseline": 0,
+          "current": 0,
+          "delta": 0
+        },
+        "pluginLoadFailures": {
+          "baseline": 0,
+          "current": 0,
+          "delta": 0
+        },
+        "gatewayRestartCount": {
+          "baseline": 0,
+          "current": 0,
+          "delta": 0
+        },
+        "metadataScanMentions": {
+          "baseline": 0,
+          "current": 0,
+          "delta": 0
+        },
+        "configNormalizationMentions": {
+          "baseline": 0,
+          "current": 0,
+          "delta": 0
+        },
+        "providerLoadMentions": {
+          "baseline": 0,
+          "current": 0,
+          "delta": 0
+        },
+        "modelCatalogMentions": {
+          "baseline": 0,
+          "current": 0,
+          "delta": 0
+        },
+        "providerTimeoutMentions": {
+          "baseline": 0,
+          "current": 0,
+          "delta": 0
+        },
+        "eventLoopDelayMentions": {
+          "baseline": 0,
+          "current": 0,
+          "delta": 0
+        },
+        "v8ReportCount": {
+          "baseline": 0,
+          "current": 1,
+          "delta": 1
+        },
+        "heapSnapshotCount": {
+          "baseline": 0,
+          "current": 1,
+          "delta": 1
+        },
+        "diagnosticArtifactBytes": {
+          "baseline": 0,
+          "current": 128880485,
+          "delta": 128880485
+        },
+        "nodeCpuProfileCount": {
+          "baseline": 5,
+          "current": 6,
+          "delta": 1
+        },
+        "nodeHeapProfileCount": {
+          "baseline": 5,
+          "current": 6,
+          "delta": 1
+        },
+        "nodeTraceEventCount": {
+          "baseline": 7,
+          "current": 6,
+          "delta": -1
+        },
+        "nodeProfileArtifactBytes": {
+          "baseline": 172827123,
+          "current": 123137894,
+          "delta": -49689229
+        },
+        "nodeProfileTopFunctionMs": {
+          "baseline": 145175.04,
+          "current": 309157.19,
+          "delta": 163982.15
+        },
+        "heapSnapshotBytes": {
+          "baseline": 0,
+          "current": 128809325,
+          "delta": 128809325
+        },
+        "resourceSampleCount": {
+          "baseline": 22,
+          "current": 20,
+          "delta": -2
+        },
+        "resourcePeakTrackedRssMb": {
+          "baseline": null,
+          "current": null,
+          "delta": null
+        },
+        "resourceCpuPercentMaxTracked": {
+          "baseline": null,
+          "current": null,
+          "delta": null
+        },
+        "resourcePeakCommandTreeRssMb": {
+          "baseline": 539.6,
+          "current": 555.7,
+          "delta": 16.100000000000023
+        },
+        "resourcePeakGatewayRssMb": {
+          "baseline": 286.8,
+          "current": 348.8,
+          "delta": 62
+        },
+        "openclawTimelineEventCount": {
+          "baseline": 0,
+          "current": 55,
+          "delta": 55
+        },
+        "openclawTimelineParseErrors": {
+          "baseline": 0,
+          "current": 0,
+          "delta": 0
+        },
+        "openclawSlowestSpanMs": {
+          "baseline": null,
+          "current": 42.97,
+          "delta": null
+        },
+        "openclawRepeatedSpanCount": {
+          "baseline": 0,
+          "current": 1,
+          "delta": 1
+        },
+        "openclawEventLoopMaxMs": {
+          "baseline": null,
+          "current": 0,
+          "delta": null
+        },
+        "openclawProviderRequestMaxMs": {
+          "baseline": null,
+          "current": null,
+          "delta": null
+        },
+        "openclawChildProcessFailedCount": {
+          "baseline": 0,
+          "current": 0,
+          "delta": 0
+        },
+        "pluginMetadataScanCount": {
+          "baseline": 0,
+          "current": 0,
+          "delta": 0
+        },
+        "configNormalizationCount": {
+          "baseline": 0,
+          "current": 0,
+          "delta": 0
+        },
+        "runtimeDepsStagingMs": {
+          "baseline": null,
+          "current": null,
+          "delta": null
+        },
+        "eventLoopDelayMs": {
+          "baseline": null,
+          "current": 0,
+          "delta": null
+        },
+        "providerModelTimingMs": {
+          "baseline": null,
+          "current": null,
+          "delta": null
+        }
+      }
+    }
+  ]
+}

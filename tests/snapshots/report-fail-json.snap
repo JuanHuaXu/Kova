@@ -1,0 +1,359 @@
+{
+  "schemaVersion": "kova.report.summary.v1",
+  "generatedAt": "<iso>",
+  "runId": "kova-2026-04-30T040505Z",
+  "reportGeneratedAt": "<iso>",
+  "mode": "execution",
+  "target": "local-build:<home>/WorkSpace/ShakkerNerd/OpenSource/OpenClaw/shakker-claw",
+  "from": null,
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "25.3.0",
+    "node": "v24.13.0"
+  },
+  "decision": {
+    "verdict": "FAIL",
+    "ok": false,
+    "reason": "peak RSS 904.5 MB exceeded threshold 900 MB",
+    "blockingFindingCount": 2,
+    "warningFindingCount": 0
+  },
+  "run": {
+    "profile": null,
+    "state": {
+      "id": "fresh",
+      "title": "Fresh OpenClaw User",
+      "objective": "A new isolated OpenClaw home with no intentional state mutations beyond normal scenario provisioning."
+    },
+    "repeat": null,
+    "parallel": null,
+    "auth": null,
+    "targetCleanup": {
+      "runtimeName": "kova-local-1777521905334",
+      "status": "removed",
+      "reason": null,
+      "durationMs": 2607
+    }
+  },
+  "coverage": {
+    "recordCount": 1,
+    "scenarioCount": 1,
+    "scenarios": [
+      "release-runtime-startup"
+    ],
+    "stateCount": 1,
+    "states": [
+      "fresh"
+    ],
+    "surfaceCount": 0,
+    "surfaces": []
+  },
+  "proof": {
+    "recordCount": 1,
+    "completeness": {},
+    "requiredTotal": 0,
+    "requiredMissing": 0,
+    "requiredFailed": 0,
+    "byCategory": {},
+    "missingRequired": [],
+    "failedRequired": []
+  },
+  "gate": null,
+  "performance": null,
+  "failureBrief": {
+    "decision": "FAIL",
+    "primaryBlocker": "release-runtime-startup/fresh",
+    "why": "peak RSS 904.5 MB exceeded threshold 900 MB",
+    "evidence": [
+      "peakRssMb: 904.5",
+      "cpuPercentMax: 150.1",
+      "resourcePeakCpuAtMs: 1437",
+      "topCpuFunction: (idle) 309157.19ms",
+      "topHeapFunction: readFileSync 19.2MB",
+      "missingDependencyErrors: 0",
+      "pluginLoadFailures: 0",
+      "CPU peaked at 150.1% around 1437ms"
+    ],
+    "likelyOwner": "OpenClaw",
+    "fixerPrompt": "Investigate OpenClaw release gate failure release-runtime-startup/fresh. Kova decision was FAIL on darwin-arm64. Primary evidence: peak RSS 904.5 MB exceeded threshold 900 MB. Measurements: peakRssMb: 904.5; cpuPercentMax: 150.1; resourcePeakCpuAtMs: 1437; topCpuFunction: (idle) 309157.19ms; topHeapFunction: readFileSync 19.2MB; missingDependencyErrors: 0; pluginLoadFailures: 0; CPU peaked at 150.1% around 1437ms. Dependency/plugin load errors were zero, so focus on startup, memory, CPU, gateway readiness, runtime deps staging, provider/model load, and UI asset initialization. Likely owner area: OpenClaw."
+  },
+  "recommendedNextScenario": {
+    "scenario": "release-runtime-startup",
+    "state": "fresh",
+    "target": "local-build:<home>/WorkSpace/ShakkerNerd/OpenSource/OpenClaw/shakker-claw",
+    "reason": "peak RSS 904.5 MB exceeded threshold 900 MB",
+    "command": "node bin/kova.mjs run --target local-build:<home>/WorkSpace/ShakkerNerd/OpenSource/OpenClaw/shakker-claw --scenario release-runtime-startup --state fresh --execute --profile-on-failure --retain-on-failure --json"
+  },
+  "statuses": {
+    "FAIL": 1
+  },
+  "findings": [
+    {
+      "id": "release-runtime-startup:fresh:peakRssMb:1",
+      "severity": "fail",
+      "kind": "violation",
+      "scenario": "release-runtime-startup",
+      "state": "fresh",
+      "sampleIndex": 1,
+      "ownerArea": "OpenClaw",
+      "metric": "peakRssMb",
+      "summary": "peak RSS 904.5 MB exceeded threshold 900 MB",
+      "expected": null,
+      "actual": 904.5,
+      "evidence": [
+        "peakRssMb: 904.5",
+        "cpuPercentMax: 150.1",
+        "resourcePeakCpuAtMs: 1437",
+        "topCpuFunction: (idle) 309157.19ms",
+        "topHeapFunction: readFileSync 19.2MB",
+        "missingDependencyErrors: 0",
+        "pluginLoadFailures: 0",
+        "CPU peaked at 150.1% around 1437ms"
+      ]
+    },
+    {
+      "id": "release-runtime-startup:fresh:readinessClassification:1",
+      "severity": "fail",
+      "kind": "violation",
+      "scenario": "release-runtime-startup",
+      "state": "fresh",
+      "sampleIndex": 1,
+      "ownerArea": "OpenClaw",
+      "metric": "readinessClassification",
+      "summary": "gateway hard failure: gateway TCP socket never accepted connections before the hard deadline",
+      "expected": null,
+      "actual": "hard-failure",
+      "evidence": [
+        "peakRssMb: 904.5",
+        "cpuPercentMax: 150.1",
+        "resourcePeakCpuAtMs: 1437",
+        "topCpuFunction: (idle) 309157.19ms",
+        "topHeapFunction: readFileSync 19.2MB",
+        "missingDependencyErrors: 0",
+        "pluginLoadFailures: 0",
+        "CPU peaked at 150.1% around 1437ms"
+      ]
+    }
+  ],
+  "groups": [
+    {
+      "key": "release-runtime-startup|unknown|fresh",
+      "scenario": "release-runtime-startup",
+      "surface": null,
+      "state": "fresh",
+      "title": "Release Runtime Startup",
+      "sampleCount": 1,
+      "statuses": {
+        "FAIL": 1
+      },
+      "resourceInterpretation": null,
+      "metrics": {}
+    }
+  ],
+  "samples": [
+    {
+      "sampleIndex": 1,
+      "repeatTotal": null,
+      "scenario": "release-runtime-startup",
+      "surface": null,
+      "title": "Release Runtime Startup",
+      "status": "FAIL",
+      "cleanup": "destroyed",
+      "target": "local-build:<home>/WorkSpace/ShakkerNerd/OpenSource/OpenClaw/shakker-claw",
+      "state": {
+        "id": "fresh",
+        "title": "Fresh OpenClaw User",
+        "objective": "A new isolated OpenClaw home with no intentional state mutations beyond normal scenario provisioning."
+      },
+      "ownerArea": "OpenClaw",
+      "failedCommand": null,
+      "failureReason": null,
+      "measurements": {
+        "readiness": {
+          "listeningReadyAtMs": null,
+          "healthReadyAtMs": null,
+          "classification": null,
+          "reason": null
+        },
+        "health": {
+          "startupP95Ms": null,
+          "postReadyP95Ms": null,
+          "finalFailures": null,
+          "totalFailures": null,
+          "slowestSample": null
+        },
+        "resources": {
+          "peakRssMb": 904.5,
+          "cpuPercentMax": 150.1,
+          "sampleCount": 20,
+          "commandTreePeakRssMb": 555.7,
+          "gatewayPeakRssMb": 348.8,
+          "trackedPeakRssMb": null,
+          "topRolesByRss": [],
+          "topRolesByCpu": []
+        },
+        "agent": {
+          "turnMs": null,
+          "coldTurnMs": null,
+          "warmTurnMs": null,
+          "coldWarmDeltaMs": null,
+          "coldPreProviderMs": null,
+          "warmPreProviderMs": null,
+          "providerFinalMs": null,
+          "coldProviderFinalMs": null,
+          "warmProviderFinalMs": null,
+          "metadataScanCount": null,
+          "metadataScanTotalMs": null,
+          "eventLoopMaxMs": null,
+          "sessionPollCount": null,
+          "turns": []
+        },
+        "attribution": {
+          "gatewaySession": null,
+          "agentCli": null
+        },
+        "plugins": {
+          "missingDependencyErrors": 0,
+          "pluginLoadFailures": 0,
+          "officialPluginInstallOk": null,
+          "officialPluginInstallMs": null,
+          "officialPluginSecurityBlocks": null
+        },
+        "diagnostics": {
+          "timelineAvailable": true,
+          "timelineEventCount": 55,
+          "timelineParseErrors": 0,
+          "slowestSpanName": "plugins.metadata.scan",
+          "slowestSpanMs": 42.97,
+          "openSpanCount": null,
+          "openRequiredSpanCount": null,
+          "missingRequiredSpanCount": null,
+          "openSpans": [],
+          "eventLoopMaxMs": 0,
+          "providerRequestMaxMs": null
+        }
+      },
+      "violations": [
+        {
+          "kind": "threshold",
+          "metric": "peakRssMb",
+          "expected": "<= 900",
+          "actual": 904.5,
+          "message": "peak RSS 904.5 MB exceeded threshold 900 MB"
+        },
+        {
+          "kind": "gateway",
+          "metric": "readinessClassification",
+          "expected": "ready",
+          "actual": "hard-failure",
+          "message": "gateway hard failure: gateway TCP socket never accepted connections before the hard deadline"
+        }
+      ],
+      "artifactRoot": null
+    }
+  ],
+  "artifacts": [],
+  "scenarios": [
+    {
+      "sampleIndex": 1,
+      "repeatTotal": null,
+      "scenario": "release-runtime-startup",
+      "surface": null,
+      "title": "Release Runtime Startup",
+      "status": "FAIL",
+      "cleanup": "destroyed",
+      "target": "local-build:<home>/WorkSpace/ShakkerNerd/OpenSource/OpenClaw/shakker-claw",
+      "state": {
+        "id": "fresh",
+        "title": "Fresh OpenClaw User",
+        "objective": "A new isolated OpenClaw home with no intentional state mutations beyond normal scenario provisioning."
+      },
+      "ownerArea": "OpenClaw",
+      "failedCommand": null,
+      "failureReason": null,
+      "measurements": {
+        "readiness": {
+          "listeningReadyAtMs": null,
+          "healthReadyAtMs": null,
+          "classification": null,
+          "reason": null
+        },
+        "health": {
+          "startupP95Ms": null,
+          "postReadyP95Ms": null,
+          "finalFailures": null,
+          "totalFailures": null,
+          "slowestSample": null
+        },
+        "resources": {
+          "peakRssMb": 904.5,
+          "cpuPercentMax": 150.1,
+          "sampleCount": 20,
+          "commandTreePeakRssMb": 555.7,
+          "gatewayPeakRssMb": 348.8,
+          "trackedPeakRssMb": null,
+          "topRolesByRss": [],
+          "topRolesByCpu": []
+        },
+        "agent": {
+          "turnMs": null,
+          "coldTurnMs": null,
+          "warmTurnMs": null,
+          "coldWarmDeltaMs": null,
+          "coldPreProviderMs": null,
+          "warmPreProviderMs": null,
+          "providerFinalMs": null,
+          "coldProviderFinalMs": null,
+          "warmProviderFinalMs": null,
+          "metadataScanCount": null,
+          "metadataScanTotalMs": null,
+          "eventLoopMaxMs": null,
+          "sessionPollCount": null,
+          "turns": []
+        },
+        "attribution": {
+          "gatewaySession": null,
+          "agentCli": null
+        },
+        "plugins": {
+          "missingDependencyErrors": 0,
+          "pluginLoadFailures": 0,
+          "officialPluginInstallOk": null,
+          "officialPluginInstallMs": null,
+          "officialPluginSecurityBlocks": null
+        },
+        "diagnostics": {
+          "timelineAvailable": true,
+          "timelineEventCount": 55,
+          "timelineParseErrors": 0,
+          "slowestSpanName": "plugins.metadata.scan",
+          "slowestSpanMs": 42.97,
+          "openSpanCount": null,
+          "openRequiredSpanCount": null,
+          "missingRequiredSpanCount": null,
+          "openSpans": [],
+          "eventLoopMaxMs": 0,
+          "providerRequestMaxMs": null
+        }
+      },
+      "violations": [
+        {
+          "kind": "threshold",
+          "metric": "peakRssMb",
+          "expected": "<= 900",
+          "actual": 904.5,
+          "message": "peak RSS 904.5 MB exceeded threshold 900 MB"
+        },
+        {
+          "kind": "gateway",
+          "metric": "readinessClassification",
+          "expected": "ready",
+          "actual": "hard-failure",
+          "message": "gateway hard failure: gateway TCP socket never accepted connections before the hard deadline"
+        }
+      ],
+      "artifactRoot": null
+    }
+  ]
+}
