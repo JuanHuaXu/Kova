@@ -8,10 +8,12 @@ import {
 import { runCleanupCommand } from "./cleanup.mjs";
 import { applyEvidenceLedgerGating, attachEvidenceLedger } from "./evidence-ledger.mjs";
 import {
-  attachCleanupEvidence,
-  attachEvidenceArtifactBudget,
   attachEvidenceInvariants
 } from "./evidence/invariants.mjs";
+import {
+  attachCleanupEvidence,
+  attachEvidenceArtifactBudget
+} from "./evidence/record.mjs";
 import { materializeCommands } from "./registries/scenarios.mjs";
 import { quoteShell } from "./commands.mjs";
 import { ocmEnvDestroy, ocmRuntimeBuildLocal } from "./ocm/commands.mjs";
