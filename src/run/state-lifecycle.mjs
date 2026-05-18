@@ -1,19 +1,16 @@
 import { collectEnvMetrics } from "../metrics.mjs";
 import {
   normalizeMeasurementScope,
-  phaseDriverKind,
   phaseResultStatus
 } from "../measurement-contract.mjs";
 import { metricOptions } from "./metric-options.mjs";
 import {
-  materializeLifecycleCommands,
   materializeLifecycleStepCommands
 } from "./phase-commands.mjs";
 import {
+  buildStateLifecyclePhase,
   stateLifecycleCollectionIntent,
   stateLifecycleCommandScope,
-  stateLifecycleIntent,
-  stateLifecycleTitle,
   stateStepMatchesPhase
 } from "./phase-plan.mjs";
 import { runScenarioCommand } from "./command-executor.mjs";
@@ -33,7 +30,8 @@ export async function executeStateLifecycleSteps(context, envName, scenario, kin
   }
 
   const results = [];
-  const { commands, evidence } = materializeLifecycleCommands(steps, context, envName, artifactDir);
+  const phase = buildStateLifecyclePhase(context, envName, scenario, kind, steps, artifactDir, phaseId);
+  const commands = phase.commands;
 
   for (const step of steps) {
     const stepCommands = materializeLifecycleStepCommands(step, context, envName, artifactDir);
@@ -43,13 +41,7 @@ export async function executeStateLifecycleSteps(context, envName, scenario, kin
   }
 
   return {
-    id: kind,
-    title: stateLifecycleTitle(context.state?.id, kind, phaseId),
-    intent: stateLifecycleIntent(context.state?.id, kind, phaseId),
-    measurementScope: normalizeMeasurementScope(null, kind),
-    driverKind: phaseDriverKind(null, commands),
-    commands,
-    evidence,
+    ...phase,
     results,
     metrics: await collectEnvMetrics(envName, metricOptions(context, scenario, { id: phaseId }, artifactDir, {
       kind: "state-lifecycle",

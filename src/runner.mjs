@@ -7,9 +7,6 @@ import {
 import { runCleanupCommand } from "./cleanup.mjs";
 import { attachEvidenceLedger } from "./evidence-ledger.mjs";
 import { ocmEnvDestroy } from "./ocm/commands.mjs";
-import {
-  materializeScenarioPhaseCommands
-} from "./run/phase-commands.mjs";
 import { runScenarioCommand } from "./run/command-executor.mjs";
 import {
   executeStateLifecycleSteps,
@@ -22,6 +19,8 @@ import {
   collectPreCleanupEvidence
 } from "./run/finalize-record.mjs";
 import {
+  buildScenarioPhase,
+  buildTargetSetupPhase,
   buildPlannedPhases,
   phaseSupportsAuthSetup,
 } from "./run/phase-plan.mjs";
@@ -29,9 +28,7 @@ import { executeTargetSetup } from "./run/target-setup.mjs";
 import { collectEnvMetrics } from "./metrics.mjs";
 import { collectorArtifactDirs, prepareCollectorArtifactDirs } from "./collectors/artifacts.mjs";
 import {
-  measurementScopeForPhase,
-  phaseDriverKind,
-  phaseResultStatus,
+  phaseResultStatus
 } from "./measurement-contract.mjs";
 import { metricOptions } from "./run/metric-options.mjs";
 import { artifactsDir } from "./paths.mjs";
@@ -97,14 +94,9 @@ export async function executeScenario(scenario, context) {
     context.onPhase?.("target setup");
     const setupResults = await executeTargetSetup(context, envName, artifactDir);
     if (setupResults.length > 0) {
+      const setupPhase = buildTargetSetupPhase(context, envName);
       record.phases.push({
-        id: "target-setup",
-        title: "Target Runtime Setup",
-        intent: "Prepare the target OpenClaw runtime selector for the scenario.",
-        measurementScope: "harness",
-        driverKind: "ocm",
-        commands: setupResults.map((result) => result.command),
-        evidence: [],
+        ...setupPhase,
         results: setupResults
       });
       if (setupResults.some((result) => result.status !== 0)) {
@@ -150,9 +142,9 @@ export async function executeScenario(scenario, context) {
         }
 
         context.onPhase?.(phase.title ?? phase.id);
-        const commands = materializeScenarioPhaseCommands(phase, context, envName, artifactDir);
+        const plannedPhase = buildScenarioPhase(phase, context, envName, artifactDir);
         const results = [];
-        for (const [commandIndex, command] of commands.entries()) {
+        for (const [commandIndex, command] of plannedPhase.commands.entries()) {
           const result = await runScenarioCommand(command, context, envName, artifactDir, phase.id, commandIndex, authPolicy);
           results.push(result);
           if (result.status !== 0) {
@@ -163,16 +155,7 @@ export async function executeScenario(scenario, context) {
         }
 
         record.phases.push({
-          id: phase.id,
-          title: phase.title,
-          intent: phase.intent,
-          healthScope: phase.healthScope,
-          collectionIntent: phase.collectionIntent ?? null,
-          measurementScope: measurementScopeForPhase(phase),
-          driverKind: phaseDriverKind(phase, commands),
-          expectedAgentFailure: phase.expectedAgentFailure === true,
-          commands,
-          evidence: phase.evidence ?? [],
+          ...plannedPhase,
           results,
           metrics: await collectEnvMetrics(envName, metricOptions(context, scenario, phase, artifactDir, {
             kind: "scenario-phase",

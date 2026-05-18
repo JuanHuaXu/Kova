@@ -41,19 +41,7 @@ export function buildPlannedPhases(scenario, context, envName, artifactDir, auth
     if (phase.id === "cleanup") {
       continue;
     }
-    const commands = materializeScenarioPhaseCommands(phase, context, envName, artifactDir);
-    phases.push({
-      id: phase.id,
-      title: phase.title,
-      intent: phase.intent,
-      healthScope: phase.healthScope,
-      collectionIntent: phase.collectionIntent ?? null,
-      measurementScope: measurementScopeForPhase(phase),
-      driverKind: phaseDriverKind(phase, commands),
-      expectedAgentFailure: phase.expectedAgentFailure === true,
-      commands,
-      evidence: phase.evidence ?? []
-    });
+    phases.push(buildScenarioPhase(phase, context, envName, artifactDir));
 
     if (phaseSupportsAuthSetup(phase, authPolicy) && !phases.some((planned) => planned.id === "auth-setup")) {
       const authSetupPhase = buildAuthSetupPhase(authPolicy, envName, artifactDir);
@@ -102,6 +90,22 @@ export function buildPlannedPhases(scenario, context, envName, artifactDir, auth
   }
 
   return phases;
+}
+
+export function buildScenarioPhase(phase, context, envName, artifactDir) {
+  const commands = materializeScenarioPhaseCommands(phase, context, envName, artifactDir);
+  return {
+    id: phase.id,
+    title: phase.title,
+    intent: phase.intent,
+    healthScope: phase.healthScope,
+    collectionIntent: phase.collectionIntent ?? null,
+    measurementScope: measurementScopeForPhase(phase),
+    driverKind: phaseDriverKind(phase, commands),
+    expectedAgentFailure: phase.expectedAgentFailure === true,
+    commands,
+    evidence: phase.evidence ?? []
+  };
 }
 
 export function buildTargetSetupPhase(context, envName) {
