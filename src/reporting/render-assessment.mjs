@@ -35,6 +35,10 @@ import {
 import { buildReportSummary } from "./report.mjs";
 import { aggregateScenarios, runConfidence } from "./scenario-aggregate.mjs";
 
+// Compact mode keeps Phases + Metrics (top-5 with role children) for a
+// "what does this scenario look like" snapshot, and drops Findings +
+// Proves (those are full-mode deep-dive material). `--full` restores
+// everything.
 const TOP_METRICS_COMPACT = 5;
 
 // Slice metrics for compact mode while keeping role-child rows attached
@@ -45,9 +49,7 @@ function compactMetricSlice(metrics, budget) {
   let topCount = 0;
   for (const m of metrics) {
     if (m.isChild) {
-      if (out.length > 0 && out[out.length - 1] && (out[out.length - 1].key === m.parentKey || out[out.length - 1].parentKey === m.parentKey)) {
-        out.push(m);
-      }
+      if (out.length > 0) out.push(m);
       continue;
     }
     if (topCount >= budget) break;
@@ -217,6 +219,7 @@ function renderScenarioBlock(sc, ui, isFull) {
     lines.push(indentBlock(phasesBlock({ phases: sc.phases, ui }), 4));
   }
 
+  const totalParents = countTopLevelMetrics(sc.metrics);
   const metricsToShow = isFull
     ? sc.metrics
     : compactMetricSlice(sc.metrics, TOP_METRICS_COMPACT);
@@ -224,24 +227,29 @@ function renderScenarioBlock(sc, ui, isFull) {
     lines.push("");
     lines.push("  " + ui.c.dim("Metrics"));
     lines.push(indentBlock(metricsTable({ rows: metricsToShow, sampleCount: sc.total, ui, indent: 4 }), 4));
-    const hidden = sc.metrics.length - metricsToShow.length;
+    const hidden = totalParents - countTopLevelMetrics(metricsToShow);
     if (hidden > 0) lines.push("    " + ui.c.dim(`+ ${hidden} more metric${hidden === 1 ? "" : "s"} (--full)`));
   }
 
-  if (sc.findings && sc.findings.length > 0) {
+  if (isFull && sc.findings && sc.findings.length > 0) {
     lines.push("");
     lines.push("  " + ui.c.dim("Findings"));
-    const findingsLimit = isFull ? null : 5;
-    lines.push(indentBlock(findingsBlock({ findings: sc.findings, ui, limit: findingsLimit, indent: 2 }), 2));
+    lines.push(indentBlock(findingsBlock({ findings: sc.findings, ui, limit: null, indent: 2 }), 2));
   }
 
-  if (sc.proves && sc.proves.length > 0) {
+  if (isFull && sc.proves && sc.proves.length > 0) {
     lines.push("");
     lines.push("  " + ui.c.dim("Proves"));
     lines.push(indentBlock(provesBlock({ claims: sc.proves, ui, indent: 2 }), 2));
   }
 
   return lines.join("\n");
+}
+
+function countTopLevelMetrics(metrics) {
+  let n = 0;
+  for (const m of metrics) if (!m.isChild) n += 1;
+  return n;
 }
 
 // ----- next hint -----

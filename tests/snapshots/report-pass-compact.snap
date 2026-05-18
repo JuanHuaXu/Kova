@@ -26,14 +26,6 @@
     peak.rss.mb          826 MB           —   PASS
     cpu.max.%             143 %           —   PASS
 
-  Findings
-    ✗ gateway hard failure: TCP socket never accepted connections
-        release-runtime-startup/fresh peakRssMb: 826.3; cpuPercentMax: 143.1
-
-  Proves
-    ✗ Start a release-shaped OpenClaw runtime, measure cold readiness and
-      bundled runtime dependency staging, and fail on degraded plugin startup.
-
 ─── next ───────────────────────────────────────────────────────────────────────
   → kova report --full <path-to-kova-<runId>.json>
   → node bin/kova.mjs run --target local-build:<home>/WorkSpace/ShakkerNerd/OpenSource/OpenClaw/shakker-claw --scenario release-runtime-startup --state fresh --execute --profile-on-failure --retain-on-failure --json
