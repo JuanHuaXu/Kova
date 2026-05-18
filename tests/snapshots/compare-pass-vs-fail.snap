@@ -11,7 +11,8 @@
 ─── scenarios ──────────────────────────────────────────────────────────────────
 
 scenario                 samples  verdict            Δ  worst metric
-release-runtime-startup        —  [REGRESSED]       +3  nodeProfileTopFunctionM…
+release-runtime-startup        —  [REGRESSED]       +3  nodeProfileTopFunctionMs
+    ↳ 32.8× tol
 
 ─── release-runtime-startup ────────────────────── [REGRESSED] · FAIL → FAIL ───
 

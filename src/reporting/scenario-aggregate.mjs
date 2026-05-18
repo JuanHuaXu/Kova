@@ -250,7 +250,10 @@ function summarizeViolation(v) {
   }
 
   const msg = typeof v.message === "string" ? v.message : "";
-  const trimmed = msg.length > 60 ? `${msg.slice(0, 57)}…` : msg;
+  // The rollup renderer (scenarios-rollup.mjs) will move long prose notes
+  // onto a full-width continuation line below the row, so keep most of the
+  // message intact here. Only guard against pathological lengths.
+  const trimmed = msg.length > 140 ? `${msg.slice(0, 137)}…` : msg;
   return { label, note: trimmed, tone };
 }
 

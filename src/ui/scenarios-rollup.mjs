@@ -18,6 +18,7 @@
 
 import { renderTable } from "./tables.mjs";
 import { badge } from "./badges.mjs";
+import { visualWidth, truncate } from "./text.mjs";
 
 // scenariosRollup({ rows, matrix, ui }) -> string
 //
@@ -29,17 +30,20 @@ import { badge } from "./badges.mjs";
 export function scenariosRollup({ rows, matrix = false, compare = false, ui } = {}) {
   if (!rows || rows.length === 0) return "";
   const c = ui.c;
+  const termWidth = ui?.width ?? 100;
 
   const shaped = rows.map((r) => {
     const passed = r.passed ?? 0;
     const total = r.total ?? passed;
+    const worst = formatWorstCell(r.worst, c, termWidth);
     return {
       id:      c.bold(r.id),
       target:  r.target ? c.dim(r.target) : "—",
       samples: total > 0 ? `${passed}/${total}` : "—",
       verdict: r.verdict ? badge(r.verdict, r.verdict, ui) : c.dim("—"),
-      worst:   r.worst ? formatWorst(r.worst, c) : c.dim("—"),
+      worst:   worst.cell,
       delta:   r.delta ? colorDelta(r.delta, c) : c.dim("—"),
+      __after: worst.after,
     };
   });
 
@@ -54,17 +58,42 @@ export function scenariosRollup({ rows, matrix = false, compare = false, ui } = 
   if (compare) cols.push({ key: "delta", header: c.dim("Δ"), align: "right", minWidth: 7 });
   cols.push({ key: "worst", header: c.dim("worst metric"), align: "left", minWidth: 0 });
 
-  return renderTable({ columns: cols, rows: shaped, gap: 2, maxWidth: ui?.width ?? null });
+  return renderTable({ columns: cols, rows: shaped, gap: 2, maxWidth: termWidth });
 }
 
-function formatWorst(worst, c) {
-  // worst can be a string or { label, note, tone }
-  if (typeof worst === "string") return worst;
-  const text = worst.label + (worst.note ? ` ${worst.note}` : "");
-  if (worst.tone === "err") return c.err(text);
-  if (worst.tone === "warn") return c.warn(text);
-  if (worst.tone === "ok") return c.ok(text);
-  return c.dim(text);
+// Worst-metric cell + optional continuation line.
+//
+// Inline when the note is compact (threshold form "value > cap"). When the
+// note is prose, keep just the metric label in the cell and emit the full
+// reason on a dim continuation line below the row. This keeps the table
+// one-row-per-scenario and screenshot-friendly while never losing detail.
+function formatWorstCell(worst, c, termWidth) {
+  if (!worst) return { cell: c.dim("—"), after: null };
+  if (typeof worst === "string") return { cell: worst, after: null };
+
+  const { label, note, tone } = worst;
+  const color = tone === "err" ? c.err
+    : tone === "warn" ? c.warn
+    : tone === "ok" ? c.ok
+    : c.dim;
+
+  if (!note) return { cell: color(label), after: null };
+
+  // Threshold form: "988.8MB > 900MB" / "97% > 80%" — always inline.
+  if (isCompactThreshold(note)) {
+    return { cell: color(`${label} ${note}`), after: null };
+  }
+
+  // Prose note: label in cell, full reason on continuation line.
+  const indent = "    ↳ ";
+  const budget = Math.max(40, termWidth - visualWidth(indent));
+  const fit = visualWidth(note) > budget ? truncate(note, budget) : note;
+  return { cell: color(label), after: c.dim(indent + fit) };
+}
+
+function isCompactThreshold(note) {
+  // Matches "<num><unit?> <op> <num><unit?>" e.g. "988.8MB > 900MB", "97% > 80%".
+  return /^[\d.,+\-]+\S* (?:>|<|≥|≤|>=|<=) [\d.,+\-]+\S*$/.test(note);
 }
 
 function colorDelta(text, c) {
