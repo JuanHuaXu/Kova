@@ -464,6 +464,20 @@ export async function runSelfCheck(flags = {}) {
       }
     ));
     checks.push(await jsonCommandCheck(
+      "allowlisted-scenario-omitted-state-falls-back-json",
+      `node bin/kova.mjs run --target runtime:stable --scenario official-plugin-install --report-dir ${quoteShell(tmp)} --json`,
+      async (data) => {
+        const report = JSON.parse(await readFile(data.jsonPath, "utf8"));
+        assertEqual(report.state?.id, "fresh", "omitted direct-run state falls back to fresh");
+        assertEqual(report.records?.[0]?.state?.id, "fresh", "record uses fresh fallback state");
+      }
+    ));
+    checks.push(await failingCommandCheck(
+      "allowlisted-scenario-explicit-state-rejected",
+      `node bin/kova.mjs run --target runtime:stable --scenario official-plugin-install --state fresh --report-dir ${quoteShell(tmp)} --json`,
+      "scenario 'official-plugin-install' supports only states: official-plugins; got 'fresh'"
+    ));
+    checks.push(await jsonCommandCheck(
       "official-plugin-install-dry-run-json",
       `node bin/kova.mjs run --target runtime:stable --scenario official-plugin-install --state official-plugins --report-dir ${quoteShell(tmp)} --json`,
       async (data) => {

@@ -45,6 +45,7 @@ export async function runScenarioCommand(flags) {
   const state = await loadState(flags.state ?? "fresh");
   const scenarios = await loadScenarios(flags.scenario);
   for (const scenario of scenarios) {
+    validateExplicitScenarioState(scenario, state, flags);
     validateScenarioRun(scenario, flags, { targetPlan, fromPlan });
   }
 
@@ -196,6 +197,20 @@ export async function runScenarioCommand(flags) {
 
   console.log(`Kova ${mode} report written: ${relative(process.cwd(), reportPath)}`);
   console.log(`Kova ${mode} data written: ${relative(process.cwd(), jsonPath)}`);
+}
+
+function validateExplicitScenarioState(scenario, state, flags) {
+  if (!flags.state || (scenario.states ?? []).length === 0) {
+    return;
+  }
+  if (scenario.states.includes(state.id)) {
+    return;
+  }
+
+  throw new Error(
+    `scenario '${scenario.id}' supports only states: ${scenario.states.join(", ")}; got '${state.id}'. ` +
+    `Use --state ${scenario.states[0]}, or omit --state to use the default fresh state.`
+  );
 }
 
 function resolveRunTimeout(scenarios, flags) {
