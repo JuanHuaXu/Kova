@@ -6701,6 +6701,18 @@ async function collectionPolicyResolverCheck(tmp) {
   });
   assertEqual(failedAuthCleanupPolicy.mode, "full", "failed auth cleanup keeps full collection");
 
+  const authSetupPolicy = resolveCollectionPolicy({
+    kind: "auth-phase",
+    phaseId: "auth-setup",
+    measurementScope: "harness",
+    resultStatus: "success"
+  });
+  assertEqual(authSetupPolicy.mode, "service-only", "successful auth setup uses service-only collection");
+  assertEqual(authSetupPolicy.collectors.service, true, "auth setup keeps service collector");
+  assertEqual(authSetupPolicy.collectors.process, true, "auth setup keeps process collector");
+  assertEqual(authSetupPolicy.collectors.logs, false, "auth setup skips logs collector");
+  assertEqual(authSetupPolicy.collectors.timeline, false, "auth setup skips timeline collector");
+
   const skippedMetrics = await collectEnvMetrics("kova-self-check-skip-env", {
     collectionPolicy: authPreparePolicy
   });
@@ -6711,6 +6723,23 @@ async function collectionPolicyResolverCheck(tmp) {
     "skipped env metrics records skipped collectors"
   );
   assertEqual(skippedMetrics.collectors.length, ENV_COLLECTOR_IDS.length, "skipped env metrics receipt count");
+
+  const authSetupMetrics = await collectPostReadySelfCheckMetrics(tmp, authSetupPolicy);
+  assertEqual(authSetupMetrics.service?.gatewayState, "running", "auth setup service-only keeps service state");
+  assertEqual(Boolean(authSetupMetrics.process), true, "auth setup service-only keeps process metrics");
+  assertEqual(authSetupMetrics.logs, null, "auth setup service-only skips logs payload");
+  assertEqual(authSetupMetrics.timeline, null, "auth setup service-only skips timeline payload");
+  assertEqual(authSetupMetrics.diagnostics, null, "auth setup service-only skips diagnostics payload");
+  assertEqual(
+    authSetupMetrics.collectors.some((collector) => collector.id === "logs" && collector.status === "SKIPPED"),
+    true,
+    "auth setup service-only records skipped logs"
+  );
+  assertEqual(
+    authSetupMetrics.collectors.some((collector) => collector.id === "timeline" && collector.status === "SKIPPED"),
+    true,
+    "auth setup service-only records skipped timeline"
+  );
 
   const postReadyMetrics = await collectPostReadySelfCheckMetrics(tmp, postReadyPolicy);
   assertEqual(postReadyMetrics.readiness?.attempts, 0, "post-ready metrics do not run readiness attempts");

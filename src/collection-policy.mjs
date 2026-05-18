@@ -97,6 +97,14 @@ export function resolveCollectionPolicy(context = {}) {
       context
     );
   }
+  if (context.kind === "auth-phase" &&
+      context.resultStatus === "success" &&
+      context.phaseId === "auth-setup") {
+    return serviceOnlyCollectionPolicy(
+      "successful auth setup is proven by the auth command; only service summary is collected after it",
+      context
+    );
+  }
   if (context.kind === "scenario-phase" && context.phaseHealthScope === "post-ready") {
     return postReadyHealthCollectionPolicy(
       "post-ready phase samples health without repeating startup readiness wait",
