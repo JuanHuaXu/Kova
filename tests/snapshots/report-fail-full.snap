@@ -7,7 +7,7 @@
 
 ─── scenarios ──────────────────────────────────────────────────────────────────
   scenario                 samples  verdict    worst metric
-  release-runtime-startup      0/1  [FAIL]     peak.rss.mb 904.5MB > 900MB
+  release-runtime-startup      0/1  [FAIL]     —
 
 ─── release-runtime-startup ────────────────────────────── [FAIL] · 1 sample ───
 
@@ -20,7 +20,7 @@
 
   Metrics
     metric                 value   threshold   status
-    peak.rss.mb           905 MB      900 MB   FAIL
+    gateway.rss.mb        349 MB      900 MB   PASS
     cold.ready.ms         703 ms           —   PASS
     health.p95.ms           1 ms           —   PASS
     cpu.max.%              150 %           —   PASS
@@ -28,9 +28,9 @@
 
   Findings
     ✗ peak RSS 904.5 MB (cap 900 MB)
-        release-runtime-startup/fresh peakRssMb: 904.5; cpuPercentMax: 150.1
+        release-runtime-startup/fresh gatewayRssMb: 348.8; cpuPercentMax: 150.1
     ✗ gateway hard failure: TCP socket never accepted connections
-        release-runtime-startup/fresh peakRssMb: 904.5; cpuPercentMax: 150.1
+        release-runtime-startup/fresh gatewayRssMb: 348.8; cpuPercentMax: 150.1
 
   Proves
     ✗ Start a release-shaped OpenClaw runtime, measure cold readiness and

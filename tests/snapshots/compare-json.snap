@@ -121,7 +121,7 @@
         "expected": null,
         "actual": 904.5,
         "evidence": [
-          "peakRssMb: 904.5",
+          "gatewayRssMb: 348.8",
           "cpuPercentMax: 150.1",
           "resourcePeakCpuAtMs: 1437",
           "topCpuFunction: (idle) 309157.19ms",
@@ -144,10 +144,19 @@
       "status": "REGRESSED",
       "currentStatus": "FAIL",
       "baselineStatus": "FAIL",
+      "baselineStatuses": {
+        "FAIL": 1
+      },
+      "currentStatuses": {
+        "FAIL": 1
+      },
+      "baselineSampleCount": 1,
+      "currentSampleCount": 1,
       "regressions": [
         {
           "kind": "metric",
           "metric": "diagnosticArtifactBytes",
+          "stat": "median",
           "baseline": 0,
           "current": 128880485,
           "delta": 128880485,
@@ -157,6 +166,7 @@
         {
           "kind": "metric",
           "metric": "heapSnapshotBytes",
+          "stat": "median",
           "baseline": 0,
           "current": 128809325,
           "delta": 128809325,
@@ -166,6 +176,7 @@
         {
           "kind": "metric",
           "metric": "nodeProfileTopFunctionMs",
+          "stat": "median",
           "baseline": 145175.04,
           "current": 309157.19,
           "delta": 163982.15,
@@ -175,374 +186,1558 @@
       ],
       "metrics": {
         "peakRssMb": {
-          "baseline": 826.3,
-          "current": 904.5,
-          "delta": 78.20000000000005
-        },
-        "cpuPercentMax": {
-          "baseline": 143.1,
-          "current": 150.1,
-          "delta": 7
-        },
-        "coldReadyMs": {
-          "baseline": 158,
-          "current": 703,
-          "delta": 545
-        },
-        "warmReadyMs": {
-          "baseline": null,
-          "current": null,
-          "delta": null
-        },
-        "upgradeMs": {
-          "baseline": null,
-          "current": null,
-          "delta": null
-        },
-        "statusMs": {
-          "baseline": 2092,
-          "current": 2237,
-          "delta": 145
-        },
-        "pluginsListMs": {
-          "baseline": 1145,
-          "current": 1438,
-          "delta": 293
-        },
-        "modelsListMs": {
-          "baseline": null,
-          "current": null,
-          "delta": null
-        },
-        "agentTurnMs": {
-          "baseline": null,
-          "current": null,
-          "delta": null
-        },
-        "coldAgentTurnMs": {
-          "baseline": null,
-          "current": null,
-          "delta": null
-        },
-        "warmAgentTurnMs": {
-          "baseline": null,
-          "current": null,
-          "delta": null
-        },
-        "agentColdWarmDeltaMs": {
-          "baseline": null,
-          "current": null,
-          "delta": null
-        },
-        "coldPreProviderMs": {
-          "baseline": null,
-          "current": null,
-          "delta": null
-        },
-        "warmPreProviderMs": {
-          "baseline": null,
-          "current": null,
-          "delta": null
-        },
-        "agentColdWarmPreProviderDeltaMs": {
-          "baseline": null,
-          "current": null,
-          "delta": null
-        },
-        "coldPreProviderAttributedMs": {
-          "baseline": null,
-          "current": null,
-          "delta": null
-        },
-        "warmPreProviderAttributedMs": {
-          "baseline": null,
-          "current": null,
-          "delta": null
-        },
-        "coldPreProviderUnattributedMs": {
-          "baseline": null,
-          "current": null,
-          "delta": null
-        },
-        "warmPreProviderUnattributedMs": {
-          "baseline": null,
-          "current": null,
-          "delta": null
-        },
-        "coldPreProviderAttributionCoverage": {
-          "baseline": null,
-          "current": null,
-          "delta": null
-        },
-        "warmPreProviderAttributionCoverage": {
-          "baseline": null,
-          "current": null,
-          "delta": null
-        },
-        "coldProviderFinalMs": {
-          "baseline": null,
-          "current": null,
-          "delta": null
-        },
-        "warmProviderFinalMs": {
-          "baseline": null,
-          "current": null,
-          "delta": null
-        },
-        "agentMetadataScanCount": {
-          "baseline": null,
-          "current": null,
-          "delta": null
-        },
-        "agentMetadataScanTotalMs": {
-          "baseline": null,
-          "current": null,
-          "delta": null
-        },
-        "agentMetadataScanMaxMs": {
-          "baseline": null,
-          "current": null,
-          "delta": null
-        },
-        "agentEventLoopMaxMs": {
-          "baseline": null,
-          "current": null,
-          "delta": null
-        },
-        "agentEventLoopSampleCount": {
-          "baseline": null,
-          "current": null,
-          "delta": null
-        },
-        "agentSessionPollCount": {
-          "baseline": null,
-          "current": null,
-          "delta": null
-        },
-        "agentSessionPollErrorCount": {
-          "baseline": null,
-          "current": null,
-          "delta": null
-        },
-        "tcpConnectMaxMs": {
-          "baseline": 0,
-          "current": 1,
-          "delta": 1
-        },
-        "readinessListeningMs": {
-          "baseline": null,
-          "current": null,
-          "delta": null
-        },
-        "readinessHealthReadyMs": {
-          "baseline": null,
-          "current": null,
-          "delta": null
-        },
-        "startupHealthP95Ms": {
-          "baseline": null,
-          "current": null,
-          "delta": null
-        },
-        "postReadyHealthP95Ms": {
-          "baseline": null,
-          "current": null,
-          "delta": null
-        },
-        "startupHealthFailures": {
-          "baseline": null,
-          "current": null,
-          "delta": null
-        },
-        "postReadyHealthFailures": {
-          "baseline": null,
-          "current": null,
-          "delta": null
-        },
-        "finalHealthFailures": {
-          "baseline": null,
-          "current": null,
-          "delta": null
-        },
-        "readinessFailures": {
-          "baseline": 1,
-          "current": 1,
-          "delta": 0
-        },
-        "missingDependencyErrors": {
-          "baseline": 0,
-          "current": 0,
-          "delta": 0
-        },
-        "pluginLoadFailures": {
-          "baseline": 0,
-          "current": 0,
-          "delta": 0
-        },
-        "gatewayRestartCount": {
-          "baseline": 0,
-          "current": 0,
-          "delta": 0
-        },
-        "metadataScanMentions": {
-          "baseline": 0,
-          "current": 0,
-          "delta": 0
-        },
-        "configNormalizationMentions": {
-          "baseline": 0,
-          "current": 0,
-          "delta": 0
-        },
-        "providerLoadMentions": {
-          "baseline": 0,
-          "current": 0,
-          "delta": 0
-        },
-        "modelCatalogMentions": {
-          "baseline": 0,
-          "current": 0,
-          "delta": 0
-        },
-        "providerTimeoutMentions": {
-          "baseline": 0,
-          "current": 0,
-          "delta": 0
-        },
-        "eventLoopDelayMentions": {
-          "baseline": 0,
-          "current": 0,
-          "delta": 0
-        },
-        "v8ReportCount": {
-          "baseline": 0,
-          "current": 1,
-          "delta": 1
-        },
-        "heapSnapshotCount": {
-          "baseline": 0,
-          "current": 1,
-          "delta": 1
-        },
-        "diagnosticArtifactBytes": {
-          "baseline": 0,
-          "current": 128880485,
-          "delta": 128880485
-        },
-        "nodeCpuProfileCount": {
-          "baseline": 5,
-          "current": 6,
-          "delta": 1
-        },
-        "nodeHeapProfileCount": {
-          "baseline": 5,
-          "current": 6,
-          "delta": 1
-        },
-        "nodeTraceEventCount": {
-          "baseline": 7,
-          "current": 6,
-          "delta": -1
-        },
-        "nodeProfileArtifactBytes": {
-          "baseline": 172827123,
-          "current": 123137894,
-          "delta": -49689229
-        },
-        "nodeProfileTopFunctionMs": {
-          "baseline": 145175.04,
-          "current": 309157.19,
-          "delta": 163982.15
-        },
-        "heapSnapshotBytes": {
-          "baseline": 0,
-          "current": 128809325,
-          "delta": 128809325
-        },
-        "resourceSampleCount": {
-          "baseline": 22,
-          "current": 20,
-          "delta": -2
-        },
-        "resourcePeakTrackedRssMb": {
-          "baseline": null,
-          "current": null,
-          "delta": null
-        },
-        "resourceCpuPercentMaxTracked": {
-          "baseline": null,
-          "current": null,
-          "delta": null
-        },
-        "resourcePeakCommandTreeRssMb": {
-          "baseline": 539.6,
-          "current": 555.7,
-          "delta": 16.100000000000023
-        },
-        "resourcePeakGatewayRssMb": {
+          "stat": "median",
           "baseline": 286.8,
           "current": 348.8,
-          "delta": 62
+          "delta": 62,
+          "tolerance": 100,
+          "baselineStats": {
+            "count": 1,
+            "min": 286.8,
+            "median": 286.8,
+            "p95": null,
+            "max": 286.8
+          },
+          "currentStats": {
+            "count": 1,
+            "min": 348.8,
+            "median": 348.8,
+            "p95": null,
+            "max": 348.8
+          }
         },
-        "openclawTimelineEventCount": {
-          "baseline": 0,
-          "current": 55,
-          "delta": 55
+        "cpuPercentMax": {
+          "stat": "median",
+          "baseline": 143.1,
+          "current": 150.1,
+          "delta": 7,
+          "tolerance": 25,
+          "baselineStats": {
+            "count": 1,
+            "min": 143.1,
+            "median": 143.1,
+            "p95": null,
+            "max": 143.1
+          },
+          "currentStats": {
+            "count": 1,
+            "min": 150.1,
+            "median": 150.1,
+            "p95": null,
+            "max": 150.1
+          }
         },
-        "openclawTimelineParseErrors": {
-          "baseline": 0,
-          "current": 0,
-          "delta": 0
+        "coldReadyMs": {
+          "stat": "median",
+          "baseline": 158,
+          "current": 703,
+          "delta": 545,
+          "tolerance": 5000,
+          "baselineStats": {
+            "count": 1,
+            "min": 158,
+            "median": 158,
+            "p95": null,
+            "max": 158
+          },
+          "currentStats": {
+            "count": 1,
+            "min": 703,
+            "median": 703,
+            "p95": null,
+            "max": 703
+          }
         },
-        "openclawSlowestSpanMs": {
+        "warmReadyMs": {
+          "stat": "median",
           "baseline": null,
-          "current": 42.97,
-          "delta": null
+          "current": null,
+          "delta": null,
+          "tolerance": 3000,
+          "baselineStats": {
+            "count": 0,
+            "min": null,
+            "median": null,
+            "p95": null,
+            "max": null
+          },
+          "currentStats": {
+            "count": 0,
+            "min": null,
+            "median": null,
+            "p95": null,
+            "max": null
+          }
         },
-        "openclawRepeatedSpanCount": {
+        "upgradeMs": {
+          "stat": "median",
+          "baseline": null,
+          "current": null,
+          "delta": null,
+          "tolerance": 10000,
+          "baselineStats": {
+            "count": 0,
+            "min": null,
+            "median": null,
+            "p95": null,
+            "max": null
+          },
+          "currentStats": {
+            "count": 0,
+            "min": null,
+            "median": null,
+            "p95": null,
+            "max": null
+          }
+        },
+        "statusMs": {
+          "stat": "median",
+          "baseline": 2092,
+          "current": 2237,
+          "delta": 145,
+          "tolerance": 1000,
+          "baselineStats": {
+            "count": 1,
+            "min": 2092,
+            "median": 2092,
+            "p95": null,
+            "max": 2092
+          },
+          "currentStats": {
+            "count": 1,
+            "min": 2237,
+            "median": 2237,
+            "p95": null,
+            "max": 2237
+          }
+        },
+        "pluginsListMs": {
+          "stat": "median",
+          "baseline": 1145,
+          "current": 1438,
+          "delta": 293,
+          "tolerance": 1000,
+          "baselineStats": {
+            "count": 1,
+            "min": 1145,
+            "median": 1145,
+            "p95": null,
+            "max": 1145
+          },
+          "currentStats": {
+            "count": 1,
+            "min": 1438,
+            "median": 1438,
+            "p95": null,
+            "max": 1438
+          }
+        },
+        "modelsListMs": {
+          "stat": "median",
+          "baseline": null,
+          "current": null,
+          "delta": null,
+          "tolerance": 3000,
+          "baselineStats": {
+            "count": 0,
+            "min": null,
+            "median": null,
+            "p95": null,
+            "max": null
+          },
+          "currentStats": {
+            "count": 0,
+            "min": null,
+            "median": null,
+            "p95": null,
+            "max": null
+          }
+        },
+        "agentTurnMs": {
+          "stat": "median",
+          "baseline": null,
+          "current": null,
+          "delta": null,
+          "tolerance": 10000,
+          "baselineStats": {
+            "count": 0,
+            "min": null,
+            "median": null,
+            "p95": null,
+            "max": null
+          },
+          "currentStats": {
+            "count": 0,
+            "min": null,
+            "median": null,
+            "p95": null,
+            "max": null
+          }
+        },
+        "coldAgentTurnMs": {
+          "stat": "median",
+          "baseline": null,
+          "current": null,
+          "delta": null,
+          "tolerance": 10000,
+          "baselineStats": {
+            "count": 0,
+            "min": null,
+            "median": null,
+            "p95": null,
+            "max": null
+          },
+          "currentStats": {
+            "count": 0,
+            "min": null,
+            "median": null,
+            "p95": null,
+            "max": null
+          }
+        },
+        "warmAgentTurnMs": {
+          "stat": "median",
+          "baseline": null,
+          "current": null,
+          "delta": null,
+          "tolerance": 5000,
+          "baselineStats": {
+            "count": 0,
+            "min": null,
+            "median": null,
+            "p95": null,
+            "max": null
+          },
+          "currentStats": {
+            "count": 0,
+            "min": null,
+            "median": null,
+            "p95": null,
+            "max": null
+          }
+        },
+        "agentColdWarmDeltaMs": {
+          "stat": "median",
+          "baseline": null,
+          "current": null,
+          "delta": null,
+          "tolerance": 10000,
+          "baselineStats": {
+            "count": 0,
+            "min": null,
+            "median": null,
+            "p95": null,
+            "max": null
+          },
+          "currentStats": {
+            "count": 0,
+            "min": null,
+            "median": null,
+            "p95": null,
+            "max": null
+          }
+        },
+        "coldPreProviderMs": {
+          "stat": "median",
+          "baseline": null,
+          "current": null,
+          "delta": null,
+          "tolerance": 5000,
+          "baselineStats": {
+            "count": 0,
+            "min": null,
+            "median": null,
+            "p95": null,
+            "max": null
+          },
+          "currentStats": {
+            "count": 0,
+            "min": null,
+            "median": null,
+            "p95": null,
+            "max": null
+          }
+        },
+        "warmPreProviderMs": {
+          "stat": "median",
+          "baseline": null,
+          "current": null,
+          "delta": null,
+          "tolerance": 2500,
+          "baselineStats": {
+            "count": 0,
+            "min": null,
+            "median": null,
+            "p95": null,
+            "max": null
+          },
+          "currentStats": {
+            "count": 0,
+            "min": null,
+            "median": null,
+            "p95": null,
+            "max": null
+          }
+        },
+        "agentColdWarmPreProviderDeltaMs": {
+          "stat": "median",
+          "baseline": null,
+          "current": null,
+          "delta": null,
+          "tolerance": null,
+          "baselineStats": {
+            "count": 0,
+            "min": null,
+            "median": null,
+            "p95": null,
+            "max": null
+          },
+          "currentStats": {
+            "count": 0,
+            "min": null,
+            "median": null,
+            "p95": null,
+            "max": null
+          }
+        },
+        "coldPreProviderAttributedMs": {
+          "stat": "median",
+          "baseline": null,
+          "current": null,
+          "delta": null,
+          "tolerance": null,
+          "baselineStats": {
+            "count": 0,
+            "min": null,
+            "median": null,
+            "p95": null,
+            "max": null
+          },
+          "currentStats": {
+            "count": 0,
+            "min": null,
+            "median": null,
+            "p95": null,
+            "max": null
+          }
+        },
+        "warmPreProviderAttributedMs": {
+          "stat": "median",
+          "baseline": null,
+          "current": null,
+          "delta": null,
+          "tolerance": null,
+          "baselineStats": {
+            "count": 0,
+            "min": null,
+            "median": null,
+            "p95": null,
+            "max": null
+          },
+          "currentStats": {
+            "count": 0,
+            "min": null,
+            "median": null,
+            "p95": null,
+            "max": null
+          }
+        },
+        "coldPreProviderUnattributedMs": {
+          "stat": "median",
+          "baseline": null,
+          "current": null,
+          "delta": null,
+          "tolerance": null,
+          "baselineStats": {
+            "count": 0,
+            "min": null,
+            "median": null,
+            "p95": null,
+            "max": null
+          },
+          "currentStats": {
+            "count": 0,
+            "min": null,
+            "median": null,
+            "p95": null,
+            "max": null
+          }
+        },
+        "warmPreProviderUnattributedMs": {
+          "stat": "median",
+          "baseline": null,
+          "current": null,
+          "delta": null,
+          "tolerance": null,
+          "baselineStats": {
+            "count": 0,
+            "min": null,
+            "median": null,
+            "p95": null,
+            "max": null
+          },
+          "currentStats": {
+            "count": 0,
+            "min": null,
+            "median": null,
+            "p95": null,
+            "max": null
+          }
+        },
+        "coldPreProviderAttributionCoverage": {
+          "stat": "median",
+          "baseline": null,
+          "current": null,
+          "delta": null,
+          "tolerance": null,
+          "baselineStats": {
+            "count": 0,
+            "min": null,
+            "median": null,
+            "p95": null,
+            "max": null
+          },
+          "currentStats": {
+            "count": 0,
+            "min": null,
+            "median": null,
+            "p95": null,
+            "max": null
+          }
+        },
+        "warmPreProviderAttributionCoverage": {
+          "stat": "median",
+          "baseline": null,
+          "current": null,
+          "delta": null,
+          "tolerance": null,
+          "baselineStats": {
+            "count": 0,
+            "min": null,
+            "median": null,
+            "p95": null,
+            "max": null
+          },
+          "currentStats": {
+            "count": 0,
+            "min": null,
+            "median": null,
+            "p95": null,
+            "max": null
+          }
+        },
+        "coldProviderFinalMs": {
+          "stat": "median",
+          "baseline": null,
+          "current": null,
+          "delta": null,
+          "tolerance": null,
+          "baselineStats": {
+            "count": 0,
+            "min": null,
+            "median": null,
+            "p95": null,
+            "max": null
+          },
+          "currentStats": {
+            "count": 0,
+            "min": null,
+            "median": null,
+            "p95": null,
+            "max": null
+          }
+        },
+        "warmProviderFinalMs": {
+          "stat": "median",
+          "baseline": null,
+          "current": null,
+          "delta": null,
+          "tolerance": null,
+          "baselineStats": {
+            "count": 0,
+            "min": null,
+            "median": null,
+            "p95": null,
+            "max": null
+          },
+          "currentStats": {
+            "count": 0,
+            "min": null,
+            "median": null,
+            "p95": null,
+            "max": null
+          }
+        },
+        "agentMetadataScanCount": {
+          "stat": "median",
+          "baseline": null,
+          "current": null,
+          "delta": null,
+          "tolerance": 5,
+          "baselineStats": {
+            "count": 0,
+            "min": null,
+            "median": null,
+            "p95": null,
+            "max": null
+          },
+          "currentStats": {
+            "count": 0,
+            "min": null,
+            "median": null,
+            "p95": null,
+            "max": null
+          }
+        },
+        "agentMetadataScanTotalMs": {
+          "stat": "median",
+          "baseline": null,
+          "current": null,
+          "delta": null,
+          "tolerance": 1000,
+          "baselineStats": {
+            "count": 0,
+            "min": null,
+            "median": null,
+            "p95": null,
+            "max": null
+          },
+          "currentStats": {
+            "count": 0,
+            "min": null,
+            "median": null,
+            "p95": null,
+            "max": null
+          }
+        },
+        "agentMetadataScanMaxMs": {
+          "stat": "median",
+          "baseline": null,
+          "current": null,
+          "delta": null,
+          "tolerance": null,
+          "baselineStats": {
+            "count": 0,
+            "min": null,
+            "median": null,
+            "p95": null,
+            "max": null
+          },
+          "currentStats": {
+            "count": 0,
+            "min": null,
+            "median": null,
+            "p95": null,
+            "max": null
+          }
+        },
+        "agentEventLoopMaxMs": {
+          "stat": "median",
+          "baseline": null,
+          "current": null,
+          "delta": null,
+          "tolerance": 250,
+          "baselineStats": {
+            "count": 0,
+            "min": null,
+            "median": null,
+            "p95": null,
+            "max": null
+          },
+          "currentStats": {
+            "count": 0,
+            "min": null,
+            "median": null,
+            "p95": null,
+            "max": null
+          }
+        },
+        "agentEventLoopSampleCount": {
+          "stat": "median",
+          "baseline": null,
+          "current": null,
+          "delta": null,
+          "tolerance": null,
+          "baselineStats": {
+            "count": 0,
+            "min": null,
+            "median": null,
+            "p95": null,
+            "max": null
+          },
+          "currentStats": {
+            "count": 0,
+            "min": null,
+            "median": null,
+            "p95": null,
+            "max": null
+          }
+        },
+        "agentSessionPollCount": {
+          "stat": "median",
+          "baseline": null,
+          "current": null,
+          "delta": null,
+          "tolerance": 10,
+          "baselineStats": {
+            "count": 0,
+            "min": null,
+            "median": null,
+            "p95": null,
+            "max": null
+          },
+          "currentStats": {
+            "count": 0,
+            "min": null,
+            "median": null,
+            "p95": null,
+            "max": null
+          }
+        },
+        "agentSessionPollErrorCount": {
+          "stat": "median",
+          "baseline": null,
+          "current": null,
+          "delta": null,
+          "tolerance": null,
+          "baselineStats": {
+            "count": 0,
+            "min": null,
+            "median": null,
+            "p95": null,
+            "max": null
+          },
+          "currentStats": {
+            "count": 0,
+            "min": null,
+            "median": null,
+            "p95": null,
+            "max": null
+          }
+        },
+        "tcpConnectMaxMs": {
+          "stat": "median",
           "baseline": 0,
           "current": 1,
-          "delta": 1
+          "delta": 1,
+          "tolerance": 250,
+          "baselineStats": {
+            "count": 1,
+            "min": 0,
+            "median": 0,
+            "p95": null,
+            "max": 0
+          },
+          "currentStats": {
+            "count": 1,
+            "min": 1,
+            "median": 1,
+            "p95": null,
+            "max": 1
+          }
+        },
+        "readinessListeningMs": {
+          "stat": "median",
+          "baseline": null,
+          "current": null,
+          "delta": null,
+          "tolerance": 3000,
+          "baselineStats": {
+            "count": 0,
+            "min": null,
+            "median": null,
+            "p95": null,
+            "max": null
+          },
+          "currentStats": {
+            "count": 0,
+            "min": null,
+            "median": null,
+            "p95": null,
+            "max": null
+          }
+        },
+        "readinessHealthReadyMs": {
+          "stat": "median",
+          "baseline": null,
+          "current": null,
+          "delta": null,
+          "tolerance": 5000,
+          "baselineStats": {
+            "count": 0,
+            "min": null,
+            "median": null,
+            "p95": null,
+            "max": null
+          },
+          "currentStats": {
+            "count": 0,
+            "min": null,
+            "median": null,
+            "p95": null,
+            "max": null
+          }
+        },
+        "startupHealthP95Ms": {
+          "stat": "median",
+          "baseline": null,
+          "current": null,
+          "delta": null,
+          "tolerance": 1000,
+          "baselineStats": {
+            "count": 0,
+            "min": null,
+            "median": null,
+            "p95": null,
+            "max": null
+          },
+          "currentStats": {
+            "count": 0,
+            "min": null,
+            "median": null,
+            "p95": null,
+            "max": null
+          }
+        },
+        "postReadyHealthP95Ms": {
+          "stat": "median",
+          "baseline": null,
+          "current": null,
+          "delta": null,
+          "tolerance": 1000,
+          "baselineStats": {
+            "count": 0,
+            "min": null,
+            "median": null,
+            "p95": null,
+            "max": null
+          },
+          "currentStats": {
+            "count": 0,
+            "min": null,
+            "median": null,
+            "p95": null,
+            "max": null
+          }
+        },
+        "startupHealthFailures": {
+          "stat": "median",
+          "baseline": null,
+          "current": null,
+          "delta": null,
+          "tolerance": 0,
+          "baselineStats": {
+            "count": 0,
+            "min": null,
+            "median": null,
+            "p95": null,
+            "max": null
+          },
+          "currentStats": {
+            "count": 0,
+            "min": null,
+            "median": null,
+            "p95": null,
+            "max": null
+          }
+        },
+        "postReadyHealthFailures": {
+          "stat": "median",
+          "baseline": null,
+          "current": null,
+          "delta": null,
+          "tolerance": 0,
+          "baselineStats": {
+            "count": 0,
+            "min": null,
+            "median": null,
+            "p95": null,
+            "max": null
+          },
+          "currentStats": {
+            "count": 0,
+            "min": null,
+            "median": null,
+            "p95": null,
+            "max": null
+          }
+        },
+        "finalHealthFailures": {
+          "stat": "median",
+          "baseline": null,
+          "current": null,
+          "delta": null,
+          "tolerance": 0,
+          "baselineStats": {
+            "count": 0,
+            "min": null,
+            "median": null,
+            "p95": null,
+            "max": null
+          },
+          "currentStats": {
+            "count": 0,
+            "min": null,
+            "median": null,
+            "p95": null,
+            "max": null
+          }
+        },
+        "readinessFailures": {
+          "stat": "median",
+          "baseline": 1,
+          "current": 1,
+          "delta": 0,
+          "tolerance": 0,
+          "baselineStats": {
+            "count": 1,
+            "min": 1,
+            "median": 1,
+            "p95": null,
+            "max": 1
+          },
+          "currentStats": {
+            "count": 1,
+            "min": 1,
+            "median": 1,
+            "p95": null,
+            "max": 1
+          }
+        },
+        "missingDependencyErrors": {
+          "stat": "median",
+          "baseline": 0,
+          "current": 0,
+          "delta": 0,
+          "tolerance": 0,
+          "baselineStats": {
+            "count": 1,
+            "min": 0,
+            "median": 0,
+            "p95": null,
+            "max": 0
+          },
+          "currentStats": {
+            "count": 1,
+            "min": 0,
+            "median": 0,
+            "p95": null,
+            "max": 0
+          }
+        },
+        "pluginLoadFailures": {
+          "stat": "median",
+          "baseline": 0,
+          "current": 0,
+          "delta": 0,
+          "tolerance": 0,
+          "baselineStats": {
+            "count": 1,
+            "min": 0,
+            "median": 0,
+            "p95": null,
+            "max": 0
+          },
+          "currentStats": {
+            "count": 1,
+            "min": 0,
+            "median": 0,
+            "p95": null,
+            "max": 0
+          }
+        },
+        "gatewayRestartCount": {
+          "stat": "median",
+          "baseline": 0,
+          "current": 0,
+          "delta": 0,
+          "tolerance": 0,
+          "baselineStats": {
+            "count": 1,
+            "min": 0,
+            "median": 0,
+            "p95": null,
+            "max": 0
+          },
+          "currentStats": {
+            "count": 1,
+            "min": 0,
+            "median": 0,
+            "p95": null,
+            "max": 0
+          }
+        },
+        "metadataScanMentions": {
+          "stat": "median",
+          "baseline": 0,
+          "current": 0,
+          "delta": 0,
+          "tolerance": 10,
+          "baselineStats": {
+            "count": 1,
+            "min": 0,
+            "median": 0,
+            "p95": null,
+            "max": 0
+          },
+          "currentStats": {
+            "count": 1,
+            "min": 0,
+            "median": 0,
+            "p95": null,
+            "max": 0
+          }
+        },
+        "configNormalizationMentions": {
+          "stat": "median",
+          "baseline": 0,
+          "current": 0,
+          "delta": 0,
+          "tolerance": 10,
+          "baselineStats": {
+            "count": 1,
+            "min": 0,
+            "median": 0,
+            "p95": null,
+            "max": 0
+          },
+          "currentStats": {
+            "count": 1,
+            "min": 0,
+            "median": 0,
+            "p95": null,
+            "max": 0
+          }
+        },
+        "providerLoadMentions": {
+          "stat": "median",
+          "baseline": 0,
+          "current": 0,
+          "delta": 0,
+          "tolerance": null,
+          "baselineStats": {
+            "count": 1,
+            "min": 0,
+            "median": 0,
+            "p95": null,
+            "max": 0
+          },
+          "currentStats": {
+            "count": 1,
+            "min": 0,
+            "median": 0,
+            "p95": null,
+            "max": 0
+          }
+        },
+        "modelCatalogMentions": {
+          "stat": "median",
+          "baseline": 0,
+          "current": 0,
+          "delta": 0,
+          "tolerance": null,
+          "baselineStats": {
+            "count": 1,
+            "min": 0,
+            "median": 0,
+            "p95": null,
+            "max": 0
+          },
+          "currentStats": {
+            "count": 1,
+            "min": 0,
+            "median": 0,
+            "p95": null,
+            "max": 0
+          }
+        },
+        "providerTimeoutMentions": {
+          "stat": "median",
+          "baseline": 0,
+          "current": 0,
+          "delta": 0,
+          "tolerance": 0,
+          "baselineStats": {
+            "count": 1,
+            "min": 0,
+            "median": 0,
+            "p95": null,
+            "max": 0
+          },
+          "currentStats": {
+            "count": 1,
+            "min": 0,
+            "median": 0,
+            "p95": null,
+            "max": 0
+          }
+        },
+        "eventLoopDelayMentions": {
+          "stat": "median",
+          "baseline": 0,
+          "current": 0,
+          "delta": 0,
+          "tolerance": 0,
+          "baselineStats": {
+            "count": 1,
+            "min": 0,
+            "median": 0,
+            "p95": null,
+            "max": 0
+          },
+          "currentStats": {
+            "count": 1,
+            "min": 0,
+            "median": 0,
+            "p95": null,
+            "max": 0
+          }
+        },
+        "v8ReportCount": {
+          "stat": "median",
+          "baseline": 0,
+          "current": 1,
+          "delta": 1,
+          "tolerance": null,
+          "baselineStats": {
+            "count": 1,
+            "min": 0,
+            "median": 0,
+            "p95": null,
+            "max": 0
+          },
+          "currentStats": {
+            "count": 1,
+            "min": 1,
+            "median": 1,
+            "p95": null,
+            "max": 1
+          }
+        },
+        "heapSnapshotCount": {
+          "stat": "median",
+          "baseline": 0,
+          "current": 1,
+          "delta": 1,
+          "tolerance": null,
+          "baselineStats": {
+            "count": 1,
+            "min": 0,
+            "median": 0,
+            "p95": null,
+            "max": 0
+          },
+          "currentStats": {
+            "count": 1,
+            "min": 1,
+            "median": 1,
+            "p95": null,
+            "max": 1
+          }
+        },
+        "diagnosticArtifactBytes": {
+          "stat": "median",
+          "baseline": 0,
+          "current": 128880485,
+          "delta": 128880485,
+          "tolerance": 26214400,
+          "baselineStats": {
+            "count": 1,
+            "min": 0,
+            "median": 0,
+            "p95": null,
+            "max": 0
+          },
+          "currentStats": {
+            "count": 1,
+            "min": 128880485,
+            "median": 128880485,
+            "p95": null,
+            "max": 128880485
+          }
+        },
+        "nodeCpuProfileCount": {
+          "stat": "median",
+          "baseline": 5,
+          "current": 6,
+          "delta": 1,
+          "tolerance": null,
+          "baselineStats": {
+            "count": 1,
+            "min": 5,
+            "median": 5,
+            "p95": null,
+            "max": 5
+          },
+          "currentStats": {
+            "count": 1,
+            "min": 6,
+            "median": 6,
+            "p95": null,
+            "max": 6
+          }
+        },
+        "nodeHeapProfileCount": {
+          "stat": "median",
+          "baseline": 5,
+          "current": 6,
+          "delta": 1,
+          "tolerance": null,
+          "baselineStats": {
+            "count": 1,
+            "min": 5,
+            "median": 5,
+            "p95": null,
+            "max": 5
+          },
+          "currentStats": {
+            "count": 1,
+            "min": 6,
+            "median": 6,
+            "p95": null,
+            "max": 6
+          }
+        },
+        "nodeTraceEventCount": {
+          "stat": "median",
+          "baseline": 7,
+          "current": 6,
+          "delta": -1,
+          "tolerance": null,
+          "baselineStats": {
+            "count": 1,
+            "min": 7,
+            "median": 7,
+            "p95": null,
+            "max": 7
+          },
+          "currentStats": {
+            "count": 1,
+            "min": 6,
+            "median": 6,
+            "p95": null,
+            "max": 6
+          }
+        },
+        "nodeProfileArtifactBytes": {
+          "stat": "median",
+          "baseline": 172827123,
+          "current": 123137894,
+          "delta": -49689229,
+          "tolerance": 104857600,
+          "baselineStats": {
+            "count": 1,
+            "min": 172827123,
+            "median": 172827123,
+            "p95": null,
+            "max": 172827123
+          },
+          "currentStats": {
+            "count": 1,
+            "min": 123137894,
+            "median": 123137894,
+            "p95": null,
+            "max": 123137894
+          }
+        },
+        "nodeProfileTopFunctionMs": {
+          "stat": "median",
+          "baseline": 145175.04,
+          "current": 309157.19,
+          "delta": 163982.15,
+          "tolerance": 5000,
+          "baselineStats": {
+            "count": 1,
+            "min": 145175.04,
+            "median": 145175.04,
+            "p95": null,
+            "max": 145175.04
+          },
+          "currentStats": {
+            "count": 1,
+            "min": 309157.19,
+            "median": 309157.19,
+            "p95": null,
+            "max": 309157.19
+          }
+        },
+        "heapSnapshotBytes": {
+          "stat": "median",
+          "baseline": 0,
+          "current": 128809325,
+          "delta": 128809325,
+          "tolerance": 52428800,
+          "baselineStats": {
+            "count": 1,
+            "min": 0,
+            "median": 0,
+            "p95": null,
+            "max": 0
+          },
+          "currentStats": {
+            "count": 1,
+            "min": 128809325,
+            "median": 128809325,
+            "p95": null,
+            "max": 128809325
+          }
+        },
+        "resourceSampleCount": {
+          "stat": "median",
+          "baseline": 22,
+          "current": 20,
+          "delta": -2,
+          "tolerance": null,
+          "baselineStats": {
+            "count": 1,
+            "min": 22,
+            "median": 22,
+            "p95": null,
+            "max": 22
+          },
+          "currentStats": {
+            "count": 1,
+            "min": 20,
+            "median": 20,
+            "p95": null,
+            "max": 20
+          }
+        },
+        "resourcePeakTrackedRssMb": {
+          "stat": "median",
+          "baseline": null,
+          "current": null,
+          "delta": null,
+          "tolerance": 100,
+          "baselineStats": {
+            "count": 0,
+            "min": null,
+            "median": null,
+            "p95": null,
+            "max": null
+          },
+          "currentStats": {
+            "count": 0,
+            "min": null,
+            "median": null,
+            "p95": null,
+            "max": null
+          }
+        },
+        "resourceCpuPercentMaxTracked": {
+          "stat": "median",
+          "baseline": null,
+          "current": null,
+          "delta": null,
+          "tolerance": 25,
+          "baselineStats": {
+            "count": 0,
+            "min": null,
+            "median": null,
+            "p95": null,
+            "max": null
+          },
+          "currentStats": {
+            "count": 0,
+            "min": null,
+            "median": null,
+            "p95": null,
+            "max": null
+          }
+        },
+        "resourcePeakCommandTreeRssMb": {
+          "stat": "median",
+          "baseline": 539.6,
+          "current": 555.7,
+          "delta": 16.100000000000023,
+          "tolerance": 100,
+          "baselineStats": {
+            "count": 1,
+            "min": 539.6,
+            "median": 539.6,
+            "p95": null,
+            "max": 539.6
+          },
+          "currentStats": {
+            "count": 1,
+            "min": 555.7,
+            "median": 555.7,
+            "p95": null,
+            "max": 555.7
+          }
+        },
+        "resourcePeakGatewayRssMb": {
+          "stat": "median",
+          "baseline": 286.8,
+          "current": 348.8,
+          "delta": 62,
+          "tolerance": 100,
+          "baselineStats": {
+            "count": 1,
+            "min": 286.8,
+            "median": 286.8,
+            "p95": null,
+            "max": 286.8
+          },
+          "currentStats": {
+            "count": 1,
+            "min": 348.8,
+            "median": 348.8,
+            "p95": null,
+            "max": 348.8
+          }
+        },
+        "openclawTimelineEventCount": {
+          "stat": "median",
+          "baseline": 0,
+          "current": 55,
+          "delta": 55,
+          "tolerance": null,
+          "baselineStats": {
+            "count": 1,
+            "min": 0,
+            "median": 0,
+            "p95": null,
+            "max": 0
+          },
+          "currentStats": {
+            "count": 1,
+            "min": 55,
+            "median": 55,
+            "p95": null,
+            "max": 55
+          }
+        },
+        "openclawTimelineParseErrors": {
+          "stat": "median",
+          "baseline": 0,
+          "current": 0,
+          "delta": 0,
+          "tolerance": 0,
+          "baselineStats": {
+            "count": 1,
+            "min": 0,
+            "median": 0,
+            "p95": null,
+            "max": 0
+          },
+          "currentStats": {
+            "count": 1,
+            "min": 0,
+            "median": 0,
+            "p95": null,
+            "max": 0
+          }
+        },
+        "openclawSlowestSpanMs": {
+          "stat": "median",
+          "baseline": null,
+          "current": 42.97,
+          "delta": null,
+          "tolerance": 5000,
+          "baselineStats": {
+            "count": 0,
+            "min": null,
+            "median": null,
+            "p95": null,
+            "max": null
+          },
+          "currentStats": {
+            "count": 1,
+            "min": 42.97,
+            "median": 42.97,
+            "p95": null,
+            "max": 42.97
+          }
+        },
+        "openclawRepeatedSpanCount": {
+          "stat": "median",
+          "baseline": 0,
+          "current": 1,
+          "delta": 1,
+          "tolerance": null,
+          "baselineStats": {
+            "count": 1,
+            "min": 0,
+            "median": 0,
+            "p95": null,
+            "max": 0
+          },
+          "currentStats": {
+            "count": 1,
+            "min": 1,
+            "median": 1,
+            "p95": null,
+            "max": 1
+          }
         },
         "openclawEventLoopMaxMs": {
+          "stat": "median",
           "baseline": null,
           "current": 0,
-          "delta": null
+          "delta": null,
+          "tolerance": 250,
+          "baselineStats": {
+            "count": 0,
+            "min": null,
+            "median": null,
+            "p95": null,
+            "max": null
+          },
+          "currentStats": {
+            "count": 1,
+            "min": 0,
+            "median": 0,
+            "p95": null,
+            "max": 0
+          }
         },
         "openclawProviderRequestMaxMs": {
+          "stat": "median",
           "baseline": null,
           "current": null,
-          "delta": null
+          "delta": null,
+          "tolerance": 5000,
+          "baselineStats": {
+            "count": 0,
+            "min": null,
+            "median": null,
+            "p95": null,
+            "max": null
+          },
+          "currentStats": {
+            "count": 0,
+            "min": null,
+            "median": null,
+            "p95": null,
+            "max": null
+          }
         },
         "openclawChildProcessFailedCount": {
+          "stat": "median",
           "baseline": 0,
           "current": 0,
-          "delta": 0
+          "delta": 0,
+          "tolerance": 0,
+          "baselineStats": {
+            "count": 1,
+            "min": 0,
+            "median": 0,
+            "p95": null,
+            "max": 0
+          },
+          "currentStats": {
+            "count": 1,
+            "min": 0,
+            "median": 0,
+            "p95": null,
+            "max": 0
+          }
         },
         "pluginMetadataScanCount": {
+          "stat": "median",
           "baseline": 0,
           "current": 0,
-          "delta": 0
+          "delta": 0,
+          "tolerance": 10,
+          "baselineStats": {
+            "count": 1,
+            "min": 0,
+            "median": 0,
+            "p95": null,
+            "max": 0
+          },
+          "currentStats": {
+            "count": 1,
+            "min": 0,
+            "median": 0,
+            "p95": null,
+            "max": 0
+          }
         },
         "configNormalizationCount": {
+          "stat": "median",
           "baseline": 0,
           "current": 0,
-          "delta": 0
+          "delta": 0,
+          "tolerance": 10,
+          "baselineStats": {
+            "count": 1,
+            "min": 0,
+            "median": 0,
+            "p95": null,
+            "max": 0
+          },
+          "currentStats": {
+            "count": 1,
+            "min": 0,
+            "median": 0,
+            "p95": null,
+            "max": 0
+          }
         },
         "runtimeDepsStagingMs": {
+          "stat": "median",
           "baseline": null,
           "current": null,
-          "delta": null
+          "delta": null,
+          "tolerance": 5000,
+          "baselineStats": {
+            "count": 0,
+            "min": null,
+            "median": null,
+            "p95": null,
+            "max": null
+          },
+          "currentStats": {
+            "count": 0,
+            "min": null,
+            "median": null,
+            "p95": null,
+            "max": null
+          }
         },
         "eventLoopDelayMs": {
+          "stat": "median",
           "baseline": null,
           "current": 0,
-          "delta": null
+          "delta": null,
+          "tolerance": 250,
+          "baselineStats": {
+            "count": 0,
+            "min": null,
+            "median": null,
+            "p95": null,
+            "max": null
+          },
+          "currentStats": {
+            "count": 1,
+            "min": 0,
+            "median": 0,
+            "p95": null,
+            "max": 0
+          }
         },
         "providerModelTimingMs": {
+          "stat": "median",
           "baseline": null,
           "current": null,
-          "delta": null
+          "delta": null,
+          "tolerance": 5000,
+          "baselineStats": {
+            "count": 0,
+            "min": null,
+            "median": null,
+            "p95": null,
+            "max": null
+          },
+          "currentStats": {
+            "count": 0,
+            "min": null,
+            "median": null,
+            "p95": null,
+            "max": null
+          }
         }
       }
     }

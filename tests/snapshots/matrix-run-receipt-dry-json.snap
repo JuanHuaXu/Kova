@@ -17,8 +17,8 @@
   "reportPath": "<home>/.kova/reports/kova-<runId>-smoke.md",
   "jsonPath": "<home>/.kova/reports/kova-<runId>-smoke.json",
   "summaryPath": "<home>/.kova/reports/kova-<runId>-smoke.summary.json",
-  "bundlePath": "<home>/.kova/reports/kova-<runid>-bundle.tar.gz",
-  "checksumPath": "<home>/.kova/reports/kova-<runid>-bundle.tar.gz.sha256",
+  "bundlePath": "<home>/.kova/reports/kova-<runId>-bundle.tar.gz",
+  "checksumPath": "<home>/.kova/reports/kova-<runId>-bundle.tar.gz.sha256",
   "retainedGateArtifacts": null,
   "gate": null,
   "performance": {

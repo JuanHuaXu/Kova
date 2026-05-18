@@ -11,23 +11,32 @@
 ─── scenarios ──────────────────────────────────────────────────────────────────
 
 scenario                 samples  verdict            Δ  worst metric
-release-runtime-startup        —  [REGRESSED]       +3  nodeProfileTopFunctionMs
+release-runtime-startup      0/1  [REGRESSED]       +3  nodeProfileTopFunctionMs
     ↳ 32.8× tol
 
 ─── release-runtime-startup ────────────────────── [REGRESSED] · FAIL → FAIL ───
 
-metric                    baseline       current         Δ    threshold   status
-nodeProfileTopFunctio…     145,175       309,157   +113.0%        5,000   OVER
-diagnosticArtifactByt…           0   128,880,485         —   26,214,400   OVER
-heapSnapshotBytes                0   128,809,325         —   52,428,800   OVER
-cold.ready.ms               158 ms        703 ms   +344.9%            —   —
-pluginsListMs                1,145         1,438    +25.6%            —   —
-resourcePeakGatewayRs…         287           349    +21.6%            —   —
+metric               baseline       current              Δ    tolerance   status
+diagnosticArtifa…           0   128,880,485   +128,880,485   26,214,400   OVER
+heapSnapshotBytes           0   128,809,325   +128,809,325   52,428,800   OVER
+nodeProfileTopFu…     145,175       309,157        +113.0%        5,000   OVER
+timeline.events             0            55            +55            —   WATCH
+nodeCpuProfileCo…           5             6         +20.0%            —   WATCH
+nodeHeapProfileC…           5             6         +20.0%            —   WATCH
 
 ─── findings ───────────────────────────────────────────────────────────────────
 
+  + ✗ diagnosticArtifactBytes +128,880,485 (0 -> 128,880,485)
+      release-runtime-startup/fresh tolerance 26214400; diagnosticArtifactBytes
+      increased by 128880485 (0 -> 128880485), over tolerance 26214400
+  + ✗ heapSnapshotBytes +128,809,325 (0 -> 128,809,325)
+      release-runtime-startup/fresh tolerance 52428800; heapSnapshotBytes
+      increased by 128809325 (0 -> 128809325), over tolerance 52428800
+  + ✗ nodeProfileTopFunctionMs +163,982.15 (145,175.04 -> 309,157.19)
+      release-runtime-startup/fresh tolerance 5000; nodeProfileTopFunctionMs
+      increased by 163982.15 (145175.04 -> 309157.19), over tolerance 5000
   + ✗ peak RSS 904.5 MB (cap 900 MB)
-      release-runtime-startup/fresh peakRssMb: 904.5; cpuPercentMax: 150.1
+      release-runtime-startup/fresh gatewayRssMb: 348.8; cpuPercentMax: 150.1
 
 ─── next ───────────────────────────────────────────────────────────────────────
 

@@ -10,7 +10,7 @@
   ◆ markdown    ~/.kova/reports/kova-<runId>-smoke.md
   ◆ json        ~/.kova/reports/kova-<runId>-smoke.json
   ◆ summary     ~/.kova/reports/kova-<runId>-smoke.summary.json
-  ◆ bundle      ~/.kova/reports/kova-<runid>-bundle.tar.gz
+  ◆ bundle      ~/.kova/reports/kova-<runId>-bundle.tar.gz
 
 ─── scenarios ──────────────────────────────────────────────────────────────────
 
@@ -28,5 +28,5 @@ openai-compatible-turn     runtime:stable      0/1  [DRY-RUN]  —
 
 ─── next ───────────────────────────────────────────────────────────────────────
 
-  → kova report ~/.kova/reports/kova-<runId>-smoke.json
-  → kova report bundle ~/.kova/reports/kova-<runid>-bundle.tar.gz
+  → kova report kova-<runId>
+  → kova report bundle kova-<runId>

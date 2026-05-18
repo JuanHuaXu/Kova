@@ -66,7 +66,7 @@
     "primaryBlocker": "release-runtime-startup/fresh",
     "why": "gateway hard failure: gateway TCP socket never accepted connections before the hard deadline",
     "evidence": [
-      "peakRssMb: 826.3",
+      "gatewayRssMb: 286.8",
       "cpuPercentMax: 143.1",
       "resourcePeakCpuAtMs: 1091",
       "topCpuFunction: (idle) 145175.04ms",
@@ -76,7 +76,7 @@
       "CPU peaked at 143.1% around 1091ms"
     ],
     "likelyOwner": "OpenClaw",
-    "fixerPrompt": "Investigate OpenClaw release gate failure release-runtime-startup/fresh. Kova decision was FAIL on darwin-arm64. Primary evidence: gateway hard failure: gateway TCP socket never accepted connections before the hard deadline. Measurements: peakRssMb: 826.3; cpuPercentMax: 143.1; resourcePeakCpuAtMs: 1091; topCpuFunction: (idle) 145175.04ms; topHeapFunction: readFileSync 14.5MB; missingDependencyErrors: 0; pluginLoadFailures: 0; CPU peaked at 143.1% around 1091ms. Dependency/plugin load errors were zero, so focus on startup, memory, CPU, gateway readiness, runtime deps staging, provider/model load, and UI asset initialization. Likely owner area: OpenClaw."
+    "fixerPrompt": "Investigate OpenClaw release gate failure release-runtime-startup/fresh. Kova decision was FAIL on darwin-arm64. Primary evidence: gateway hard failure: gateway TCP socket never accepted connections before the hard deadline. Measurements: gatewayRssMb: 286.8; cpuPercentMax: 143.1; resourcePeakCpuAtMs: 1091; topCpuFunction: (idle) 145175.04ms; topHeapFunction: readFileSync 14.5MB; missingDependencyErrors: 0; pluginLoadFailures: 0; CPU peaked at 143.1% around 1091ms. Dependency/plugin load errors were zero, so focus on startup, memory, CPU, gateway readiness, runtime deps staging, provider/model load, and UI asset initialization. Likely owner area: OpenClaw."
   },
   "recommendedNextScenario": {
     "scenario": "release-runtime-startup",
@@ -102,7 +102,7 @@
       "expected": null,
       "actual": "hard-failure",
       "evidence": [
-        "peakRssMb: 826.3",
+        "gatewayRssMb: 286.8",
         "cpuPercentMax: 143.1",
         "resourcePeakCpuAtMs: 1091",
         "topCpuFunction: (idle) 145175.04ms",
@@ -161,8 +161,10 @@
           "slowestSample": null
         },
         "resources": {
-          "peakRssMb": 826.3,
+          "peakRssMb": 286.8,
           "cpuPercentMax": 143.1,
+          "primaryRole": null,
+          "gateKind": null,
           "sampleCount": 22,
           "commandTreePeakRssMb": 539.6,
           "gatewayPeakRssMb": 286.8,
@@ -257,8 +259,10 @@
           "slowestSample": null
         },
         "resources": {
-          "peakRssMb": 826.3,
+          "peakRssMb": 286.8,
           "cpuPercentMax": 143.1,
+          "primaryRole": null,
+          "gateKind": null,
           "sampleCount": 22,
           "commandTreePeakRssMb": 539.6,
           "gatewayPeakRssMb": 286.8,

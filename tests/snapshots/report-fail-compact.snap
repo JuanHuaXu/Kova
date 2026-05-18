@@ -7,7 +7,7 @@
 
 ─── scenarios ──────────────────────────────────────────────────────────────────
   scenario                 samples  verdict    worst metric
-  release-runtime-startup      0/1  [FAIL]     peak.rss.mb 904.5MB > 900MB
+  release-runtime-startup      0/1  [FAIL]     —
 
 ─── release-runtime-startup ────────────────────────────── [FAIL] · 1 sample ───
 
@@ -20,13 +20,13 @@
 
   Metrics
     metric                 value   threshold   status
-    peak.rss.mb           905 MB      900 MB   FAIL
+    gateway.rss.mb        349 MB      900 MB   PASS
     cold.ready.ms         703 ms           —   PASS
     health.p95.ms           1 ms           —   PASS
     cpu.max.%              150 %           —   PASS
     event-loop.max.ms       0 ms           —   PASS
 
 ─── next ───────────────────────────────────────────────────────────────────────
-  → kova report --full <path-to-kova-<runId>.json>
+  → kova report --full kova-<runId>
   → node bin/kova.mjs run --target local-build:<home>/WorkSpace/ShakkerNerd/OpenSource/OpenClaw/shakker-claw --scenario release-runtime-startup --state fresh --execute --profile-on-failure --retain-on-failure --json
   → kova report bundle kova-<runId>

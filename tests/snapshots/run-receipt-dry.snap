@@ -18,4 +18,4 @@ fresh-install             0/1  [DRY-RUN]  —
 
 ─── next ───────────────────────────────────────────────────────────────────────
 
-  → kova report ~/.kova/reports/kova-<runId>.json
+  → kova report kova-<runId>

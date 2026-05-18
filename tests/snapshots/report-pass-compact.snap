@@ -23,10 +23,10 @@
     metric                value   threshold   status
     cold.ready.ms        158 ms           —   PASS
     health.p95.ms          1 ms           —   PASS
-    peak.rss.mb          826 MB           —   PASS
+    gateway.rss.mb       287 MB           —   PASS
     cpu.max.%             143 %           —   PASS
 
 ─── next ───────────────────────────────────────────────────────────────────────
-  → kova report --full <path-to-kova-<runId>.json>
+  → kova report --full kova-<runId>
   → node bin/kova.mjs run --target local-build:<home>/WorkSpace/ShakkerNerd/OpenSource/OpenClaw/shakker-claw --scenario release-runtime-startup --state fresh --execute --profile-on-failure --retain-on-failure --json
   → kova report bundle kova-<runId>
