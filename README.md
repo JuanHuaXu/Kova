@@ -23,7 +23,7 @@ browsers, soak — with **real execution evidence**, not synthetic confidence.
 | ⏱ **Honest agent latency** | Pre-provider · provider · post-provider, split per turn with timeline span evidence. |
 | 🧠 **Process attribution** | CPU and RSS across 21 named roles — never just "memory was high". |
 | 📈 **Baselines & regressions** | `--repeat N` with median / p95 / max / variance. Per-platform baselines. Gate refuses to ship without proof. |
-| 🔍 **Inventory audit** | Discovers OpenClaw CLI, scripts, plugins, entrypoints — flags surfaces Kova doesn't yet cover. |
+| 🔍 **Inventory audit** | Discovers OpenClaw CLI, scripts, plugins, entrypoints, and repeated Kova run work. |
 | 🛰 **Diagnostics contract** | Timeline spans, event-loop delay, CPU/heap profiles on `--deep-profile`. |
 | 🤖 **Agent-first I/O** | `kova.report.v1` JSON, summary, bundle, paste, compare. Verdict-led dashboard by default. |
 
@@ -56,6 +56,7 @@ Kova data lives in `~/.kova` (credentials, reports, artifacts, baselines).
 ```sh
 kova plan                       # what Kova will do, by profile/scenario/state
 kova inventory plan             # find OpenClaw capabilities Kova doesn't cover yet
+kova inventory repeated-work    # find duplicated scenario commands and collector pressure
 kova run --scenario <id>        # one scenario, one target
 kova matrix run --profile <p>   # the release matrix (multi-target, --repeat N)
 kova report <run.json>          # the dashboard above
@@ -104,6 +105,7 @@ with `--retain-on-failure` when you need to look.
 ```sh
 kova plan --json
 kova inventory plan --openclaw-bin openclaw --openclaw-repo /path/to/openclaw --json
+kova inventory repeated-work --json
 kova matrix plan --profile smoke  --target runtime:stable --json
 kova matrix run  --profile smoke  --target runtime:stable --execute --json
 ```

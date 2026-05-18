@@ -1,8 +1,19 @@
 import { buildOpenClawInventoryPlan } from "../inventory/openclaw.mjs";
+import { buildRepeatedWorkAudit } from "../audits/repeated-work.mjs";
 import { renderInventoryPlan } from "../reporting/render-inventory.mjs";
 
 export async function runInventoryCommand(flags) {
   const [subcommand = "plan"] = flags._;
+  if (subcommand === "repeated-work") {
+    const audit = await buildRepeatedWorkAudit();
+    if (flags.json) {
+      console.log(JSON.stringify(audit, null, 2));
+      return;
+    }
+    renderRepeatedWorkPlain(audit);
+    return;
+  }
+
   if (subcommand !== "plan") {
     throw new Error(`unknown inventory command: ${subcommand}`);
   }
@@ -31,6 +42,24 @@ export async function runInventoryCommand(flags) {
     for (const warning of plan.coverage.warnings.slice(0, warningLimit)) {
       console.log(`- ${warning.message}`);
     }
+  }
+}
+
+function renderRepeatedWorkPlain(audit) {
+  console.log("Kova repeated work audit");
+  console.log(`Scenarios: ${audit.scenarioCount}`);
+  console.log(`Phases: ${audit.phaseCount}`);
+  console.log("Profiles:");
+  for (const [id, profile] of Object.entries(audit.profiles)) {
+    console.log(`- ${id}: entries=${profile.entries}, phases=${profile.scenarioPhases}, minimum collectEnvMetrics=${profile.minimumCollectEnvMetrics}`);
+  }
+  console.log("Top duplicate commands:");
+  for (const entry of audit.duplicateCommands.slice(0, 10)) {
+    console.log(`- ${entry.count}x ${entry.command}`);
+  }
+  console.log("Explicit status/log evidence commands:");
+  for (const entry of audit.explicitEvidenceCommands.slice(0, 10)) {
+    console.log(`- ${entry.kind}: ${entry.scenario}/${entry.phaseId}`);
   }
 }
 

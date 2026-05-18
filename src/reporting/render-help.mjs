@@ -53,9 +53,12 @@ const COMMANDS = [
     examples: ["kova plan", "kova plan --scenario fresh-install", "kova plan --json"],
   },
   {
-    id: "inventory", title: "kova inventory plan",
-    blurb: "Discover OpenClaw capabilities not yet mapped to Kova surfaces.",
-    usage: ["kova inventory plan [--openclaw-bin <path>] [--openclaw-repo <path>] [--script-scope <product|all|none>] [--json|--plain]"],
+    id: "inventory", title: "kova inventory",
+    blurb: "Discover OpenClaw coverage gaps and repeated Kova run work.",
+    usage: [
+      "kova inventory plan [--openclaw-bin <path>] [--openclaw-repo <path>] [--script-scope <product|all|none>] [--json|--plain]",
+      "kova inventory repeated-work [--json|--plain]",
+    ],
     flags: [
       ["--openclaw-bin <path>", "binary to inspect"],
       ["--openclaw-repo <path>", "checkout to scan for package scripts"],
@@ -66,7 +69,11 @@ const COMMANDS = [
       ["--max-warnings <n>", "fail if more than n warnings"],
       ["--timeout-ms <n>", "discovery timeout"],
     ],
-    examples: ["kova inventory plan", "kova inventory plan --openclaw-bin ./bin/openclaw --json"],
+    examples: [
+      "kova inventory plan",
+      "kova inventory plan --openclaw-bin ./bin/openclaw --json",
+      "kova inventory repeated-work --json",
+    ],
   },
   {
     id: "run", title: "kova run",

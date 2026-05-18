@@ -4,15 +4,15 @@
    OpenClaw runtime validation lab              kova help <command>  for details
 
 ─── commands ───────────────────────────────────────────────────────────────────
-  ◆ kova version          Print Kova version and runtime info.
-  ◆ kova setup            Verify prerequisites, configure auth, and prepare directories.
-  ◆ kova self-check       Run the full Kova suite (dry-runs, parsers, gates, evaluators).
-  ◆ kova plan             Show OpenClaw surfaces, scenarios, states, and metrics.
-  ◆ kova inventory plan   Discover OpenClaw capabilities not yet mapped to Kova surfaces.
-  ◆ kova run              Run one OpenClaw scenario. Dry-run unless --execute.
-  ◆ kova matrix           Profile-driven multi-scenario plan / run with optional gate.
-  ◆ kova report           Render a Kova report dashboard, summary, paste, compare, or bundle.
-  ◆ kova cleanup          Remove stale Kova-owned envs and run artifact dirs.
+  ◆ kova version      Print Kova version and runtime info.
+  ◆ kova setup        Verify prerequisites, configure auth, and prepare directories.
+  ◆ kova self-check   Run the full Kova suite (dry-runs, parsers, gates, evaluators).
+  ◆ kova plan         Show OpenClaw surfaces, scenarios, states, and metrics.
+  ◆ kova inventory    Discover OpenClaw coverage gaps and repeated Kova run work.
+  ◆ kova run          Run one OpenClaw scenario. Dry-run unless --execute.
+  ◆ kova matrix       Profile-driven multi-scenario plan / run with optional gate.
+  ◆ kova report       Render a Kova report dashboard, summary, paste, compare, or bundle.
+  ◆ kova cleanup      Remove stale Kova-owned envs and run artifact dirs.
 
 ─── selectors ──────────────────────────────────────────────────────────────────
   → npm:<version>             Published OpenClaw release

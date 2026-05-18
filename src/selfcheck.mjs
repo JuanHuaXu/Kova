@@ -47,6 +47,7 @@ import {
 import { captureProcessSnapshot, classifyRegistryRolesForProcess, classifySnapshotRolesForProcess, diffProcessSnapshots, summarizeResourceSamples } from "./collectors/resources.mjs";
 import { captureOpenClawStateSnapshot } from "./collectors/openclaw-state.mjs";
 import { buildReportSummary, renderMarkdownReport, renderPasteSummary, renderReportSummary, summarizeRecords } from "./reporting/report.mjs";
+import { buildRepeatedWorkAudit } from "./audits/repeated-work.mjs";
 import {
   buildAgentCliLocalTurnEvidenceInvariants,
   buildAgentGatewayRpcTurnEvidenceInvariants,
@@ -186,6 +187,7 @@ export async function runSelfCheck(flags = {}) {
       }
     }));
     checks.push(await inventoryPlanCheck(tmp));
+    checks.push(await repeatedWorkAuditCheck());
     checks.push(await jsonCommandCheck("matrix-plan-json", "node bin/kova.mjs matrix plan --profile smoke --target runtime:stable --include scenario:fresh-install --parallel 2 --json", (data) => {
       assertEqual(data.schemaVersion, "kova.matrix.plan.v1", "matrix plan schema");
       assertEqual(data.profile?.id, "smoke", "matrix profile id");
@@ -6539,6 +6541,37 @@ esac
       assertEqual((data.coverage?.blockers ?? []).some((blocker) => blocker.capability === "cli:unknownx"), true, "required unmodeled blocker emitted");
     }
   );
+}
+
+async function repeatedWorkAuditCheck() {
+  const audit = await buildRepeatedWorkAudit();
+  assertEqual(audit.schemaVersion, "kova.repeatedWorkAudit.v1", "repeated work audit schema");
+  assertEqual(audit.scenarioCount > 0, true, "repeated work audit scenarios");
+  assertEqual(audit.phaseCount > 0, true, "repeated work audit phases");
+  assertEqual(
+    Object.values(audit.profiles).some((profile) => profile.minimumCollectEnvMetrics > profile.entries),
+    true,
+    "repeated work audit profile collector floor"
+  );
+  assertEqual(
+    audit.duplicateCommands.some((entry) => entry.command === "ocm @{env} -- status" && entry.count > 1),
+    true,
+    "repeated work audit duplicate status command"
+  );
+  assertEqual(
+    audit.explicitEvidenceCommands.some((entry) => entry.kind === "logs"),
+    true,
+    "repeated work audit log evidence commands"
+  );
+  assertEqual(
+    audit.commandReceiptLocks.some((lock) => lock.scenario === "release-runtime-startup"),
+    true,
+    "repeated work audit release receipt lock"
+  );
+  return {
+    id: "repeated-work-audit",
+    status: "PASS"
+  };
 }
 
 function readinessClassificationCheck() {

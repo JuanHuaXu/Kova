@@ -602,6 +602,18 @@ Package-script discovery defaults to `--script-scope product`. Use
 `--script-scope all` to include every package script or `--script-scope none` to
 scan only CLI help and manifests.
 
+`kova inventory repeated-work --json` is planner-only and uses schema
+`kova.repeatedWorkAudit.v1`. It includes:
+
+- `profiles`: profile entry counts, scenario phase counts, and minimum
+  `collectEnvMetrics` calls implied by the profile shape
+- `duplicateCommands`: repeated scenario commands with the scenario/phase uses
+- `duplicatePhaseIds`: shared phase ids across scenarios
+- `explicitEvidenceCommands`: scenario commands that already collect service
+  status or logs as required evidence
+- `commandReceiptLocks`: invariants that currently depend on exact command
+  receipt evidence
+
 ## Summary Output
 
 Each run also writes `<run>.summary.json`. `kova report summarize

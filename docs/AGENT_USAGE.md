@@ -44,6 +44,13 @@ node bin/kova.mjs inventory plan \
   --openclaw-bin openclaw --openclaw-repo /path/to/openclaw --json
 ```
 
+Use `inventory repeated-work` before optimizing Kova runs so duplicated scenario
+commands and collector pressure are measured from the registry instead of guessed:
+
+```sh
+node bin/kova.mjs inventory repeated-work --json
+```
+
 Package-script discovery defaults to `--script-scope product` so internal
 maintenance scripts do not drown out OpenClaw capability coverage. Unmodeled
 entries are planning warnings until they are intentionally promoted to gate
