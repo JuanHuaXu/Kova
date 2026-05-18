@@ -84,9 +84,7 @@
       "id": "logs",
       "title": "Startup Logs",
       "intent": "Capture startup logs for dependency staging, plugin loading, stalls, and warnings.",
-      "commands": [
-        "ocm logs {env} --tail 200 --raw"
-      ],
+      "commands": [],
       "evidence": [
         "startup logs",
         "missing dependency errors",

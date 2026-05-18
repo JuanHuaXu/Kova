@@ -35,9 +35,7 @@
       "id": "logs",
       "title": "Provider Logs",
       "intent": "Capture logs for provider/model discovery stalls, missing auth, and timeout handling.",
-      "commands": [
-        "ocm logs {env} --tail 300 --raw"
-      ],
+      "commands": [],
       "evidence": [
         "timeout logs",
         "auth skip logs",
