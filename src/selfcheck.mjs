@@ -58,7 +58,9 @@ import {
   buildOfficialPluginInstallEvidenceInvariants,
   buildReleaseRuntimeStartupEvidenceInvariants,
   buildUpgradeLogDerivedInvariants,
-  buildUpgradeStateSnapshotInvariants,
+  buildUpgradeStateSnapshotInvariants
+} from "./evidence/invariants.mjs";
+import {
   normalizeOptionalCommandResult
 } from "./runner.mjs";
 import { compareReports, renderCompareSummary } from "./reporting/compare.mjs";
