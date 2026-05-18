@@ -48,6 +48,7 @@ import { captureProcessSnapshot, classifyRegistryRolesForProcess, classifySnapsh
 import { captureOpenClawStateSnapshot } from "./collectors/openclaw-state.mjs";
 import { buildReportSummary, renderMarkdownReport, renderPasteSummary, renderReportSummary, summarizeRecords } from "./reporting/report.mjs";
 import { buildRepeatedWorkAudit } from "./audits/repeated-work.mjs";
+import { ENV_COLLECTOR_IDS, resolveCollectionPolicy } from "./collection-policy.mjs";
 import {
   buildAgentCliLocalTurnEvidenceInvariants,
   buildAgentGatewayRpcTurnEvidenceInvariants,
@@ -188,6 +189,7 @@ export async function runSelfCheck(flags = {}) {
     }));
     checks.push(await inventoryPlanCheck(tmp));
     checks.push(await repeatedWorkAuditCheck());
+    checks.push(collectionPolicyResolverCheck());
     checks.push(await jsonCommandCheck("matrix-plan-json", "node bin/kova.mjs matrix plan --profile smoke --target runtime:stable --include scenario:fresh-install --parallel 2 --json", (data) => {
       assertEqual(data.schemaVersion, "kova.matrix.plan.v1", "matrix plan schema");
       assertEqual(data.profile?.id, "smoke", "matrix profile id");
@@ -6570,6 +6572,30 @@ async function repeatedWorkAuditCheck() {
   );
   return {
     id: "repeated-work-audit",
+    status: "PASS"
+  };
+}
+
+function collectionPolicyResolverCheck() {
+  const policy = resolveCollectionPolicy({
+    kind: "scenario-phase",
+    scenario: "fresh-install",
+    surface: "fresh-install",
+    phaseId: "provision",
+    phaseHealthScope: "readiness",
+    measurementScope: "product",
+    resultStatus: "success"
+  });
+  assertEqual(policy.schemaVersion, "kova.collectionPolicy.v1", "collection policy schema");
+  assertEqual(policy.mode, "full", "collection policy default mode");
+  assertEqual(policy.context.scenario, "fresh-install", "collection policy scenario context");
+  assertEqual(policy.context.phaseId, "provision", "collection policy phase context");
+  for (const collector of ENV_COLLECTOR_IDS) {
+    assertEqual(policy.collectors[collector], true, `collection policy keeps ${collector}`);
+  }
+  assertEqual(policy.skipped.length, 0, "collection policy skips nothing before behavior slice");
+  return {
+    id: "collection-policy-resolver",
     status: "PASS"
   };
 }

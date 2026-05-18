@@ -5,6 +5,7 @@ import { collectHealthSamples, collectReadinessMetrics, summarizeHealthSamples }
 import { collectLogMetrics } from "./collectors/logs.mjs";
 import { collectNodeProfileMetrics } from "./collectors/node-profiles.mjs";
 import { collectTimelineMetrics } from "./collectors/timeline.mjs";
+import { fullCollectionPolicy } from "./collection-policy.mjs";
 
 export { collectNodeProfileMetrics };
 
@@ -21,12 +22,14 @@ export async function collectEnvMetrics(envName, options = {}) {
   );
   const readinessIntervalMs = Math.max(50, Number(options.readinessIntervalMs ?? 250));
   const collectors = [];
+  const collectionPolicy = options.collectionPolicy ?? fullCollectionPolicy();
   const service = await runCommand(ocmServiceStatusJson(envName), { timeoutMs });
   const metrics = {
     schemaVersion: ENV_METRICS_SCHEMA,
     collectedAt: new Date().toISOString(),
     artifactDir: options.artifactDir ?? null,
     collectorArtifactDirs: options.collectorArtifactDirs ?? null,
+    collectionPolicy,
     collectors,
     serviceCommand: {
       status: service.status,

@@ -14,6 +14,7 @@ import { captureProcessSnapshot, diffProcessSnapshots } from "./collectors/resou
 import { collectEnvMetrics, collectNodeProfileMetrics } from "./metrics.mjs";
 import { collectorArtifactDirs, prepareCollectorArtifactDirs } from "./collectors/artifacts.mjs";
 import { collectProviderEvidence } from "./collectors/provider.mjs";
+import { resolveCollectionPolicy } from "./collection-policy.mjs";
 import { evaluateRecord } from "./evaluator.mjs";
 import { driverKindForCommand, measurementScopeForPhase, normalizeMeasurementScope, phaseDriverKind } from "./measurement-contract.mjs";
 import { artifactsDir } from "./paths.mjs";
@@ -157,7 +158,9 @@ export async function executeScenario(scenario, context) {
           commands,
           evidence: phase.evidence ?? [],
           results,
-          metrics: await collectEnvMetrics(envName, metricOptions(context, scenario, phase, artifactDir))
+          metrics: await collectEnvMetrics(envName, metricOptions(context, scenario, phase, artifactDir, {
+            kind: "scenario-phase"
+          }))
         });
 
         const authSetupPhase = shouldApplyAuthAfterPhase(phase, authPolicy, record)
@@ -205,13 +208,17 @@ export async function executeScenario(scenario, context) {
     }
   } finally {
     record.finishedAt = new Date().toISOString();
-    record.finalMetrics = await collectEnvMetrics(envName, metricOptions(context, scenario, null, artifactDir));
+    record.finalMetrics = await collectEnvMetrics(envName, metricOptions(context, scenario, null, artifactDir, {
+      kind: "final"
+    }));
     record.providerEvidence = await collectProviderEvidence(artifactDir, { authPolicy });
     evaluateRecord(record, scenario, evaluatorContext(context, scenario));
 
     if (shouldCaptureFailureDiagnostics(record, context)) {
       record.failureDiagnostics = await collectEnvMetrics(envName, {
-        ...metricOptions(context, scenario, null, artifactDir),
+        ...metricOptions(context, scenario, null, artifactDir, {
+          kind: "failure-diagnostics"
+        }),
         readinessTimeoutMs: 0,
         heapSnapshot: true,
         diagnosticReport: true
@@ -2577,7 +2584,11 @@ async function executeStateLifecycleSteps(context, envName, scenario, kind, step
     commands,
     evidence,
     results,
-    metrics: await collectEnvMetrics(envName, metricOptions(context, scenario, { id: phaseId }, artifactDir))
+    metrics: await collectEnvMetrics(envName, metricOptions(context, scenario, { id: phaseId }, artifactDir, {
+      kind: "state-lifecycle",
+      measurementScope: normalizeMeasurementScope(null, kind),
+      resultStatus: phaseStatus(results)
+    }))
   };
 }
 
@@ -2594,7 +2605,11 @@ async function executeAuthPhase(phase, context, envName, artifactDir, authPolicy
     measurementScope: normalizeMeasurementScope(phase.measurementScope, phase.id),
     driverKind: phaseDriverKind(phase),
     results,
-    metrics: await collectEnvMetrics(envName, metricOptions(context, null, { id: phase.id }, artifactDir))
+    metrics: await collectEnvMetrics(envName, metricOptions(context, null, { id: phase.id }, artifactDir, {
+      kind: "auth-phase",
+      measurementScope: normalizeMeasurementScope(phase.measurementScope, phase.id),
+      resultStatus: phaseStatus(results)
+    }))
   };
 }
 
@@ -2632,7 +2647,11 @@ async function executeEvidenceSnapshotPhase(context, envName, scenario, afterPha
   return {
     ...phase,
     results,
-    metrics: await collectEnvMetrics(envName, metricOptions(context, scenario, { id: afterPhaseId }, artifactDir))
+    metrics: await collectEnvMetrics(envName, metricOptions(context, scenario, { id: afterPhaseId }, artifactDir, {
+      kind: "evidence-snapshot",
+      measurementScope: phase.measurementScope,
+      resultStatus: phaseStatus(results)
+    }))
   };
 }
 
@@ -2663,8 +2682,9 @@ function stateStepMatchesPhase(step, phaseId) {
   return step.afterPhase === phaseId;
 }
 
-function metricOptions(context, scenario, phase, artifactDir) {
+function metricOptions(context, scenario, phase, artifactDir, policyContext = {}) {
   const readinessThresholdMs = readinessThresholdForPhase(scenario, phase);
+  const measurementScope = policyContext.measurementScope ?? normalizeMeasurementScope(phase?.measurementScope, phase?.id);
   return {
     timeoutMs: context.timeoutMs,
     healthSamples: context.healthSamples,
@@ -2675,8 +2695,24 @@ function metricOptions(context, scenario, phase, artifactDir) {
     heapSnapshot: context.heapSnapshot === true && context.deepProfile !== true,
     diagnosticReport: false,
     artifactDir,
-    collectorArtifactDirs: collectorArtifactDirs(artifactDir)
+    collectorArtifactDirs: collectorArtifactDirs(artifactDir),
+    collectionPolicy: resolveCollectionPolicy({
+      kind: policyContext.kind,
+      scenario: scenario?.id ?? null,
+      surface: scenario?.surface ?? null,
+      phaseId: phase?.id ?? null,
+      phaseHealthScope: phase?.healthScope ?? null,
+      measurementScope,
+      resultStatus: policyContext.resultStatus ?? null
+    })
   };
+}
+
+function phaseStatus(results) {
+  if (!Array.isArray(results) || results.length === 0) {
+    return "empty";
+  }
+  return results.every((result) => result.status === 0) ? "success" : "failure";
 }
 
 function readinessThresholdForPhase(scenario, phase) {

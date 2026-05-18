@@ -211,6 +211,12 @@ collector receipts:
 }
 ```
 
+Metrics also include `collectionPolicy` with schema
+`kova.collectionPolicy.v1`. It records the scenario/phase context and which
+collectors were intended to run for that metrics capture. A `full` policy means
+all env collectors remain enabled; future skipped collectors must appear in the
+policy and in collector receipts instead of silently disappearing.
+
 Records expose `collectorArtifactDirs` with schema
 `kova.collectorArtifactDirs.v1`. This makes artifact ownership explicit for
 agents and prevents collectors from hiding files in ad hoc paths:
