@@ -1,4 +1,3 @@
-import { runCommand } from "./commands.mjs";
 import {
   buildAuthCleanupPhase,
   buildAuthPreparePhase,
@@ -28,8 +27,8 @@ import { executeEvidenceSnapshotPhase } from "./run/evidence-snapshots.mjs";
 import {
   buildPlannedPhases,
   phaseSupportsAuthSetup,
-  targetSetupCommand
 } from "./run/phase-plan.mjs";
+import { executeTargetSetup } from "./run/target-setup.mjs";
 import { collectEnvMetrics, collectNodeProfileMetrics } from "./metrics.mjs";
 import { collectorArtifactDirs, prepareCollectorArtifactDirs } from "./collectors/artifacts.mjs";
 import { collectProviderEvidence } from "./collectors/provider.mjs";
@@ -38,7 +37,6 @@ import {
   measurementScopeForPhase,
   phaseDriverKind,
   phaseResultStatus,
-  tagCommandResult
 } from "./measurement-contract.mjs";
 import { metricOptions } from "./run/metric-options.mjs";
 import { artifactsDir } from "./paths.mjs";
@@ -368,32 +366,6 @@ function classifyEnvDestroyCleanup(result) {
   }
 
   return "destroy-failed";
-}
-
-async function executeTargetSetup(context, envName, artifactDir) {
-  if (context.targetPlan.kind !== "local-build") {
-    return [];
-  }
-  if (context.targetSetup?.completed) {
-    return [];
-  }
-
-  const results = [
-    tagCommandResult(await runCommand(targetSetupCommand(context.targetPlan), {
-      timeoutMs: context.timeoutMs,
-      env: { KOVA_ENV_NAME: envName },
-      resourceSample: context.resourceSampling === false ? null : {
-        envName,
-        intervalMs: context.resourceSampleIntervalMs,
-        processRoles: context.processRoles ?? [],
-        artifactPath: join(collectorArtifactDirs(artifactDir).resourceSamples, "target-setup-1.jsonl")
-      }
-    }), "target-setup")
-  ];
-  if (results.every((result) => result.status === 0) && context.targetSetup) {
-    context.targetSetup.completed = true;
-  }
-  return results;
 }
 
 function shouldApplyAuthAfterPhase(phase, authPolicy, record) {
