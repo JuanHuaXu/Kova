@@ -4,18 +4,28 @@ import {
   makeUi, ruleSection, renderKovaHeader, kpiStrip,
   renderTable, repeat, withMargin,
 } from "../ui/index.mjs";
+import { createPulseFooter } from "../ui/pulse-footer.mjs";
 
 export function createSelfCheckProgress({ flags = {}, env = process.env, stream = process.stderr } = {}) {
   const silent = flags.json === true || flags.plain === true || flags.no_progress === true;
   if (silent) return { runStart() {}, checkDone() {}, runFinish() {} };
   const ui = makeUi(flags, env, stream);
   const { c, g } = ui;
+  const footer = createPulseFooter({ stream, env, flags, silent });
   const start = process.hrtime.bigint();
   let count = 0;
 
+  function emit(line, contextAfter) {
+    footer.clear();
+    stream.write(line);
+    if (contextAfter !== undefined) footer.setContext(contextAfter);
+    footer.paint();
+  }
+
   return {
     runStart() {
-      stream.write(`${c.head("[SELF-CHECK]")} ${c.dim("running")}\n`);
+      footer.start("running checks");
+      emit(`${c.head("[SELF-CHECK]")} ${c.dim("running")}\n`, "running checks");
     },
     checkDone(check) {
       count += 1;
@@ -28,11 +38,12 @@ export function createSelfCheckProgress({ flags = {}, env = process.env, stream 
                   : status === "FAIL" ? c.err("FAIL")
                   : status === "WARN" ? c.warn("WARN")
                   : c.dim(status);
-      stream.write(`  ${glyph} ${label}  ${c.bold(check.id ?? "?")}${check.message ? c.dim(`  ${g.sep} ${truncate1Line(check.message)}`) : ""}\n`);
+      emit(`  ${glyph} ${label}  ${c.bold(check.id ?? "?")}${check.message ? c.dim(`  ${g.sep} ${truncate1Line(check.message)}`) : ""}\n`, `check ${count} done`);
     },
     runFinish({ ok, total }) {
       const dur = fmtDuration(elapsedMs(start));
       const tag = ok ? c.ok("OK") : c.err("FAIL");
+      footer.stop();
       stream.write(`${c.head(g.arrow)} ${c.dim(`finished ${total ?? count} ${(total ?? count) === 1 ? "check" : "checks"} in ${dur}`)}  ${tag}\n`);
     },
   };
