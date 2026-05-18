@@ -85,6 +85,12 @@ export function scenarioMetricRows(scenario, { limit = 6 } = {}) {
       : null;
     const absoluteDelta = typeof b === "number" && typeof cur === "number" ? cur - b : null;
     const reg = regressionByMetric.get(id);
+    const status = compareMetricStatus({
+      regressed: !!reg,
+      deltaPct,
+      absoluteDelta,
+      direction: metricDirection(parsed.base),
+    });
     rows.push({
       id,
       label: compareMetricLabel(id),
@@ -95,25 +101,57 @@ export function scenarioMetricRows(scenario, { limit = 6 } = {}) {
       delta: deltaPct,
       absoluteDelta,
       threshold: reg?.tolerance ?? null,
-      status: reg ? "OVER" : (deltaPct != null && deltaPct < -1 ? "PASS" : "—"),
+      status,
       headline: HEADLINE_METRICS.includes(parsed.base),
       regressed: !!reg,
     });
   }
 
-  rows.sort((a, b) => {
-    // Regressed first
-    if (a.regressed !== b.regressed) return a.regressed ? -1 : 1;
-    // Then by signed delta magnitude (worse = bigger positive for lower-better)
-    const aw = worseness(a);
-    const bw = worseness(b);
-    if (aw !== bw) return bw - aw;
-    // Headline metrics tiebreak
-    if (a.headline !== b.headline) return a.headline ? -1 : 1;
-    return a.id.localeCompare(b.id);
-  });
+  return rows
+    .filter((row) => row.status !== "—" || row.regressed)
+    .sort(compareMetricRowOrder)
+    .slice(0, limit);
+}
 
-  return rows.slice(0, limit);
+export function compareMetricRowOrder(a, b) {
+  const statusDelta = compareStatusRank(a) - compareStatusRank(b);
+  if (statusDelta !== 0) return statusDelta;
+  const scoreDelta = compareStatusScore(b) - compareStatusScore(a);
+  if (scoreDelta !== 0) return scoreDelta;
+  if (a.headline !== b.headline) return a.headline ? -1 : 1;
+  return a.id.localeCompare(b.id);
+}
+
+function compareMetricStatus({ regressed, deltaPct, absoluteDelta, direction }) {
+  if (regressed) return "OVER";
+  const delta = deltaPct ?? absoluteDelta;
+  if (typeof delta !== "number" || !Number.isFinite(delta)) return "—";
+  const worse = direction === "lower-better" ? delta > 0 : delta < 0;
+  const better = direction === "lower-better" ? delta < 0 : delta > 0;
+  if (worse && isMeaningfulDelta(deltaPct, absoluteDelta)) return "WATCH";
+  if (better && isMeaningfulDelta(deltaPct, absoluteDelta)) return "PASS";
+  return "—";
+}
+
+function isMeaningfulDelta(deltaPct, absoluteDelta) {
+  if (typeof deltaPct === "number" && Number.isFinite(deltaPct)) {
+    return Math.abs(deltaPct) >= 1;
+  }
+  return typeof absoluteDelta === "number" && Number.isFinite(absoluteDelta) && absoluteDelta !== 0;
+}
+
+function compareStatusRank(row) {
+  switch (row.status) {
+    case "OVER": return 0;
+    case "WATCH": return 1;
+    case "PASS": return 2;
+    default: return 3;
+  }
+}
+
+function compareStatusScore(row) {
+  const score = Math.abs(worseness(row));
+  return Number.isFinite(score) ? score : 0;
 }
 
 function parseStatMetricId(id) {

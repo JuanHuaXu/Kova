@@ -65,6 +65,7 @@ import {
   normalizeOptionalCommandResult
 } from "./command-results.mjs";
 import { compareReports, renderCompareSummary } from "./reporting/compare.mjs";
+import { scenarioMetricRows } from "./reporting/compare-aggregate.mjs";
 import {
   ocmAt,
   ocmEnvDestroy,
@@ -529,6 +530,7 @@ export async function runSelfCheck(flags = {}) {
     checks.push(await localBuildRuntimeAlreadyAbsentCleanupCheck(tmp));
     checks.push(defaultGatewayResourceRoleCheck());
     checks.push(compareRepeatAggregationCheck());
+    checks.push(compareMetricOrderingCheck());
 
     const receiptCheck = await jsonCommandCheck(
       "dry-run-report-json",
@@ -937,6 +939,43 @@ function compareRepeatAggregationCheck() {
       id: "compare-repeat-aggregation",
       status: "FAIL",
       command: "evaluate repeated-run compare aggregation",
+      durationMs: 0,
+      message: error.message
+    };
+  }
+}
+
+function compareMetricOrderingCheck() {
+  try {
+    const rows = scenarioMetricRows({
+      scenario: "gateway-performance",
+      state: "fresh",
+      regressions: [
+        { kind: "metric", metric: "cpuPercentMax", baseline: 76.8, current: 124.5, delta: 47.7, tolerance: 25 },
+        { kind: "metric", metric: "postReadyHealthFailures.max", baseline: 0, current: 3, delta: 3, tolerance: 0 }
+      ],
+      metrics: {
+        cpuPercentMax: { baseline: 76.8, current: 124.5 },
+        "postReadyHealthFailures.max": { baseline: 0, current: 3 },
+        modelsListMs: { baseline: 1034, current: 2496 },
+        readinessHealthReadyMs: { baseline: 2342, current: 1859 },
+        gatewayRestartCount: { baseline: 6, current: 6 }
+      }
+    }, { limit: Infinity });
+    assertEqual(rows.map((row) => row.status).join(","), "OVER,OVER,WATCH,PASS", "compare rows sort by status class");
+    assertEqual(rows.map((row) => row.id).join(","), "cpuPercentMax,postReadyHealthFailures.max,modelsListMs,readinessHealthReadyMs", "compare rows omit unchanged rows");
+    assertEqual(rows.find((row) => row.id === "postReadyHealthFailures.max").absoluteDelta, 3, "zero-baseline count delta retained");
+    return {
+      id: "compare-metric-ordering",
+      status: "PASS",
+      command: "evaluate compare metric row ordering",
+      durationMs: 0
+    };
+  } catch (error) {
+    return {
+      id: "compare-metric-ordering",
+      status: "FAIL",
+      command: "evaluate compare metric row ordering",
       durationMs: 0,
       message: error.message
     };

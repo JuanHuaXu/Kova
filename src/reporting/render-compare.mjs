@@ -25,7 +25,7 @@ import {
 
 import {
   rollupScenarios, pickAffectedScenarios, scenarioMetricRows,
-  shapeFindingsForCompare, runVerdict,
+  shapeFindingsForCompare, runVerdict, compareMetricRowOrder,
 } from "./compare-aggregate.mjs";
 import { METRIC_LABELS } from "./scenario-aggregate.mjs";
 
@@ -258,20 +258,14 @@ function mergeMetricRows(scenarioStates, limit) {
   for (const s of scenarioStates) {
     for (const row of scenarioMetricRows(s, { limit: limit * 2 })) {
       const existing = byMetric.get(row.id);
-      if (!existing || worse(row) > worse(existing)) {
+      if (!existing || compareMetricRowOrder(row, existing) < 0) {
         byMetric.set(row.id, row);
       }
     }
   }
   return [...byMetric.values()]
-    .sort((a, b) => (b.regressed === a.regressed ? worse(b) - worse(a) : (a.regressed ? -1 : 1)))
+    .sort(compareMetricRowOrder)
     .slice(0, limit);
-}
-
-function worse(row) {
-  const delta = row.delta ?? row.absoluteDelta;
-  if (delta == null) return -Infinity;
-  return row.direction === "lower-better" ? delta : -delta;
 }
 
 // ─── next hint ───────────────────────────────────────────────────────────────
