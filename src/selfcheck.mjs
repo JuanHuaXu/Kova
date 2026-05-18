@@ -6700,8 +6700,13 @@ async function repeatedWorkAuditCheck() {
   );
   assertEqual(
     audit.explicitEvidenceCommands.some((entry) => entry.kind === "logs"),
-    true,
-    "repeated work audit log evidence commands"
+    false,
+    "repeated work audit log evidence commands removed"
+  );
+  assertEqual(
+    audit.explicitEvidenceCommands.length,
+    0,
+    "repeated work audit explicit evidence commands empty"
   );
   assertEqual(
     audit.commandReceiptLocks.some((lock) => lock.scenario === "release-runtime-startup"),

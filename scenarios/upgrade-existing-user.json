@@ -89,8 +89,7 @@
       "commands": [
         "ocm @{env} -- status",
         "ocm @{env} -- plugins list",
-        "ocm @{env} -- doctor --fix",
-        "ocm logs {env} --tail 250 --raw"
+        "ocm @{env} -- doctor --fix"
       ],
       "evidence": [
         "status output",
