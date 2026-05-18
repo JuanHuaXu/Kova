@@ -4,20 +4,11 @@ import { gatewaySessionPreProviderMarkdownRows } from "../collectors/gateway-ses
 import { healthTotalFailures } from "../health.mjs";
 import { RECORD_STATUS, findingSeverityForStatus } from "../statuses.mjs";
 import { firstFailedCommand, summarizeFailureReason } from "./failures.mjs";
+import { summarizeRecords } from "./records.mjs";
+
+export { summarizeRecords } from "./records.mjs";
 
 const SUMMARY_SCHEMA = "kova.report.summary.v1";
-
-export function summarizeRecords(records) {
-  const statuses = {};
-  for (const record of records) {
-    statuses[record.status] = (statuses[record.status] ?? 0) + 1;
-  }
-
-  return {
-    total: records.length,
-    statuses
-  };
-}
 
 export function renderMarkdownReport(report) {
   const summary = buildReportSummary(report);
