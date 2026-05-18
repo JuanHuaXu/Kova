@@ -24,11 +24,15 @@ import { collectProviderEvidence } from "./collectors/provider.mjs";
 import { resolveCollectionPolicy } from "./collection-policy.mjs";
 import { evaluateRecord } from "./evaluator.mjs";
 import {
-  driverKindForCommand,
   isAgentMessageCommand,
   measurementScopeForPhase,
   normalizeMeasurementScope,
-  phaseDriverKind
+  phaseDriverKind,
+  phaseResultStatus,
+  readinessHardTimeoutForPhase,
+  readinessThresholdForPhase,
+  tagCommandResult,
+  withPhaseContract
 } from "./measurement-contract.mjs";
 import { artifactsDir } from "./paths.mjs";
 import { repoRoot } from "./paths.mjs";
@@ -166,7 +170,7 @@ export async function executeScenario(scenario, context) {
           intent: phase.intent,
           healthScope: phase.healthScope,
           collectionIntent: phase.collectionIntent ?? null,
-          measurementScope: phaseMeasurementScope(phase),
+          measurementScope: measurementScopeForPhase(phase),
           driverKind: phaseDriverKind(phase, commands),
           expectedAgentFailure: phase.expectedAgentFailure === true,
           commands,
@@ -174,7 +178,7 @@ export async function executeScenario(scenario, context) {
           results,
           metrics: await collectEnvMetrics(envName, metricOptions(context, scenario, phase, artifactDir, {
             kind: "scenario-phase",
-            resultStatus: phaseStatus(results)
+            resultStatus: phaseResultStatus(results)
           }))
         });
 
@@ -402,7 +406,7 @@ function buildPlannedPhases(scenario, context, envName, artifactDir, authPolicy)
       intent: phase.intent,
       healthScope: phase.healthScope,
       collectionIntent: phase.collectionIntent ?? null,
-      measurementScope: phaseMeasurementScope(phase),
+      measurementScope: measurementScopeForPhase(phase),
       driverKind: phaseDriverKind(phase, commands),
       expectedAgentFailure: phase.expectedAgentFailure === true,
       commands,
@@ -658,7 +662,7 @@ async function executeStateLifecycleSteps(context, envName, scenario, kind, step
       lifecycleKind: kind,
       lifecycleCommandScope: stateLifecycleCommandScope(commands),
       collectionIntent: stateLifecycleCollectionIntent(steps),
-      resultStatus: phaseStatus(results)
+      resultStatus: phaseResultStatus(results)
     }))
   };
 }
@@ -680,7 +684,7 @@ async function executeAuthPhase(phase, context, envName, artifactDir, authPolicy
       kind: "auth-phase",
       measurementScope: normalizeMeasurementScope(phase.measurementScope, phase.id),
       collectionIntent: phase.collectionIntent ?? null,
-      resultStatus: phaseStatus(results)
+      resultStatus: phaseResultStatus(results)
     }))
   };
 }
@@ -722,7 +726,7 @@ async function executeEvidenceSnapshotPhase(context, envName, scenario, afterPha
     metrics: await collectEnvMetrics(envName, metricOptions(context, scenario, { id: afterPhaseId }, artifactDir, {
       kind: "evidence-snapshot",
       measurementScope: phase.measurementScope,
-      resultStatus: phaseStatus(results)
+      resultStatus: phaseResultStatus(results)
     }))
   };
 }
@@ -790,53 +794,6 @@ function stateLifecycleCommandScope(commands) {
 function stateLifecycleCollectionIntent(steps) {
   const intents = new Set((steps ?? []).map((step) => step.collectionIntent).filter(Boolean));
   return intents.size === 1 ? [...intents][0] : null;
-}
-
-function phaseHasNoServiceCommand(phase) {
-  return (phase?.commands ?? []).some((command) => /(?:^|\s)--no-service(?:\s|$)/.test(command));
-}
-
-function phaseStatus(results) {
-  if (!Array.isArray(results) || results.length === 0) {
-    return "empty";
-  }
-  return results.every((result) => result.status === 0) ? "success" : "failure";
-}
-
-function readinessThresholdForPhase(scenario, phase) {
-  const thresholds = scenario?.thresholds ?? {};
-  const defaultMs = thresholds.gatewayReadyMs ?? 30000;
-  if (!phase) {
-    return 0;
-  }
-  if ((phase.commands ?? []).some((command) => /(?:^|\s)--no-service(?:\s|$)/.test(command))) {
-    return 0;
-  }
-  if (phase.id === "cold-start" || phase.id === "provision" || phase.id === "baseline" || phase.id === "gateway" || phase.id === "start") {
-    return thresholds.coldReadyMs ?? thresholds.gatewayReadyMs ?? defaultMs;
-  }
-  if (phase.id === "gateway-start") {
-    return thresholds.gatewayReadyMs ?? defaultMs;
-  }
-  if (phase.id === "warm-restart" || phase.id === "restart") {
-    return thresholds.warmReadyMs ?? thresholds.restartReadyMs ?? thresholds.gatewayReadyMs ?? defaultMs;
-  }
-  if (phase.id === "upgrade" || phase.id === "post-upgrade" || phase.id === "source-runtime") {
-    return thresholds.gatewayReadyMs ?? defaultMs;
-  }
-  return 0;
-}
-
-function readinessHardTimeoutForPhase(scenario, phase, thresholdMs) {
-  if (!phase || thresholdMs <= 0) {
-    return 0;
-  }
-  const thresholds = scenario?.thresholds ?? {};
-  const explicit = thresholds.gatewayReadyHardTimeoutMs ?? thresholds.readinessHardTimeoutMs;
-  if (typeof explicit === "number") {
-    return Math.max(explicit, thresholdMs);
-  }
-  return Math.max(thresholdMs * 3, thresholdMs + 30000);
 }
 
 async function executeTargetSetup(context, envName, artifactDir) {
@@ -932,28 +889,6 @@ export function normalizeOptionalCommandResult(result) {
     result.note = "optional log collection found no env logs";
   }
 
-  return result;
-}
-
-function phaseMeasurementScope(phase) {
-  return measurementScopeForPhase(phase);
-}
-
-function withPhaseContract(phase, scope = null) {
-  return {
-    ...phase,
-    measurementScope: normalizeMeasurementScope(scope ?? phase.measurementScope, phase.id),
-    driverKind: phaseDriverKind(phase)
-  };
-}
-
-function tagCommandResult(result, phaseId) {
-  result.measurementScope = measurementScopeForPhase({
-    id: phaseId,
-    measurementScope: result.measurementScope,
-    commands: [result.command]
-  });
-  result.driverKind = driverKindForCommand(result.command);
   return result;
 }
 

@@ -27,6 +27,49 @@ export function measurementScopeForPhase(phase) {
   return normalizeMeasurementScope(phase?.measurementScope, phase?.id);
 }
 
+export function phaseResultStatus(results) {
+  if (!Array.isArray(results) || results.length === 0) {
+    return "empty";
+  }
+  return results.every((result) => result.status === 0) ? "success" : "failure";
+}
+
+export function readinessThresholdForPhase(scenario, phase) {
+  const thresholds = scenario?.thresholds ?? {};
+  const defaultMs = thresholds.gatewayReadyMs ?? 30000;
+  if (!phase) {
+    return 0;
+  }
+  if ((phase.commands ?? []).some((command) => /(?:^|\s)--no-service(?:\s|$)/.test(command))) {
+    return 0;
+  }
+  if (phase.id === "cold-start" || phase.id === "provision" || phase.id === "baseline" || phase.id === "gateway" || phase.id === "start") {
+    return thresholds.coldReadyMs ?? thresholds.gatewayReadyMs ?? defaultMs;
+  }
+  if (phase.id === "gateway-start") {
+    return thresholds.gatewayReadyMs ?? defaultMs;
+  }
+  if (phase.id === "warm-restart" || phase.id === "restart") {
+    return thresholds.warmReadyMs ?? thresholds.restartReadyMs ?? thresholds.gatewayReadyMs ?? defaultMs;
+  }
+  if (phase.id === "upgrade" || phase.id === "post-upgrade" || phase.id === "source-runtime") {
+    return thresholds.gatewayReadyMs ?? defaultMs;
+  }
+  return 0;
+}
+
+export function readinessHardTimeoutForPhase(scenario, phase, thresholdMs) {
+  if (!phase || thresholdMs <= 0) {
+    return 0;
+  }
+  const thresholds = scenario?.thresholds ?? {};
+  const explicit = thresholds.gatewayReadyHardTimeoutMs ?? thresholds.readinessHardTimeoutMs;
+  if (typeof explicit === "number") {
+    return Math.max(explicit, thresholdMs);
+  }
+  return Math.max(thresholdMs * 3, thresholdMs + 30000);
+}
+
 export function driverKindForCommand(command) {
   const text = String(command ?? "");
   if (text.includes("run-gateway-session-send-turn.mjs")) {
@@ -51,6 +94,24 @@ export function driverKindForCommand(command) {
     return "kova-helper";
   }
   return "unknown";
+}
+
+export function tagCommandResult(result, phaseId) {
+  result.measurementScope = measurementScopeForPhase({
+    id: phaseId,
+    measurementScope: result.measurementScope,
+    commands: [result.command]
+  });
+  result.driverKind = driverKindForCommand(result.command);
+  return result;
+}
+
+export function withPhaseContract(phase, scope = null) {
+  return {
+    ...phase,
+    measurementScope: normalizeMeasurementScope(scope ?? phase.measurementScope, phase.id),
+    driverKind: phaseDriverKind(phase)
+  };
 }
 
 export function isAgentMessageCommand(command) {
