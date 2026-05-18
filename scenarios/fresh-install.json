@@ -38,7 +38,6 @@
       "title": "Gateway Readiness",
       "intent": "Confirm the gateway reaches a usable running state within the threshold.",
       "commands": [
-        "ocm service status {env} --json",
         "ocm @{env} -- status"
       ],
       "evidence": [

@@ -39,8 +39,7 @@
       "intent": "List and inspect plugin registry state after startup.",
       "commands": [
         "ocm @{env} -- plugins list",
-        "ocm @{env} -- plugins registry --refresh --json",
-        "ocm logs {env} --tail 400 --raw"
+        "ocm @{env} -- plugins registry --refresh --json"
       ],
       "evidence": [
         "plugin list",
@@ -56,9 +55,7 @@
       "title": "Warm Restart Bundled Plugins",
       "intent": "Restart after dependency staging should be warm and verify bundled plugin services remain healthy.",
       "commands": [
-        "ocm service restart {env}",
-        "ocm service status {env} --json",
-        "ocm logs {env} --tail 400 --raw"
+        "ocm service restart {env}"
       ],
       "evidence": [
         "warm readiness",

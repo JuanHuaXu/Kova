@@ -3845,8 +3845,7 @@
           "intent": "List and inspect plugin registry state after startup.",
           "commands": [
             "ocm @{env} -- plugins list",
-            "ocm @{env} -- plugins registry --refresh --json",
-            "ocm logs {env} --tail 400 --raw"
+            "ocm @{env} -- plugins registry --refresh --json"
           ],
           "evidence": [
             "plugin list",
@@ -3862,9 +3861,7 @@
           "title": "Warm Restart Bundled Plugins",
           "intent": "Restart after dependency staging should be warm and verify bundled plugin services remain healthy.",
           "commands": [
-            "ocm service restart {env}",
-            "ocm service status {env} --json",
-            "ocm logs {env} --tail 400 --raw"
+            "ocm service restart {env}"
           ],
           "evidence": [
             "warm readiness",
@@ -3902,8 +3899,7 @@
           "title": "Cold Runtime Dependency Start",
           "intent": "Start a fresh env and capture bundled runtime dependency staging logs.",
           "commands": [
-            "ocm start {env} {startSelector} --json",
-            "ocm logs {env} --tail 300 --raw"
+            "ocm start {env} {startSelector} --json"
           ],
           "evidence": [
             "dependency staging duration",
@@ -3917,9 +3913,7 @@
           "title": "Warm Runtime Dependency Restart",
           "intent": "Restart with staged dependencies already present and verify no repeated expensive staging or missing dependency errors.",
           "commands": [
-            "ocm service restart {env}",
-            "ocm service status {env} --json",
-            "ocm logs {env} --tail 300 --raw"
+            "ocm service restart {env}"
           ],
           "evidence": [
             "warm ready time",
@@ -4160,7 +4154,6 @@
           "title": "Gateway Readiness",
           "intent": "Confirm the gateway reaches a usable running state within the threshold.",
           "commands": [
-            "ocm service status {env} --json",
             "ocm @{env} -- status"
           ],
           "evidence": [
@@ -5027,9 +5020,7 @@
           "title": "Restart After Install",
           "intent": "Restart the gateway so OpenClaw loads the installed external plugin from persisted state.",
           "commands": [
-            "ocm service restart {env}",
-            "ocm service status {env} --json",
-            "ocm logs {env} --tail 300 --raw"
+            "ocm service restart {env}"
           ],
           "evidence": [
             "restart readiness",
@@ -5081,9 +5072,7 @@
           "title": "Restart After Plugin Inspection",
           "intent": "Verify plugin state survives gateway restart and does not create missing dependency errors.",
           "commands": [
-            "ocm service restart {env}",
-            "ocm service status {env} --json",
-            "ocm logs {env} --tail 250 --raw"
+            "ocm service restart {env}"
           ],
           "evidence": [
             "restart status",
@@ -5138,9 +5127,7 @@
           "title": "Restart And Capture Failure",
           "intent": "Restart so OpenClaw attempts to load the plugin and emits missing dependency diagnostics.",
           "commands": [
-            "ocm service restart {env}",
-            "ocm service status {env} --json",
-            "ocm logs {env} --tail 400 --raw"
+            "ocm service restart {env}"
           ],
           "evidence": [
             "missing dependency diagnostic",
@@ -5227,9 +5214,7 @@
           "title": "Restart After Removal",
           "intent": "Restart after uninstall to verify removed plugin state does not break gateway startup.",
           "commands": [
-            "ocm service restart {env}",
-            "ocm service status {env} --json",
-            "ocm logs {env} --tail 300 --raw"
+            "ocm service restart {env}"
           ],
           "evidence": [
             "restart readiness",
@@ -5478,8 +5463,7 @@
           "title": "Start Gateway",
           "intent": "Start the target runtime and capture baseline status.",
           "commands": [
-            "ocm start {env} {startSelector} --json",
-            "ocm service status {env} --json"
+            "ocm start {env} {startSelector} --json"
           ],
           "evidence": [
             "baseline PID",
@@ -6269,8 +6253,7 @@
           "title": "Start Gateway",
           "intent": "Start the target OpenClaw runtime before applying the large workspace fixture.",
           "commands": [
-            "ocm start {env} {startSelector} --json",
-            "ocm service status {env} --json"
+            "ocm start {env} {startSelector} --json"
           ],
           "evidence": [
             "startup readiness",
@@ -6284,8 +6267,7 @@
           "title": "Restart With Large Workspace",
           "intent": "Restart the gateway after the large workspace fixture exists so startup and reload paths see filesystem pressure.",
           "commands": [
-            "ocm service restart {env}",
-            "ocm service status {env} --json"
+            "ocm service restart {env}"
           ],
           "evidence": [
             "restart readiness",

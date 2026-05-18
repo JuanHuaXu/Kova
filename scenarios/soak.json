@@ -24,8 +24,7 @@
       "title": "Start Gateway",
       "intent": "Start the target runtime and capture baseline status.",
       "commands": [
-        "ocm start {env} {startSelector} --json",
-        "ocm service status {env} --json"
+        "ocm start {env} {startSelector} --json"
       ],
       "evidence": [
         "baseline PID",

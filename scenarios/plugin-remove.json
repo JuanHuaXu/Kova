@@ -56,9 +56,7 @@
       "title": "Restart After Removal",
       "intent": "Restart after uninstall to verify removed plugin state does not break gateway startup.",
       "commands": [
-        "ocm service restart {env}",
-        "ocm service status {env} --json",
-        "ocm logs {env} --tail 300 --raw"
+        "ocm service restart {env}"
       ],
       "evidence": [
         "restart readiness",

@@ -55,9 +55,7 @@
       "title": "Restart After Install",
       "intent": "Restart the gateway so OpenClaw loads the installed external plugin from persisted state.",
       "commands": [
-        "ocm service restart {env}",
-        "ocm service status {env} --json",
-        "ocm logs {env} --tail 300 --raw"
+        "ocm service restart {env}"
       ],
       "evidence": [
         "restart readiness",

@@ -39,9 +39,7 @@
       "title": "Restart And Capture Failure",
       "intent": "Restart so OpenClaw attempts to load the plugin and emits missing dependency diagnostics.",
       "commands": [
-        "ocm service restart {env}",
-        "ocm service status {env} --json",
-        "ocm logs {env} --tail 400 --raw"
+        "ocm service restart {env}"
       ],
       "evidence": [
         "missing dependency diagnostic",

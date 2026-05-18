@@ -34,8 +34,7 @@
       "title": "Start Gateway",
       "intent": "Start the target OpenClaw runtime before applying the large workspace fixture.",
       "commands": [
-        "ocm start {env} {startSelector} --json",
-        "ocm service status {env} --json"
+        "ocm start {env} {startSelector} --json"
       ],
       "evidence": [
         "startup readiness",
@@ -49,8 +48,7 @@
       "title": "Restart With Large Workspace",
       "intent": "Restart the gateway after the large workspace fixture exists so startup and reload paths see filesystem pressure.",
       "commands": [
-        "ocm service restart {env}",
-        "ocm service status {env} --json"
+        "ocm service restart {env}"
       ],
       "evidence": [
         "restart readiness",

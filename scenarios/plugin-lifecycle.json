@@ -36,9 +36,7 @@
       "title": "Restart After Plugin Inspection",
       "intent": "Verify plugin state survives gateway restart and does not create missing dependency errors.",
       "commands": [
-        "ocm service restart {env}",
-        "ocm service status {env} --json",
-        "ocm logs {env} --tail 250 --raw"
+        "ocm service restart {env}"
       ],
       "evidence": [
         "restart status",
