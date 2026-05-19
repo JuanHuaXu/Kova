@@ -64,13 +64,17 @@ try {
       status: response.status,
       finalAssistantVisibleText: finalText,
       finalAssistantRawText: finalText,
-      expectedTextPresent: finalText.includes(expectedText)
+      expectedTextPresent: textEquals(finalText, expectedText)
     });
   } finally {
     clearTimeout(timer);
   }
 } catch (error) {
   failJson(error, { surface: "openai-compatible-turn", finishedAtEpochMs: Date.now() });
+}
+
+function textEquals(actual, expected) {
+  return typeof actual === "string" && typeof expected === "string" && actual.trim() === expected.trim();
 }
 
 function readGatewayToken(cfg) {

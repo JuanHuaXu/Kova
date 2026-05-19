@@ -1039,7 +1039,7 @@ function collectAgentTurns(record, providerEvidence, scenario, timelineSummary, 
       const attribution = computeProviderTurnAttribution(timingResult, providerEvidence);
       const response = extractAgentResponse(result);
       const expectedTextPresent = typeof expectedText === "string" && expectedText.length > 0
-        ? responseContainsExpectedText(response, result, expectedText)
+        ? responseMatchesExpectedText(response, expectedText)
         : null;
       const expectedFailureObserved = expectedFailure === true && result.status === 0 && result.timedOut !== true;
       const normalResponseOk = result.status === 0 && result.timedOut !== true && response.usable === true && (expectedTextPresent !== false);
@@ -1252,7 +1252,7 @@ function extractChannelModelTurn(result) {
     expectedText: typeof payload.expectedText === "string" && payload.expectedText.length > 0 ? payload.expectedText : null,
     finalText: typeof payload.finalText === "string" && payload.finalText.length > 0 ? payload.finalText : null,
     expectedTextPresent: typeof payload.finalText === "string" && typeof payload.expectedText === "string"
-      ? payload.finalText.includes(payload.expectedText)
+      ? textEquals(payload.finalText, payload.expectedText)
       : null,
     providerRequestDelta: numberOrNull(payload.providerRequestDelta),
     modelTurnCaseCount: numberOrNull(payload.modelTurnCaseCount),
@@ -1629,7 +1629,7 @@ function checkAgentTurnCorrectness(violations, turns, expectedText) {
         phaseId: turn.phaseId,
         expected: turnExpectedText,
         actual: turn.responseText ?? "none",
-        message: `${turn.label} agent turn response did not include expected marker ${turnExpectedText}`
+        message: `${turn.label} agent turn response did not exactly match expected text ${turnExpectedText}`
       });
     }
   }
@@ -3696,11 +3696,12 @@ function extractAgentResponse(result) {
   };
 }
 
-function responseContainsExpectedText(response, result, expectedText) {
-  if (response.text?.includes(expectedText)) {
-    return true;
-  }
-  return `${result.stdout ?? ""}\n${result.stderr ?? ""}`.includes(expectedText);
+function responseMatchesExpectedText(response, expectedText) {
+  return textEquals(response.text, expectedText);
+}
+
+function textEquals(actual, expected) {
+  return typeof actual === "string" && typeof expected === "string" && actual.trim() === expected.trim();
 }
 
 function findFirstString(value, keys) {

@@ -101,7 +101,7 @@ function runTurn(index) {
     child.on("close", (status, signal) => {
       const turnFinishedAtEpochMs = Date.now();
       const responseText = extractResponseText(stdout);
-      const expectedTextPresent = responseText?.includes(expectedText) || stdout.includes(expectedText) || stderr.includes(expectedText);
+      const expectedTextPresent = textEquals(responseText, expectedText);
       resolve({
         index,
         sessionId,
@@ -141,6 +141,10 @@ function extractResponseText(stdout) {
     const match = text.match(/"finalAssistant(?:Raw|Visible)Text"\s*:\s*"([^"]+)"/);
     return match?.[1]?.trim() ?? null;
   }
+}
+
+function textEquals(actual, expected) {
+  return typeof actual === "string" && typeof expected === "string" && actual.trim() === expected.trim();
 }
 
 function findFirstString(value, keys) {

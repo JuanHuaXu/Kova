@@ -103,7 +103,7 @@ try {
       finalAssistantVisibleText: history.matchedAssistantText,
       finalAssistantRawText: history.lastAssistantText,
       assistantMessageCount: history.assistantTexts.length,
-      expectedTextPresent: history.matchedAssistantText.includes(expectedText)
+      expectedTextPresent: textEquals(history.matchedAssistantText, expectedText)
     });
   } finally {
     gatewayTransport.client?.close();
@@ -131,7 +131,7 @@ async function waitForAssistantText({ runtimeContext, gatewayTransport, sessionK
       if (assistantFirstSeenAtEpochMs === null && eligibleAssistantTexts.length > 0) {
         assistantFirstSeenAtEpochMs = Date.now();
       }
-      const matchedAssistantText = eligibleAssistantTexts.find((text) => text.includes(expectedText));
+      const matchedAssistantText = eligibleAssistantTexts.find((text) => textEquals(text, expectedText));
       if (matchedAssistantText) {
         return {
           assistantTexts,
@@ -151,7 +151,7 @@ async function waitForAssistantText({ runtimeContext, gatewayTransport, sessionK
     await sleep(500);
   }
   throw new Error(
-    `timed out waiting for Gateway session assistant text ${JSON.stringify(expectedText)}; last=${JSON.stringify(lastAssistantText)}; lastHistoryError=${JSON.stringify(lastHistoryError?.message ?? null)}`
+    `timed out waiting for Gateway session assistant text exactly equal to ${JSON.stringify(expectedText)}; last=${JSON.stringify(lastAssistantText)}; lastHistoryError=${JSON.stringify(lastHistoryError?.message ?? null)}`
   );
 }
 
@@ -209,4 +209,8 @@ function extractAssistantTexts(messages) {
     .map((message) => extractText(message))
     .map((text) => text.trim())
     .filter(Boolean);
+}
+
+function textEquals(actual, expected) {
+  return typeof actual === "string" && typeof expected === "string" && actual.trim() === expected.trim();
 }

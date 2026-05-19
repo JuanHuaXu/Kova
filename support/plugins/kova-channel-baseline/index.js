@@ -281,7 +281,7 @@ async function runModelTurn(params = {}) {
   const finalTexts = modelTurnCases
     .map((testCase) => testCase.finalText)
     .filter((text) => typeof text === "string" && text.length > 0);
-  const matchedText = finalTexts.find((text) => text.includes(expectedText)) ?? null;
+  const matchedText = finalTexts.find((text) => textEquals(text, expectedText)) ?? null;
   const failedCases = modelTurnCases.filter((testCase) => testCase.status !== "passed");
   const capabilityRows = [
     ...(capabilityBaseline.proofs ?? []).map((proof) => ({
@@ -307,7 +307,7 @@ async function runModelTurn(params = {}) {
       : []),
     invariant("model-turn-case-count", modelTurnCases.length === selectedCases.length, "all requested channel model-turn cases ran"),
     invariant("model-turn-cases-passed", failedCases.length === 0, "all channel model-turn cases passed"),
-    invariant("expected-final-text", Boolean(matchedText), `at least one model-turn final channel send contains ${expectedText}`),
+    invariant("expected-final-text", Boolean(matchedText), `at least one model-turn final channel send equals ${expectedText}`),
     invariant("terminal-return", modelTurnCases.every((testCase) => testCase.dispatched === true), "all channel model turns returned from OpenClaw dispatch")
   ];
   const ok = invariants.every((item) => item.status === "passed");
@@ -382,14 +382,14 @@ async function runModelTurnCase(testCase) {
     .map((record) => record.text)
     .filter((text) => typeof text === "string" && text.length > 0);
   const matchedText = typeof testCase.expectedText === "string"
-    ? (finalTexts.find((text) => text.includes(testCase.expectedText)) ?? null)
+    ? (finalTexts.find((text) => textEquals(text, testCase.expectedText)) ?? null)
     : null;
   const firstFinal = finalOutboundRecords[0] ?? null;
   const invariants = [
     invariant(`${testCase.id}:turn-dispatched`, !error && turn?.dispatched === true, `${testCase.id} dispatched through OpenClaw runtime`),
     invariant(`${testCase.id}:expected-final-count`, finalOutboundRecords.length === testCase.expectedFinalSendCount, `${testCase.id} produced expected final send count`),
     invariant(`${testCase.id}:expected-final-kind`, !testCase.expectedKind || firstFinal?.kind === testCase.expectedKind, `${testCase.id} used expected channel send kind`),
-    invariant(`${testCase.id}:expected-final-text`, !testCase.expectedText || Boolean(matchedText), `${testCase.id} final channel send contains expected text`),
+    invariant(`${testCase.id}:expected-final-text`, !testCase.expectedText || Boolean(matchedText), `${testCase.id} final channel send equals expected text`),
     invariant(`${testCase.id}:delivery-receipt`, testCase.expectedFinalSendCount === 0 || caseDeliveryRecords.some((record) => record.fallback === false), `${testCase.id} durable delivery recorded a channel receipt`),
     invariant(`${testCase.id}:single-final-send`, finalOutboundRecords.length <= 1 || testCase.allowMultipleFinalSends === true, `${testCase.id} did not duplicate final channel sends`),
     invariant(`${testCase.id}:reply-to`, !testCase.expectReplyToId || firstFinal?.replyToId === inboundEventId, `${testCase.id} preserved reply target`),
@@ -1179,6 +1179,10 @@ function compactTurnLogEvent(event) {
     reason: event?.reason ?? null,
     error: event?.error instanceof Error ? event.error.message : event?.error ? String(event.error) : null
   };
+}
+
+function textEquals(actual, expected) {
+  return typeof actual === "string" && typeof expected === "string" && actual.trim() === expected.trim();
 }
 
 function assert(condition, message) {
