@@ -285,9 +285,10 @@ function aggregateMetrics(samples) {
     const values = samples.map((s) => measurementMetricValue(s.measurements ?? {}, key)).filter((v) => v != null && Number.isFinite(Number(v)));
     if (values.length === 0 && !roleChildren.has(key)) continue;
     const stats = values.length > 0 ? summarizeSamples(values) : null;
+    const hasFailedRoleChild = roleChildren.has(key);
     const thresholdStatus = meta.threshold !== null && stats?.max !== null && stats?.max !== undefined
       ? stats.max > meta.threshold ? "FAIL" : "PASS"
-      : meta.status;
+      : hasFailedRoleChild ? "FAIL" : meta.status;
     rows.push({
       key,
       label: meta.label,

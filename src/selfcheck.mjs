@@ -67,6 +67,7 @@ import {
 import { compareReports, renderCompareSummary } from "./reporting/compare.mjs";
 import { scenarioMetricRows } from "./reporting/compare-aggregate.mjs";
 import { renderAssessment } from "./reporting/render-assessment.mjs";
+import { aggregateScenarios } from "./reporting/scenario-aggregate.mjs";
 import {
   ocmAt,
   ocmEnvDestroy,
@@ -8201,6 +8202,14 @@ function roleThresholdEvaluationCheck() {
       true,
       "role CPU violation"
     );
+    const reportScenarios = aggregateScenarios({
+      records: [record],
+      summary: { total: 1, statuses: { FAIL: 1 } }
+    });
+    const peakRow = reportScenarios[0]?.metrics?.find((metric) => metric.key === "peakRssMb");
+    const gatewayRow = reportScenarios[0]?.metrics?.find((metric) => metric.key === "peakRssMb#gateway");
+    assertEqual(peakRow?.status, "FAIL", "parent RSS row inherits failed role child status");
+    assertEqual(gatewayRow?.status, "FAIL", "gateway role child row fails");
     return {
       id: "resource-role-thresholds",
       status: "PASS",
