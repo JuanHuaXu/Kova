@@ -1022,7 +1022,7 @@ export function evaluateRecord(record, scenario, options = {}) {
 function collectAgentTurns(record, providerEvidence, scenario, timelineSummary, logSummary) {
   const turns = [];
   let index = 0;
-  const expectedText = scenario.agent?.expectedText ?? null;
+  const scenarioExpectedText = scenario.agent?.expectedText ?? null;
   for (const phase of record.phases ?? []) {
     for (const result of phase.results ?? []) {
       if (!isAgentMessageCommand(result.command)) {
@@ -1032,6 +1032,7 @@ function collectAgentTurns(record, providerEvidence, scenario, timelineSummary, 
       const expectedFailure = phase.expectedAgentFailure === true || scenario.agent?.expectedFailure === true;
       const gatewaySession = extractGatewaySessionTurn(result);
       const channelModelTurn = gatewaySession ? null : extractChannelModelTurn(result);
+      const expectedText = channelModelTurn?.expectedText ?? scenarioExpectedText;
       const timingResult = gatewaySession
         ? resultForActiveTurnWindow(result, gatewaySession)
         : (channelModelTurn ? resultForChannelModelTurnWindow(result, channelModelTurn) : result);
@@ -1092,6 +1093,7 @@ function collectAgentTurns(record, providerEvidence, scenario, timelineSummary, 
         rawCommandDurationMs: result.durationMs ?? null,
         gatewaySession,
         channelModelTurn,
+        expectedText,
         responseText: response.text,
         responseOk: expectedFailure ? expectedFailureObserved : normalResponseOk,
         assistantResponseOk: normalResponseOk,
@@ -1247,6 +1249,8 @@ function extractChannelModelTurn(result) {
     surface: "channel-model-turn-baseline",
     inboundEventId: payload.inboundEventId ?? null,
     routeSessionKey: payload.routeSessionKey ?? null,
+    expectedText: typeof payload.expectedText === "string" && payload.expectedText.length > 0 ? payload.expectedText : null,
+    finalText: typeof payload.finalText === "string" && payload.finalText.length > 0 ? payload.finalText : null,
     expectedTextPresent: typeof payload.finalText === "string" && typeof payload.expectedText === "string"
       ? payload.finalText.includes(payload.expectedText)
       : null,
@@ -1617,14 +1621,15 @@ function checkAgentTurnCorrectness(violations, turns, expectedText) {
         message: `${turn.label} agent turn did not produce the expected assistant response`
       });
     }
-    if (typeof expectedText === "string" && expectedText.length > 0 && turn.expectedTextPresent !== true) {
+    const turnExpectedText = turn.expectedText ?? expectedText;
+    if (typeof turnExpectedText === "string" && turnExpectedText.length > 0 && turn.expectedTextPresent !== true) {
       violations.push({
         kind: "agent",
         metric: "agentTurn.expectedTextPresent",
         phaseId: turn.phaseId,
-        expected: expectedText,
+        expected: turnExpectedText,
         actual: turn.responseText ?? "none",
-        message: `${turn.label} agent turn response did not include expected marker ${expectedText}`
+        message: `${turn.label} agent turn response did not include expected marker ${turnExpectedText}`
       });
     }
   }
