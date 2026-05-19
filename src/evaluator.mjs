@@ -754,6 +754,7 @@ export function evaluateRecord(record, scenario, options = {}) {
   }
 
   checkGatewaySessionTransport(violations, agentTurns, scenario);
+  checkChannelModelTurnCases(violations, agentTurns);
 
   if (agentResponseOk === false) {
     violations.push({
@@ -1163,6 +1164,27 @@ function checkGatewaySessionTransport(violations, agentTurns, scenario) {
   }
 }
 
+function checkChannelModelTurnCases(violations, agentTurns) {
+  for (const turn of agentTurns) {
+    const failedCases = Array.isArray(turn.channelModelTurn?.failedModelTurnCases)
+      ? turn.channelModelTurn.failedModelTurnCases
+      : [];
+    for (const failedCase of failedCases) {
+      const caseId = typeof failedCase?.id === "string" && failedCase.id.length > 0
+        ? failedCase.id
+        : "unknown";
+      violations.push({
+        kind: "channel",
+        metric: `channelModelTurn.case.${caseId}`,
+        phaseId: turn.phaseId,
+        expected: "passed",
+        actual: "failed",
+        message: `channel model turn case ${caseId} failed${failedCase?.reason ? `: ${failedCase.reason}` : ""}`
+      });
+    }
+  }
+}
+
 function extractGatewaySessionTurn(result) {
   if (!result?.command?.includes("run-gateway-session-send-turn.mjs")) {
     return null;
@@ -1229,9 +1251,30 @@ function extractChannelModelTurn(result) {
       ? payload.finalText.includes(payload.expectedText)
       : null,
     providerRequestDelta: numberOrNull(payload.providerRequestDelta),
+    modelTurnCaseCount: numberOrNull(payload.modelTurnCaseCount),
+    capabilityRowCount: numberOrNull(payload.capabilityRowCount),
+    failedModelTurnCases: Array.isArray(payload.failedModelTurnCases)
+      ? payload.failedModelTurnCases.map(compactFailedModelTurnCase).filter(Boolean)
+      : [],
     activeStartedAtEpochMs,
     activeFinishedAtEpochMs,
     activeTurnMs
+  };
+}
+
+function compactFailedModelTurnCase(value) {
+  if (!value || typeof value !== "object") {
+    return null;
+  }
+  return {
+    id: typeof value.id === "string" ? value.id : null,
+    reason: typeof value.reason === "string" ? value.reason : null,
+    failedInvariants: Array.isArray(value.failedInvariants)
+      ? value.failedInvariants.map((invariant) => ({
+          id: typeof invariant?.id === "string" ? invariant.id : null,
+          reason: typeof invariant?.reason === "string" ? invariant.reason : null
+        }))
+      : []
   };
 }
 

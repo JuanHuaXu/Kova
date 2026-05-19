@@ -73,6 +73,7 @@ async function main() {
     inboundEventId: result.artifact.turn?.modelTurnCases?.[0]?.inboundEvent?.id ?? result.artifact.turn?.inboundEvent?.id ?? null,
     routeSessionKey: result.artifact.turn?.modelTurnCases?.[0]?.routeSessionKey ?? result.artifact.turn?.routeSessionKey ?? null,
     modelTurnCaseCount: result.artifact.turn?.modelTurnCases?.length ?? null,
+    failedModelTurnCases: summarizeFailedModelTurnCases(result.artifact.turn?.modelTurnCases),
     capabilityRowCount: result.artifact.turn?.capabilityRows?.length ?? null,
     activeStartedAtEpochMs: result.artifact.activeStartedAtEpochMs,
     activeFinishedAtEpochMs: result.artifact.activeFinishedAtEpochMs,
@@ -157,6 +158,26 @@ function compactRuntimeContext(context) {
     packageRoot: context.packageRoot,
     runtime: context.runtime ?? null
   };
+}
+
+function summarizeFailedModelTurnCases(cases) {
+  if (!Array.isArray(cases)) {
+    return [];
+  }
+  return cases
+    .filter((testCase) => testCase?.status !== "passed")
+    .map((testCase) => ({
+      id: testCase.id ?? null,
+      reason: testCase.reason ?? null,
+      failedInvariants: Array.isArray(testCase.invariants)
+        ? testCase.invariants
+            .filter((invariant) => invariant?.status !== "passed")
+            .map((invariant) => ({
+              id: invariant.id ?? null,
+              reason: invariant.reason ?? invariant.summary ?? null
+            }))
+        : []
+    }));
 }
 
 async function countJsonl(path) {
