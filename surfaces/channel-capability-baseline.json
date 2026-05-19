@@ -1,0 +1,34 @@
+{
+  "id": "channel-capability-baseline",
+  "title": "Channel Capability Baseline",
+  "ownerArea": "OpenClaw",
+  "description": "Validate OpenClaw's shared channel behavior through a real running OpenClaw gateway and installed Kova test channel.",
+  "processRoles": [
+    "gateway",
+    "command-tree"
+  ],
+  "thresholds": {},
+  "diagnostics": {
+    "timelineRequiredForSourceBuild": false,
+    "expectedSpans": []
+  },
+  "purposes": [
+    "regression",
+    "release"
+  ],
+  "requirements": [
+    {
+      "id": "baseline",
+      "states": [
+        "fresh"
+      ],
+      "targetKinds": [
+        "npm",
+        "release",
+        "runtime",
+        "local-build"
+      ],
+      "metrics": []
+    }
+  ]
+}

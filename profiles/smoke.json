@@ -12,6 +12,11 @@
       "state": "fresh"
     },
     {
+      "scenario": "channel-capability-baseline",
+      "state": "fresh",
+      "timeoutMs": 300000
+    },
+    {
       "scenario": "release-runtime-startup",
       "state": "fresh"
     },

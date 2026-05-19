@@ -1,0 +1,96 @@
+{
+  "id": "channel-capability-baseline",
+  "surface": "channel-capability-baseline",
+  "title": "Channel Capability Baseline",
+  "objective": "Install a deterministic Kova channel into a real OpenClaw gateway, inject channel turns through OpenClaw's channel runtime, and emit one baseline proof row for every OpenClaw channel capability.",
+  "tags": [
+    "channel",
+    "capability",
+    "baseline",
+    "runtime",
+    "plugins"
+  ],
+  "targetKinds": [
+    "npm",
+    "release",
+    "runtime",
+    "local-build"
+  ],
+  "timeoutMs": 300000,
+  "thresholds": {
+    "gatewayReadyMs": 45000,
+    "missingDependencyErrors": 0,
+    "pluginLoadFailures": 0
+  },
+  "phases": [
+    {
+      "id": "provision",
+      "title": "Provision Channel Baseline Env",
+      "intent": "Create a disposable OpenClaw environment without starting the gateway so Kova auth and the test channel plugin are installed before plugin discovery.",
+      "commands": [
+        "ocm start {env} {startSelector} --no-service --json"
+      ],
+      "evidence": [
+        "OCM start JSON",
+        "env name",
+        "runtime binding",
+        "gateway port"
+      ],
+      "healthScope": "none",
+      "collectionIntent": "service-only"
+    },
+    {
+      "id": "install-channel-baseline",
+      "title": "Install Kova Channel Baseline Plugin",
+      "intent": "Install the deterministic Kova channel plugin into the selected OpenClaw runtime exactly through the user-visible plugin install path.",
+      "commands": [
+        "ocm @{env} -- plugins install {kovaRoot}/support/plugins/kova-channel-baseline --force",
+        "ocm @{env} -- plugins list"
+      ],
+      "evidence": [
+        "plugin install command",
+        "installed plugin list",
+        "external plugin manifest load"
+      ],
+      "healthScope": "none",
+      "collectionIntent": "service-only"
+    },
+    {
+      "id": "gateway-start",
+      "title": "Start Gateway With Baseline Channel",
+      "intent": "Start the OpenClaw gateway after auth and plugin installation so channel startup and gateway method registration happen through the normal runtime path.",
+      "commands": [
+        "ocm service install {env} --json",
+        "ocm service start {env} --json",
+        "node {kovaRoot}/support/ensure-gateway-running.mjs --env {env} --artifact-dir {artifactDir} --timeout-ms 120000"
+      ],
+      "evidence": [
+        "gateway service installed",
+        "gateway service started",
+        "gateway readiness",
+        "baseline channel startup"
+      ],
+      "healthScope": "readiness",
+      "collectionIntent": "post-ready-health"
+    },
+    {
+      "id": "channel-capability-baseline",
+      "title": "Run OpenClaw Channel Capability Baseline",
+      "intent": "Call the baseline plugin over Gateway RPC so OpenClaw injects channel turns, dispatches replies, routes durable final sends through the channel message adapter, and records capability evidence.",
+      "commands": [
+        "node {kovaRoot}/support/run-channel-capability-baseline.mjs --env {env} --artifact-dir {artifactDir} --timeout-ms 120000"
+      ],
+      "evidence": [
+        "OpenClaw gateway RPC",
+        "channel runtime turn dispatch",
+        "durable final channel send records",
+        "baseline capability proof rows"
+      ],
+      "healthScope": "post-ready",
+      "collectionIntent": "post-ready-health"
+    }
+  ],
+  "proves": [
+    "baseline"
+  ]
+}

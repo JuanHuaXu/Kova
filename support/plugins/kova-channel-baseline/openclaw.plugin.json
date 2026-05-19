@@ -1,0 +1,28 @@
+{
+  "id": "kova-channel-baseline",
+  "name": "Kova Channel Baseline",
+  "description": "Deterministic Kova channel used to prove OpenClaw channel capability behavior.",
+  "kind": "channel",
+  "activation": {
+    "onStartup": true
+  },
+  "channels": [
+    "kova-channel-baseline"
+  ],
+  "channelConfigs": {
+    "kova-channel-baseline": {
+      "label": "Kova Channel Baseline",
+      "description": "Deterministic Kova channel used to prove OpenClaw channel capability behavior.",
+      "schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {}
+      }
+    }
+  },
+  "configSchema": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {}
+  }
+}

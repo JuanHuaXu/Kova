@@ -1,10 +1,10 @@
 ╔══════════════════════════════════════════════════════════════════════════════╗
 ║  KOVA  ·  matrix run                                                         ║
 ╚══════════════════════════════════════════════════════════════════════════════╝
-   [DRY-RUN]   12 planned
+   [DRY-RUN]   13 planned
                mode: dry-run · target: runtime:stable · runId: kova-<runId>
 
-  Entries 12   ·   Dry-run 12   ·   Failed 0   ·   Performance 12 groups
+  Entries 13   ·   Dry-run 13   ·   Failed 0   ·   Performance 13 groups
 
 ─── artifacts ──────────────────────────────────────────────────────────────────
   ◆ markdown    ~/.kova/reports/kova-<runId>-smoke.md
@@ -17,6 +17,7 @@
 scenario                         target          samples  verdict    worst metr…
 channel-capability-preflight     runtime:stable      0/1  [DRY-RUN]  —
 channel-capability-shared-runt…  runtime:stable      0/1  [DRY-RUN]  —
+channel-capability-baseline      runtime:stable      0/1  [DRY-RUN]  —
 release-runtime-startup          runtime:stable      0/1  [DRY-RUN]  —
 fresh-install                    runtime:stable      0/1  [DRY-RUN]  —
 bundled-runtime-deps             runtime:stable      0/1  [DRY-RUN]  —

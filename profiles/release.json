@@ -234,6 +234,7 @@
         "blocking": [
           "channel-capability-preflight:preflight",
           "channel-capability-shared-runtime-smoke:shared-runtime-smoke",
+          "channel-capability-baseline:baseline",
           "release-runtime-startup:baseline",
           "fresh-install:baseline",
           "upgrade-existing-user:baseline",
@@ -275,6 +276,10 @@
       },
       {
         "scenario": "channel-capability-shared-runtime-smoke",
+        "state": "fresh"
+      },
+      {
+        "scenario": "channel-capability-baseline",
         "state": "fresh"
       },
       {
@@ -455,6 +460,10 @@
     },
     {
       "scenario": "channel-capability-shared-runtime-smoke",
+      "state": "fresh"
+    },
+    {
+      "scenario": "channel-capability-baseline",
       "state": "fresh"
     },
     {

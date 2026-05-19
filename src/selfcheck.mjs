@@ -592,7 +592,7 @@ export async function runSelfCheck(flags = {}) {
         if (!data.bundlePath.startsWith(tmp)) {
           throw new Error(`matrix bundle path should use report dir: ${data.bundlePath}`);
         }
-        assertEqual(data.summary?.statuses?.["DRY-RUN"], 5, "filtered matrix dry-run count");
+        assertEqual(data.summary?.statuses?.["DRY-RUN"], 6, "filtered matrix dry-run count");
       }
     ));
     checks.push(await gateDryRunCheck(tmp));
