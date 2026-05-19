@@ -24,6 +24,7 @@ export function commandValues(context, envName, artifactDir = "") {
   return {
     env: quoteShell(envName),
     target: context.target,
+    targetRepo: context.targetPlan.repoPath ? quoteShell(context.targetPlan.repoPath) : "",
     from: context.from ?? "",
     sourceEnv: quoteShell(context.sourceEnv ?? ""),
     artifactDir: artifactDir ? quoteShell(artifactDir) : "",

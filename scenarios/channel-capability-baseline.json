@@ -1,0 +1,37 @@
+{
+  "id": "channel-capability-baseline",
+  "surface": "channel-capability-baseline",
+  "title": "Channel Capability Baseline",
+  "objective": "Prove OpenClaw's shared message-channel capability catalog matches the source declarations and passes the shared channel contract tests before adapter-specific conformance runs.",
+  "tags": [
+    "channel",
+    "capability",
+    "baseline",
+    "contracts"
+  ],
+  "targetKinds": [
+    "local-build"
+  ],
+  "timeoutMs": 180000,
+  "thresholds": {},
+  "phases": [
+    {
+      "id": "channel-capability-baseline",
+      "title": "OpenClaw Channel Capability Baseline",
+      "intent": "Inspect OpenClaw's channel message source declarations, run the shared channel contract tests, and emit one capability proof row per OpenClaw baseline capability.",
+      "commands": [
+        "node {kovaRoot}/support/run-channel-capability-baseline.mjs --openclaw-repo {targetRepo} --artifact-dir {artifactDir} --timeout-ms 120000"
+      ],
+      "evidence": [
+        "OpenClaw channel capability catalog source match",
+        "OpenClaw channel message contract test result",
+        "baseline capability proof rows"
+      ],
+      "healthScope": "none",
+      "collectionIntent": "skip-env"
+    }
+  ],
+  "proves": [
+    "baseline"
+  ]
+}
