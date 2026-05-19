@@ -14,6 +14,7 @@ const artifactDir = requiredArg(args, "artifact-dir");
 const timeoutMs = readTimeoutMs(args["timeout-ms"], 120000);
 const message = args.message ?? "Reply with exact ASCII text KOVA_AGENT_OK only.";
 const expectedText = args["expected-text"] ?? "KOVA_AGENT_OK";
+const includeSharedBaseline = args["skip-shared-baseline"] !== "true";
 const artifactPath = join(artifactDir, "channel-model-turn-baseline.json");
 const providerRequestLogPath = join(artifactDir, "mock-openai", "requests.jsonl");
 
@@ -31,7 +32,7 @@ async function main() {
     const activeStartedAtEpochMs = Date.now();
     const turn = await clientHandle.client.request(
       "kova.channelBaseline.runModelTurn",
-      { message, expectedText },
+      { message, expectedText, includeSharedBaseline },
       { timeoutMs }
     );
     const activeFinishedAtEpochMs = Date.now();
@@ -69,6 +70,7 @@ async function main() {
     ownerArea: "OpenClaw",
     envName,
     expectedText,
+    sharedBaselineIncluded: result.artifact.turn?.sharedBaselineIncluded ?? null,
     finalText: result.artifact.turn?.finalText ?? null,
     inboundEventId: result.artifact.turn?.modelTurnCases?.[0]?.inboundEvent?.id ?? result.artifact.turn?.inboundEvent?.id ?? null,
     routeSessionKey: result.artifact.turn?.modelTurnCases?.[0]?.routeSessionKey ?? result.artifact.turn?.routeSessionKey ?? null,

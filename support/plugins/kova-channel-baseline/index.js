@@ -257,8 +257,15 @@ async function runModelTurn(params = {}) {
   const expectedText = typeof params.expectedText === "string" && params.expectedText.length > 0
     ? params.expectedText
     : "KOVA_AGENT_OK";
+  const includeSharedBaseline = params.includeSharedBaseline !== false;
 
-  const capabilityBaseline = await runBaseline();
+  const capabilityBaseline = includeSharedBaseline
+    ? await runBaseline()
+    : {
+        ok: true,
+        proofs: [],
+        proofCount: 0
+      };
   outboundRecords = [];
   deliveryRecords = [];
   modelTurnRecords = [];
@@ -294,7 +301,9 @@ async function runModelTurn(params = {}) {
     })))
   ];
   const invariants = [
-    invariant("shared-capability-baseline", capabilityBaseline.ok === true, "all shared OpenClaw channel capabilities passed before model-turn proof"),
+    ...(includeSharedBaseline
+      ? [invariant("shared-capability-baseline", capabilityBaseline.ok === true, "all shared OpenClaw channel capabilities passed before model-turn proof")]
+      : []),
     invariant("model-turn-case-count", modelTurnCases.length === modelTurnCaseDefinitions.length, "all configured channel model-turn cases ran"),
     invariant("model-turn-cases-passed", failedCases.length === 0, "all channel model-turn cases passed"),
     invariant("expected-final-text", Boolean(matchedText), `at least one model-turn final channel send contains ${expectedText}`),
@@ -308,6 +317,7 @@ async function runModelTurn(params = {}) {
     channelId: CHANNEL_ID,
     accountId: activeRuntime.accountId,
     expectedText,
+    sharedBaselineIncluded: includeSharedBaseline,
     finalText: finalTexts.join("\n"),
     durationMs: elapsedMs(startedAt),
     sharedCapabilityBaseline: capabilityBaseline,
