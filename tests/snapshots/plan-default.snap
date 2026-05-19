@@ -53,7 +53,7 @@
     • fresh-install  1 scenario
   ◆ terminal-ui  1 surface · 1 scenario
     • tui  1 scenario
-  ◆ tui-agent-runtime  1 surface · 1 scenario
+  ◆ tui  1 surface · 1 scenario
     • tui-message-turn  1 scenario
   ◆ upgrade  1 surface · 6 scenarios
     • upgrade-existing-user  6 scenarios

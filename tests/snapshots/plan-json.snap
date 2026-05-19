@@ -1866,9 +1866,9 @@
     },
     {
       "id": "tui-message-turn",
-      "title": "TUI Message Turn",
-      "ownerArea": "tui-agent-runtime",
-      "description": "Launch the OpenClaw TUI, send a real stdin message, and require visible assistant output so Kova can catch TUI input freezes and delayed user-visible responses.",
+      "title": "TUI Visible Message Smoke",
+      "ownerArea": "tui",
+      "description": "Launch the OpenClaw TUI, send a real stdin message, and require the expected marker to render in terminal output. This is UI smoke coverage, not structured agent-turn correctness proof.",
       "processRoles": [
         "gateway",
         "command-tree",
@@ -1877,9 +1877,6 @@
         "mock-provider"
       ],
       "thresholds": {
-        "agentTurnMs": 45000,
-        "preProviderMs": 10000,
-        "providerFinalMs": 3000,
         "peakRssMb": 900,
         "postReadyHealthP95Ms": 1000
       },
@@ -1900,11 +1897,7 @@
       "diagnostics": {
         "timelineRequiredForSourceBuild": true,
         "expectedSpans": [
-          "agent.turn",
-          "agent.prepare",
-          "models.catalog",
-          "provider.request",
-          "agent.cleanup"
+          "gateway.ready"
         ]
       },
       "purposes": [
@@ -1924,9 +1917,6 @@
             "local-build"
           ],
           "metrics": [
-            "agentTurnMs",
-            "agentTurnP95Ms",
-            "coldPreProviderMs",
             "postReadyHealthP95Ms",
             "peakRssMb",
             "pluginLoadFailures"
@@ -6567,8 +6557,8 @@
     {
       "id": "tui-message-turn",
       "surface": "tui-message-turn",
-      "title": "TUI Message Turn",
-      "objective": "Launch the TUI, send a real user message through stdin, and require the expected assistant response to appear in the TUI output.",
+      "title": "TUI Visible Message Smoke",
+      "objective": "Launch the TUI, send a real user message through stdin, and require the expected marker to render in terminal output. This is UI smoke coverage; structured agent-turn correctness is proven by Gateway and channel scenarios.",
       "tags": [
         "agent",
         "message",
@@ -6577,15 +6567,8 @@
         "providers"
       ],
       "timeoutMs": 180000,
-      "agent": {
-        "expectedText": "KOVA_AGENT_OK"
-      },
       "thresholds": {
         "gatewayReadyMs": 30000,
-        "agentTurnMs": 45000,
-        "preProviderMs": 10000,
-        "providerFinalMs": 3000,
-        "preProviderDominanceRatio": 0.8,
         "statusMs": 10000,
         "peakRssMb": 900,
         "missingDependencyErrors": 0,
@@ -6625,14 +6608,13 @@
         {
           "id": "tui-message-turn",
           "title": "TUI Message",
-          "intent": "Exercise the user-visible terminal input path and verify final assistant output.",
+          "intent": "Exercise the user-visible terminal input path and verify the expected marker renders in terminal output.",
           "commands": [
             "node {kovaRoot}/support/run-tui-message-turn.mjs --env {env} --session kova-tui-message --message 'Reply with exact ASCII text KOVA_AGENT_OK only.' --expected-text KOVA_AGENT_OK --timeout 120000"
           ],
           "evidence": [
             "TUI input accepted",
-            "final assistant text rendered",
-            "mock provider request timing",
+            "expected marker rendered in terminal output",
             "gateway health after turn",
             "role resource samples"
           ],
@@ -9126,8 +9108,8 @@
       },
       {
         "id": "tui-message-turn",
-        "title": "TUI Message Turn",
-        "ownerArea": "tui-agent-runtime",
+        "title": "TUI Visible Message Smoke",
+        "ownerArea": "tui",
         "scenarioCount": 1,
         "scenarios": [
           "tui-message-turn"

@@ -21,12 +21,13 @@ try {
     surface: "tui-message-turn",
     method: "tui stdin/stdout",
     session,
+    proofLevel: "terminal-output-smoke",
+    behavioralTurnProof: false,
     startedAtEpochMs,
     inputAcceptedAtEpochMs: result.inputAcceptedAtEpochMs,
     finishedAtEpochMs: Date.now(),
-    finalAssistantVisibleText: result.finalAssistantText,
-    finalAssistantRawText: result.finalAssistantText,
-    expectedTextPresent: result.finalAssistantText.includes(expectedText),
+    matchedText: result.matchedText,
+    expectedTextPresent: result.matchedText === expectedText,
     outputTail: result.outputTail
   });
 } catch (error) {
@@ -76,7 +77,7 @@ function runTuiTurn({ envName, message, expectedText, timeoutMs, session }) {
       if (output.includes(expectedText)) {
         finish(null, {
           inputAcceptedAtEpochMs,
-          finalAssistantText: expectedText,
+          matchedText: expectedText,
           outputTail: output.slice(-4000)
         });
       }

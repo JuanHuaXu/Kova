@@ -82,7 +82,7 @@ export function driverKindForCommand(command) {
     return "gateway-http";
   }
   if (text.includes("run-tui-message-turn.mjs")) {
-    return "gateway-rpc";
+    return "tui-stdio";
   }
   if (/\bocm\s+@[^ ]+\s+--\s+agent\b/.test(text)) {
     return text.includes("--local") ? "openclaw-cli-local" : "openclaw-cli-gateway";
@@ -123,7 +123,6 @@ export function isAgentMessageCommand(command) {
     text.includes("run-concurrent-agent-turns.mjs") ||
     text.includes("run-gateway-session-send-turn.mjs") ||
     text.includes("run-channel-model-turn-baseline.mjs") ||
-    text.includes("run-tui-message-turn.mjs") ||
     text.includes("run-openai-compatible-turn.mjs");
 }
 

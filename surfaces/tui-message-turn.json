@@ -1,8 +1,8 @@
 {
   "id": "tui-message-turn",
-  "title": "TUI Message Turn",
-  "ownerArea": "tui-agent-runtime",
-  "description": "Launch the OpenClaw TUI, send a real stdin message, and require visible assistant output so Kova can catch TUI input freezes and delayed user-visible responses.",
+  "title": "TUI Visible Message Smoke",
+  "ownerArea": "tui",
+  "description": "Launch the OpenClaw TUI, send a real stdin message, and require the expected marker to render in terminal output. This is UI smoke coverage, not structured agent-turn correctness proof.",
   "processRoles": [
     "gateway",
     "command-tree",
@@ -11,9 +11,6 @@
     "mock-provider"
   ],
   "thresholds": {
-    "agentTurnMs": 45000,
-    "preProviderMs": 10000,
-    "providerFinalMs": 3000,
     "peakRssMb": 900,
     "postReadyHealthP95Ms": 1000
   },
@@ -34,11 +31,7 @@
   "diagnostics": {
     "timelineRequiredForSourceBuild": true,
     "expectedSpans": [
-      "agent.turn",
-      "agent.prepare",
-      "models.catalog",
-      "provider.request",
-      "agent.cleanup"
+      "gateway.ready"
     ]
   },
   "purposes": [
@@ -58,9 +51,6 @@
         "local-build"
       ],
       "metrics": [
-        "agentTurnMs",
-        "agentTurnP95Ms",
-        "coldPreProviderMs",
         "postReadyHealthP95Ms",
         "peakRssMb",
         "pluginLoadFailures"
