@@ -46,8 +46,9 @@ node bin/kova.mjs inventory plan \
 
 When `--openclaw-repo` is present, inventory also compares Kova's OpenClaw
 message-channel capability catalog with `src/channels/message/types.ts`. That
-source drift check is inventory signal only; normal runs and matrix runs probe
-the selected OpenClaw runtime package instead.
+source drift check is inventory signal only. Runtime and matrix runs use
+`channel-capability-preflight` to probe the selected OpenClaw runtime package
+instead.
 
 Use `inventory repeated-work` before optimizing Kova runs so duplicated scenario
 commands and collector pressure are measured from the registry instead of guessed:

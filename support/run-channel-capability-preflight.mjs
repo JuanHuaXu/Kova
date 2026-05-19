@@ -13,7 +13,7 @@ const repoRoot = dirname(dirname(fileURLToPath(import.meta.url)));
 const args = parseSupportArgs(process.argv.slice(2));
 const artifactDir = requiredArg(args, "artifact-dir");
 const timeoutMs = readTimeoutMs(args["timeout-ms"], 120000);
-const artifactPath = join(artifactDir, "channel-capability-baseline.json");
+const artifactPath = join(artifactDir, "channel-capability-preflight.json");
 const catalog = JSON.parse(await readFile(join(repoRoot, "channel-capabilities", "openclaw-message.json"), "utf8"));
 
 let result;
@@ -45,7 +45,7 @@ await writeFile(artifactPath, `${JSON.stringify(result.artifact, null, 2)}\n`, "
 
 process.stdout.write(`${JSON.stringify({
   schemaVersion: "kova.channelCapabilityRun.v1",
-  proofMode: "baseline",
+  proofMode: "preflight",
   artifactPath,
   ownerArea: "OpenClaw",
   capabilities: result.rows.map((row) => ({
@@ -87,7 +87,7 @@ async function probeRuntimeChannelMessageContracts({ catalog: catalogValue, pack
     capabilities: groups.get("durable-final") ?? [],
     list: channelMessage.listDeclaredDurableFinalCapabilities,
     verify: (capabilities, proofs) => channelMessage.verifyDurableFinalCapabilityProofs({
-      adapterName: "Kova OpenClaw baseline",
+      adapterName: "Kova OpenClaw preflight",
       capabilities,
       proofs
     })
@@ -98,7 +98,7 @@ async function probeRuntimeChannelMessageContracts({ catalog: catalogValue, pack
     capabilities: groups.get("live-preview") ?? [],
     list: channelMessage.listDeclaredChannelMessageLiveCapabilities,
     verify: (capabilities, proofs) => channelMessage.verifyChannelMessageLiveCapabilityProofs({
-      adapterName: "Kova OpenClaw baseline",
+      adapterName: "Kova OpenClaw preflight",
       capabilities,
       proofs
     })
@@ -109,7 +109,7 @@ async function probeRuntimeChannelMessageContracts({ catalog: catalogValue, pack
     capabilities: groups.get("live-finalizer") ?? [],
     list: channelMessage.listDeclaredLivePreviewFinalizerCapabilities,
     verify: (capabilities, proofs) => channelMessage.verifyLivePreviewFinalizerCapabilityProofs({
-      adapterName: "Kova OpenClaw baseline",
+      adapterName: "Kova OpenClaw preflight",
       capabilities,
       proofs
     })
@@ -119,7 +119,7 @@ async function probeRuntimeChannelMessageContracts({ catalog: catalogValue, pack
     capabilities: groups.get("ack") ?? [],
     list: channelMessage.listDeclaredReceiveAckPolicies,
     verify: (receive, proofs) => channelMessage.verifyChannelMessageReceiveAckPolicyProofs({
-      adapterName: "Kova OpenClaw baseline",
+      adapterName: "Kova OpenClaw preflight",
       receive,
       proofs
     })
@@ -229,8 +229,8 @@ function buildResult({ catalog: catalogValue, runtimeContext, probe, error, time
         capabilityId: capability.id,
         required: true,
         status,
-        proofMode: "baseline",
-        summary: `OpenClaw runtime baseline ${capability.group}/${capability.id}`,
+        proofMode: "preflight",
+        summary: `OpenClaw runtime preflight ${capability.group}/${capability.id}`,
         reason: status === "passed" ? null : rowReason(capability, groupResult, probeError),
         ownerArea: "OpenClaw"
       });
@@ -241,7 +241,7 @@ function buildResult({ catalog: catalogValue, runtimeContext, probe, error, time
     ok,
     rows,
     artifact: {
-      schemaVersion: "kova.channelCapabilityBaselineArtifact.v1",
+      schemaVersion: "kova.channelCapabilityPreflightArtifact.v1",
       catalogId: catalogValue.id,
       catalogCapabilityCount: catalogValue.capabilities.length,
       runtimeContext: compactRuntimeContext(runtimeContext),

@@ -7,7 +7,7 @@
 
 ─── surfaces by owner ──────────────────────────────────────────────────────────
   ◆ OpenClaw  1 surface · 1 scenario
-    • channel-capability-baseline  1 scenario
+    • channel-capability-preflight  1 scenario
   ◆ agent-cli-gateway-client  1 surface · 1 scenario
     • agent-gateway-rpc-turn  1 scenario
   ◆ agent-runtime  1 surface · 9 scenarios

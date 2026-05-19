@@ -16,6 +16,7 @@ export const channelCapabilityGroups = [
 ];
 
 export const channelCapabilityProofModes = [
+  "preflight",
   "baseline",
   "deterministic-shim",
   "live-smoke",

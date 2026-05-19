@@ -1,6 +1,6 @@
 {
-  "id": "channel-capability-baseline",
-  "title": "Channel Capability Baseline",
+  "id": "channel-capability-preflight",
+  "title": "Channel Capability Preflight",
   "ownerArea": "OpenClaw",
   "description": "Validate the target OpenClaw runtime against the OpenClaw-owned message-channel capability catalog.",
   "processRoles": [
@@ -17,7 +17,7 @@
   ],
   "requirements": [
     {
-      "id": "baseline",
+      "id": "preflight",
       "states": [
         "fresh"
       ],

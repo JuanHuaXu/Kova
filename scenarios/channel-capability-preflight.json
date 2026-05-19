@@ -1,12 +1,12 @@
 {
-  "id": "channel-capability-baseline",
-  "surface": "channel-capability-baseline",
-  "title": "Channel Capability Baseline",
+  "id": "channel-capability-preflight",
+  "surface": "channel-capability-preflight",
+  "title": "Channel Capability Preflight",
   "objective": "Prove the target OpenClaw runtime exposes the shared message-channel capability contract expected by Kova before adapter-specific conformance runs.",
   "tags": [
     "channel",
     "capability",
-    "baseline",
+    "preflight",
     "contracts"
   ],
   "targetKinds": [
@@ -37,22 +37,22 @@
       "collectionIntent": "service-only"
     },
     {
-      "id": "channel-capability-baseline",
-      "title": "OpenClaw Channel Capability Baseline",
-      "intent": "Import the selected OpenClaw runtime's packaged channel-message contract helpers and emit one capability proof row per OpenClaw baseline capability.",
+      "id": "channel-capability-preflight",
+      "title": "OpenClaw Channel Capability Preflight",
+      "intent": "Import the selected OpenClaw runtime's packaged channel-message contract helpers and emit one preflight proof row per OpenClaw channel capability catalog entry.",
       "commands": [
-        "node {kovaRoot}/support/run-channel-capability-baseline.mjs --env {env} --artifact-dir {artifactDir} --timeout-ms 120000"
+        "node {kovaRoot}/support/run-channel-capability-preflight.mjs --env {env} --artifact-dir {artifactDir} --timeout-ms 120000"
       ],
       "evidence": [
         "OpenClaw runtime channel-message package export",
         "OpenClaw runtime channel contract helper results",
-        "baseline capability proof rows"
+        "preflight capability proof rows"
       ],
       "healthScope": "none",
       "collectionIntent": "skip-env"
     }
   ],
   "proves": [
-    "baseline"
+    "preflight"
   ]
 }

@@ -184,7 +184,7 @@ export async function runSelfCheck(flags = {}) {
       assertArrayNotEmpty(data.channelCapabilities, "plan channel capabilities");
       const openClawCatalog = data.channelCapabilityCatalog.find((catalog) => catalog.id === "openclaw-message");
       assertEqual(Boolean(openClawCatalog), true, "OpenClaw message capability catalog present");
-      assertEqual(openClawCatalog?.capabilities?.some((capability) => capability.group === "durable-final" && capability.id === "native-quote"), true, "OpenClaw native quote baseline capability present");
+      assertEqual(openClawCatalog?.capabilities?.some((capability) => capability.group === "durable-final" && capability.id === "native-quote"), true, "OpenClaw native quote catalog capability present");
       const telegramChannel = data.channelCapabilities.find((channel) => channel.id === "telegram");
       assertEqual(Boolean(telegramChannel), true, "telegram channel capability registry present");
       assertEqual(telegramChannel?.capabilities?.some((capability) => capability.group === "durable-final" && capability.id === "media"), true, "telegram media durable-final capability present");

@@ -382,8 +382,8 @@
       ]
     },
     {
-      "id": "channel-capability-baseline",
-      "title": "Channel Capability Baseline",
+      "id": "channel-capability-preflight",
+      "title": "Channel Capability Preflight",
       "ownerArea": "OpenClaw",
       "description": "Validate the target OpenClaw runtime against the OpenClaw-owned message-channel capability catalog.",
       "processRoles": [
@@ -400,7 +400,7 @@
       ],
       "requirements": [
         {
-          "id": "baseline",
+          "id": "preflight",
           "states": [
             "fresh"
           ],
@@ -2717,6 +2717,7 @@
           "sourceSymbol": "durableFinalDeliveryCapabilities.text",
           "baselineExpectation": "final assistant text can be rendered, sent, receipted, and committed through the shared message-channel path",
           "proofModes": [
+            "preflight",
             "baseline",
             "deterministic-shim",
             "live-smoke"
@@ -2730,6 +2731,7 @@
           "sourceSymbol": "durableFinalDeliveryCapabilities.media",
           "baselineExpectation": "generated media can be rendered, sent, receipted, and committed through the shared message-channel path",
           "proofModes": [
+            "preflight",
             "baseline",
             "deterministic-shim",
             "live-smoke"
@@ -2743,6 +2745,7 @@
           "sourceSymbol": "durableFinalDeliveryCapabilities.payload",
           "baselineExpectation": "reply payloads can be rendered into channel sends without losing text, media, or presentation data",
           "proofModes": [
+            "preflight",
             "baseline",
             "deterministic-shim"
           ],
@@ -2755,6 +2758,7 @@
           "sourceSymbol": "durableFinalDeliveryCapabilities.silent",
           "baselineExpectation": "silent delivery intent is carried through durable final send requirements and adapter context",
           "proofModes": [
+            "preflight",
             "baseline",
             "deterministic-shim"
           ],
@@ -2767,6 +2771,7 @@
           "sourceSymbol": "durableFinalDeliveryCapabilities.replyTo",
           "baselineExpectation": "reply target intent is carried through durable final send requirements and adapter context",
           "proofModes": [
+            "preflight",
             "baseline",
             "deterministic-shim"
           ],
@@ -2779,6 +2784,7 @@
           "sourceSymbol": "durableFinalDeliveryCapabilities.thread",
           "baselineExpectation": "thread target intent is carried through durable final send requirements and adapter context",
           "proofModes": [
+            "preflight",
             "baseline",
             "deterministic-shim"
           ],
@@ -2791,6 +2797,7 @@
           "sourceSymbol": "durableFinalDeliveryCapabilities.nativeQuote",
           "baselineExpectation": "native quote intent can be represented as a declared durable final capability and proven by adapters that support it",
           "proofModes": [
+            "preflight",
             "baseline",
             "deterministic-shim"
           ],
@@ -2803,6 +2810,7 @@
           "sourceSymbol": "durableFinalDeliveryCapabilities.messageSendingHooks",
           "baselineExpectation": "message sending hooks run around durable final sends without losing attempt context",
           "proofModes": [
+            "preflight",
             "baseline",
             "deterministic-shim"
           ],
@@ -2815,6 +2823,7 @@
           "sourceSymbol": "durableFinalDeliveryCapabilities.batch",
           "baselineExpectation": "multi-part durable final payloads preserve ordering and receipts",
           "proofModes": [
+            "preflight",
             "baseline",
             "deterministic-shim"
           ],
@@ -2827,6 +2836,7 @@
           "sourceSymbol": "durableFinalDeliveryCapabilities.reconcileUnknownSend",
           "baselineExpectation": "ambiguous durable send outcomes can be reconciled without duplicate or lost final delivery",
           "proofModes": [
+            "preflight",
             "baseline",
             "deterministic-shim"
           ],
@@ -2839,6 +2849,7 @@
           "sourceSymbol": "durableFinalDeliveryCapabilities.afterSendSuccess",
           "baselineExpectation": "after-send-success lifecycle hooks run after successful platform send attempts",
           "proofModes": [
+            "preflight",
             "baseline",
             "deterministic-shim"
           ],
@@ -2851,6 +2862,7 @@
           "sourceSymbol": "durableFinalDeliveryCapabilities.afterCommit",
           "baselineExpectation": "after-commit lifecycle hooks run after durable final receipts are committed",
           "proofModes": [
+            "preflight",
             "baseline",
             "deterministic-shim"
           ],
@@ -2863,6 +2875,7 @@
           "sourceSymbol": "channelMessageLiveCapabilities.draftPreview",
           "baselineExpectation": "draft preview state can be declared and proven through the shared live message adapter contract",
           "proofModes": [
+            "preflight",
             "baseline",
             "deterministic-shim",
             "live-smoke"
@@ -2876,6 +2889,7 @@
           "sourceSymbol": "channelMessageLiveCapabilities.previewFinalization",
           "baselineExpectation": "preview state can transition to final delivery through the shared live message adapter contract",
           "proofModes": [
+            "preflight",
             "baseline",
             "deterministic-shim",
             "live-smoke"
@@ -2889,6 +2903,7 @@
           "sourceSymbol": "channelMessageLiveCapabilities.progressUpdates",
           "baselineExpectation": "progress updates can be represented and proven through the shared live message adapter contract",
           "proofModes": [
+            "preflight",
             "baseline",
             "deterministic-shim",
             "live-smoke"
@@ -2902,6 +2917,7 @@
           "sourceSymbol": "channelMessageLiveCapabilities.nativeStreaming",
           "baselineExpectation": "native streaming can be declared and proven by adapters that support streaming updates",
           "proofModes": [
+            "preflight",
             "baseline",
             "deterministic-shim",
             "live-smoke"
@@ -2915,6 +2931,7 @@
           "sourceSymbol": "channelMessageLiveCapabilities.quietFinalization",
           "baselineExpectation": "quiet finalization can be declared and proven by adapters that suppress noisy final updates",
           "proofModes": [
+            "preflight",
             "baseline",
             "deterministic-shim",
             "live-smoke"
@@ -2928,6 +2945,7 @@
           "sourceSymbol": "livePreviewFinalizerCapabilities.finalEdit",
           "baselineExpectation": "live preview finalizers can edit an existing preview into the final message",
           "proofModes": [
+            "preflight",
             "baseline",
             "deterministic-shim",
             "live-smoke"
@@ -2941,6 +2959,7 @@
           "sourceSymbol": "livePreviewFinalizerCapabilities.normalFallback",
           "baselineExpectation": "live preview finalizers can fall back to a normal final send when edit finalization is unavailable",
           "proofModes": [
+            "preflight",
             "baseline",
             "deterministic-shim",
             "live-smoke"
@@ -2954,6 +2973,7 @@
           "sourceSymbol": "livePreviewFinalizerCapabilities.discardPending",
           "baselineExpectation": "live preview finalizers can discard pending preview state when final delivery should not reuse it",
           "proofModes": [
+            "preflight",
             "baseline",
             "deterministic-shim",
             "live-smoke"
@@ -2967,6 +2987,7 @@
           "sourceSymbol": "livePreviewFinalizerCapabilities.previewReceipt",
           "baselineExpectation": "live preview finalizers can carry preview receipts into finalization",
           "proofModes": [
+            "preflight",
             "baseline",
             "deterministic-shim",
             "live-smoke"
@@ -2980,6 +3001,7 @@
           "sourceSymbol": "livePreviewFinalizerCapabilities.retainOnAmbiguousFailure",
           "baselineExpectation": "live preview finalizers can retain preview state when finalization fails ambiguously",
           "proofModes": [
+            "preflight",
             "baseline",
             "deterministic-shim",
             "live-smoke"
@@ -2993,6 +3015,7 @@
           "sourceSymbol": "channelMessageReceiveAckPolicies.after_receive_record",
           "baselineExpectation": "receive acknowledgement can run after the inbound message is recorded",
           "proofModes": [
+            "preflight",
             "baseline",
             "deterministic-shim",
             "live-smoke"
@@ -3006,6 +3029,7 @@
           "sourceSymbol": "channelMessageReceiveAckPolicies.after_agent_dispatch",
           "baselineExpectation": "receive acknowledgement can run after the inbound message is dispatched to the agent path",
           "proofModes": [
+            "preflight",
             "baseline",
             "deterministic-shim",
             "live-smoke"
@@ -3019,6 +3043,7 @@
           "sourceSymbol": "channelMessageReceiveAckPolicies.after_durable_send",
           "baselineExpectation": "receive acknowledgement can run after durable outbound response send",
           "proofModes": [
+            "preflight",
             "baseline",
             "deterministic-shim",
             "live-smoke"
@@ -3032,6 +3057,7 @@
           "sourceSymbol": "channelMessageReceiveAckPolicies.manual",
           "baselineExpectation": "manual receive acknowledgement can be declared as plugin-owned behavior and proven by the adapter",
           "proofModes": [
+            "preflight",
             "baseline",
             "deterministic-shim",
             "live-smoke"
@@ -4509,14 +4535,14 @@
       ]
     },
     {
-      "id": "channel-capability-baseline",
-      "surface": "channel-capability-baseline",
-      "title": "Channel Capability Baseline",
+      "id": "channel-capability-preflight",
+      "surface": "channel-capability-preflight",
+      "title": "Channel Capability Preflight",
       "objective": "Prove the target OpenClaw runtime exposes the shared message-channel capability contract expected by Kova before adapter-specific conformance runs.",
       "tags": [
         "channel",
         "capability",
-        "baseline",
+        "preflight",
         "contracts"
       ],
       "targetKinds": [
@@ -4547,23 +4573,23 @@
           "collectionIntent": "service-only"
         },
         {
-          "id": "channel-capability-baseline",
-          "title": "OpenClaw Channel Capability Baseline",
-          "intent": "Import the selected OpenClaw runtime's packaged channel-message contract helpers and emit one capability proof row per OpenClaw baseline capability.",
+          "id": "channel-capability-preflight",
+          "title": "OpenClaw Channel Capability Preflight",
+          "intent": "Import the selected OpenClaw runtime's packaged channel-message contract helpers and emit one preflight proof row per OpenClaw channel capability catalog entry.",
           "commands": [
-            "node {kovaRoot}/support/run-channel-capability-baseline.mjs --env {env} --artifact-dir {artifactDir} --timeout-ms 120000"
+            "node {kovaRoot}/support/run-channel-capability-preflight.mjs --env {env} --artifact-dir {artifactDir} --timeout-ms 120000"
           ],
           "evidence": [
             "OpenClaw runtime channel-message package export",
             "OpenClaw runtime channel contract helper results",
-            "baseline capability proof rows"
+            "preflight capability proof rows"
           ],
           "healthScope": "none",
           "collectionIntent": "skip-env"
         }
       ],
       "proves": [
-        "baseline"
+        "preflight"
       ]
     },
     {
@@ -8473,12 +8499,12 @@
         ]
       },
       {
-        "id": "channel-capability-baseline",
-        "title": "Channel Capability Baseline",
+        "id": "channel-capability-preflight",
+        "title": "Channel Capability Preflight",
         "ownerArea": "OpenClaw",
         "scenarioCount": 1,
         "scenarios": [
-          "channel-capability-baseline"
+          "channel-capability-preflight"
         ]
       },
       {
@@ -8762,8 +8788,8 @@
         "surface": "bundled-runtime-deps"
       },
       {
-        "scenario": "channel-capability-baseline",
-        "surface": "channel-capability-baseline"
+        "scenario": "channel-capability-preflight",
+        "surface": "channel-capability-preflight"
       },
       {
         "scenario": "cross-platform-smoke",

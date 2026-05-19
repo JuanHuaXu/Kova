@@ -158,12 +158,16 @@ function formatChannelCapabilityProofSection(proof) {
   }
   const gaps = [...proof.failedRequired, ...proof.missingRequired].slice(0, 8);
   if (gaps.length > 0) {
+    if (gaps.some((gap) => gap.proofMode === "preflight")) {
+      lines.push("");
+      lines.push("- Preflight gaps mean the selected OpenClaw runtime package contract differs from Kova's expected channel capability catalog. Use `kova inventory plan --openclaw-repo <path> --json` to compare the catalog with source.");
+    }
     lines.push("");
-    lines.push("| Channel | Capability | Status | Reason |");
-    lines.push("|---|---|---|---|");
+    lines.push("| Channel | Capability | Proof | Status | Reason |");
+    lines.push("|---|---|---|---|---|");
     for (const gap of gaps) {
       const capability = [gap.group, gap.capabilityId].filter(Boolean).join("/") || gap.id;
-      lines.push(`| ${tableCell(gap.channelId)} | ${tableCell(capability)} | ${tableCell(gap.status)} | ${tableCell(gap.reason ?? gap.summary ?? "see JSON")} |`);
+      lines.push(`| ${tableCell(gap.channelId)} | ${tableCell(capability)} | ${tableCell(gap.proofMode ?? "unknown")} | ${tableCell(gap.status)} | ${tableCell(gap.reason ?? gap.summary ?? "see JSON")} |`);
     }
   }
   lines.push("");
