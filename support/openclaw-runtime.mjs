@@ -7,7 +7,7 @@ const GATEWAY_PROTOCOL_MIN_VERSION = 3;
 const GATEWAY_PROTOCOL_MAX_VERSION = 4;
 const GATEWAY_RPC_CLIENT_ID = "gateway-client";
 const GATEWAY_RPC_CLIENT_MODE = "backend";
-const GATEWAY_OPERATOR_SCOPES = ["operator.read", "operator.write"];
+const GATEWAY_OPERATOR_SCOPES = ["operator.read", "operator.write", "operator.admin"];
 
 export function prepareOpenClawRuntimeFromOcmEnv(envName) {
   if (!envName) {
