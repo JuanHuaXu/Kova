@@ -99,7 +99,7 @@
     {
       "id": "channel-model-turn-media-final",
       "title": "Run Media Final Model Turn",
-      "intent": "Call the Kova channel plugin over Gateway RPC so OpenClaw handles one inbound media-final channel event, calls the mock provider, sends generated media through the channel adapter, and records media preservation, receipt, duplicate, and terminal invariants.",
+      "intent": "Call the Kova channel plugin over Gateway RPC so OpenClaw handles one inbound media-final channel event, calls the mock provider, stages local media for outbound delivery, sends it through the channel adapter, and records receipt, duplicate, and terminal invariants.",
       "commands": [
         "node {kovaRoot}/support/run-channel-model-turn-baseline.mjs --env {env} --artifact-dir {artifactDir} --case media-final --skip-shared-baseline true --continue-on-model-turn-failure true --timeout-ms 120000"
       ],

@@ -1,4 +1,4 @@
-import { unlinkSync, writeFileSync } from "node:fs";
+import { existsSync, unlinkSync, writeFileSync } from "node:fs";
 import { definePluginEntry } from "openclaw/plugin-sdk/core";
 import {
   classifyDurableSendRecoveryState,
@@ -395,7 +395,7 @@ async function runModelTurnCase(testCase) {
     invariant(`${testCase.id}:reply-to`, !testCase.expectReplyToId || firstFinal?.replyToId === inboundEventId, `${testCase.id} preserved reply target`),
     invariant(`${testCase.id}:thread`, !testCase.threadId || firstFinal?.threadId === testCase.threadId, `${testCase.id} preserved thread target`),
     invariant(`${testCase.id}:silent`, testCase.silent !== true || firstFinal?.silent === true, `${testCase.id} preserved silent delivery intent`),
-    invariant(`${testCase.id}:media-url`, !testCase.expectedMediaUrl || firstFinal?.mediaUrl === testCase.expectedMediaUrl, `${testCase.id} preserved media URL`),
+    invariant(`${testCase.id}:media-url`, !testCase.expectedLocalMediaSource || isManagedOutboundMedia(firstFinal?.mediaUrl, testCase.expectedLocalMediaSource), `${testCase.id} staged local media for outbound delivery`),
     invariant(`${testCase.id}:after-send-success`, testCase.expectHooks !== true || caseOutboundRecords.some((record) => record.kind === "after-send-success"), `${testCase.id} ran after-send-success hook`),
     invariant(`${testCase.id}:after-commit`, testCase.expectHooks !== true || caseOutboundRecords.some((record) => record.kind === "after-commit"), `${testCase.id} ran after-commit hook`),
     invariant(`${testCase.id}:terminal-return`, !error, `${testCase.id} returned from OpenClaw dispatch`)
@@ -452,7 +452,7 @@ const modelTurnCaseDefinitions = [
     responseText: "MEDIA:/tmp/kova-channel-model-turn-media.png\nKOVA_AGENT_MEDIA_OK",
     expectedText: "KOVA_AGENT_MEDIA_OK",
     expectedKind: "media",
-    expectedMediaUrl: "/tmp/kova-channel-model-turn-media.png",
+    expectedLocalMediaSource: "/tmp/kova-channel-model-turn-media.png",
     mediaFixturePath: "/tmp/kova-channel-model-turn-media.png",
     expectedFinalSendCount: 1,
     expectReplyToId: true,
@@ -1003,6 +1003,31 @@ function modelTurnPrompt(testCase) {
 
 function isFinalOutboundRecord(record) {
   return ["text", "media", "payload"].includes(record?.kind);
+}
+
+function isManagedOutboundMedia(mediaUrl, sourcePath) {
+  if (typeof mediaUrl !== "string" || mediaUrl.length === 0) {
+    return false;
+  }
+  const normalizedMediaUrl = mediaUrl.replaceAll("\\", "/");
+  if (!normalizedMediaUrl.includes("/.openclaw/media/outbound/")) {
+    return false;
+  }
+  if (!existsSync(mediaUrl)) {
+    return false;
+  }
+  const sourceName = sourcePath.replaceAll("\\", "/").split("/").pop();
+  const outboundName = normalizedMediaUrl.split("/").pop();
+  if (!sourceName || !outboundName) {
+    return false;
+  }
+  const dotIndex = sourceName.lastIndexOf(".");
+  if (dotIndex <= 0) {
+    return outboundName === sourceName || outboundName.startsWith(`${sourceName}---`);
+  }
+  const stem = sourceName.slice(0, dotIndex);
+  const extension = sourceName.slice(dotIndex);
+  return outboundName === sourceName || (outboundName.startsWith(`${stem}---`) && outboundName.endsWith(extension));
 }
 
 function writeMediaFixture(path) {
