@@ -56,6 +56,83 @@ const defaultThresholds = {
   nodeProfileTopFunctionMs: 5000
 };
 
+const COMPARE_METRICS = [
+  "peakRssMb",
+  "cpuPercentMax",
+  "coldReadyMs",
+  "warmReadyMs",
+  "upgradeMs",
+  "statusMs",
+  "pluginsListMs",
+  "modelsListMs",
+  "agentTurnMs",
+  "coldAgentTurnMs",
+  "warmAgentTurnMs",
+  "agentColdWarmDeltaMs",
+  "coldPreProviderMs",
+  "warmPreProviderMs",
+  "agentColdWarmPreProviderDeltaMs",
+  "coldPreProviderAttributedMs",
+  "warmPreProviderAttributedMs",
+  "coldPreProviderUnattributedMs",
+  "warmPreProviderUnattributedMs",
+  "coldPreProviderAttributionCoverage",
+  "warmPreProviderAttributionCoverage",
+  "coldProviderFinalMs",
+  "warmProviderFinalMs",
+  "agentMetadataScanCount",
+  "agentMetadataScanTotalMs",
+  "agentMetadataScanMaxMs",
+  "agentEventLoopMaxMs",
+  "agentEventLoopSampleCount",
+  "agentSessionPollCount",
+  "agentSessionPollErrorCount",
+  "tcpConnectMaxMs",
+  "readinessListeningMs",
+  "readinessHealthReadyMs",
+  "startupHealthP95Ms",
+  "postReadyHealthP95Ms",
+  "startupHealthFailures",
+  "postReadyHealthFailures",
+  "finalHealthFailures",
+  "readinessFailures",
+  "missingDependencyErrors",
+  "pluginLoadFailures",
+  "gatewayRestartCount",
+  "metadataScanMentions",
+  "configNormalizationMentions",
+  "providerLoadMentions",
+  "modelCatalogMentions",
+  "providerTimeoutMentions",
+  "eventLoopDelayMentions",
+  "v8ReportCount",
+  "heapSnapshotCount",
+  "diagnosticArtifactBytes",
+  "nodeCpuProfileCount",
+  "nodeHeapProfileCount",
+  "nodeTraceEventCount",
+  "nodeProfileArtifactBytes",
+  "nodeProfileTopFunctionMs",
+  "heapSnapshotBytes",
+  "resourceSampleCount",
+  "resourcePeakTrackedRssMb",
+  "resourceCpuPercentMaxTracked",
+  "resourcePeakCommandTreeRssMb",
+  "resourcePeakGatewayRssMb",
+  "openclawTimelineEventCount",
+  "openclawTimelineParseErrors",
+  "openclawSlowestSpanMs",
+  "openclawRepeatedSpanCount",
+  "openclawEventLoopMaxMs",
+  "openclawProviderRequestMaxMs",
+  "openclawChildProcessFailedCount",
+  "pluginMetadataScanCount",
+  "configNormalizationCount",
+  "runtimeDepsStagingMs",
+  "eventLoopDelayMs",
+  "providerModelTimingMs"
+];
+
 export function compareReports(baseline, current, options = {}) {
   const thresholds = resolveThresholds(options.thresholds);
   const baselineSummary = buildReportSummary(baseline);
@@ -558,7 +635,11 @@ function statusRank(status) {
 
 function metricRegressions(baselineRecords, currentRecords, thresholds) {
   const regressions = [];
+  const metricIds = compareMetricIdsForGroups(baselineRecords, currentRecords);
   for (const [metric, tolerance] of Object.entries(thresholds)) {
+    if (!metricIds.includes(metric)) {
+      continue;
+    }
     const baseline = summarizeMetricRecords(baselineRecords, metric);
     const current = summarizeMetricRecords(currentRecords, metric);
     if (usesRepeatedMaxOnly(baseline, current, tolerance)) {
@@ -606,82 +687,7 @@ function addIncreaseRegression(regressions, baseline, current, metric, tolerance
 
 function metricDeltas(baselineRecords, currentRecords, thresholds = {}) {
   const metrics = {};
-  for (const metric of [
-    "peakRssMb",
-    "cpuPercentMax",
-    "coldReadyMs",
-    "warmReadyMs",
-    "upgradeMs",
-    "statusMs",
-    "pluginsListMs",
-    "modelsListMs",
-    "agentTurnMs",
-    "coldAgentTurnMs",
-    "warmAgentTurnMs",
-    "agentColdWarmDeltaMs",
-    "coldPreProviderMs",
-    "warmPreProviderMs",
-    "agentColdWarmPreProviderDeltaMs",
-    "coldPreProviderAttributedMs",
-    "warmPreProviderAttributedMs",
-    "coldPreProviderUnattributedMs",
-    "warmPreProviderUnattributedMs",
-    "coldPreProviderAttributionCoverage",
-    "warmPreProviderAttributionCoverage",
-    "coldProviderFinalMs",
-    "warmProviderFinalMs",
-    "agentMetadataScanCount",
-    "agentMetadataScanTotalMs",
-    "agentMetadataScanMaxMs",
-    "agentEventLoopMaxMs",
-    "agentEventLoopSampleCount",
-    "agentSessionPollCount",
-    "agentSessionPollErrorCount",
-    "tcpConnectMaxMs",
-    "readinessListeningMs",
-    "readinessHealthReadyMs",
-    "startupHealthP95Ms",
-    "postReadyHealthP95Ms",
-    "startupHealthFailures",
-    "postReadyHealthFailures",
-    "finalHealthFailures",
-    "readinessFailures",
-    "missingDependencyErrors",
-    "pluginLoadFailures",
-    "gatewayRestartCount",
-    "metadataScanMentions",
-    "configNormalizationMentions",
-    "providerLoadMentions",
-    "modelCatalogMentions",
-    "providerTimeoutMentions",
-    "eventLoopDelayMentions",
-    "v8ReportCount",
-    "heapSnapshotCount",
-    "diagnosticArtifactBytes",
-    "nodeCpuProfileCount",
-    "nodeHeapProfileCount",
-    "nodeTraceEventCount",
-    "nodeProfileArtifactBytes",
-    "nodeProfileTopFunctionMs",
-    "heapSnapshotBytes",
-    "resourceSampleCount",
-    "resourcePeakTrackedRssMb",
-    "resourceCpuPercentMaxTracked",
-    "resourcePeakCommandTreeRssMb",
-    "resourcePeakGatewayRssMb",
-    "openclawTimelineEventCount",
-    "openclawTimelineParseErrors",
-    "openclawSlowestSpanMs",
-    "openclawRepeatedSpanCount",
-    "openclawEventLoopMaxMs",
-    "openclawProviderRequestMaxMs",
-    "openclawChildProcessFailedCount",
-    "pluginMetadataScanCount",
-    "configNormalizationCount",
-    "runtimeDepsStagingMs",
-    "eventLoopDelayMs",
-    "providerModelTimingMs"
-  ]) {
+  for (const metric of compareMetricIdsForGroups(baselineRecords, currentRecords)) {
     const baseline = summarizeMetricRecords(baselineRecords, metric);
     const current = summarizeMetricRecords(currentRecords, metric);
     const tolerance = typeof thresholds[metric] === "number" ? thresholds[metric] : null;
@@ -697,6 +703,33 @@ function metricDeltas(baselineRecords, currentRecords, thresholds = {}) {
     }
   }
   return metrics;
+}
+
+function compareMetricIdsForGroups(baselineRecords, currentRecords) {
+  const records = [...(baselineRecords ?? []), ...(currentRecords ?? [])];
+  return COMPARE_METRICS.filter((metric) => {
+    if (metric !== "resourcePeakGatewayRssMb") {
+      return true;
+    }
+    return !metricSeriesEquivalent(records, "peakRssMb", "resourcePeakGatewayRssMb");
+  });
+}
+
+function metricSeriesEquivalent(records, leftMetric, rightMetric) {
+  const pairs = [];
+  for (const record of records ?? []) {
+    const measurements = record.measurements ?? {};
+    const left = measurementMetricValue(measurements, leftMetric);
+    const right = measurementMetricValue(measurements, rightMetric);
+    if (typeof left !== "number" && typeof right !== "number") {
+      continue;
+    }
+    if (typeof left !== "number" || typeof right !== "number") {
+      return false;
+    }
+    pairs.push([left, right]);
+  }
+  return pairs.length > 0 && pairs.every(([left, right]) => left === right);
 }
 
 function addMetricDelta(metrics, id, baseline, current, stat, tolerance = null) {

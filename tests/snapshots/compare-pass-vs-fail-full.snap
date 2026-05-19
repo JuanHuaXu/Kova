@@ -30,7 +30,6 @@ cold.ready.ms         158 ms        703 ms        +344.9%      5,000 ms   PASS
 nodeProfileAr…   172,827,123   123,137,894         -28.8%   104,857,600   PASS
 plugins.list.…      1,145 ms      1,438 ms         +25.6%      1,000 ms   PASS
 gateway.rss.mb        287 MB        349 MB         +21.6%        100 MB   PASS
-gateway.rss.mb        287 MB        349 MB         +21.6%        100 MB   PASS
 nodeTraceEven…             7             6         -14.3%             —   PASS
 resource.samp…            22            20          -9.1%             —   PASS
 status.ms           2,092 ms      2,237 ms          +6.9%      1,000 ms   PASS

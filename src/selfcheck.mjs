@@ -66,6 +66,7 @@ import {
 } from "./command-results.mjs";
 import { compareReports, renderCompareSummary } from "./reporting/compare.mjs";
 import { scenarioMetricRows } from "./reporting/compare-aggregate.mjs";
+import { renderAssessment } from "./reporting/render-assessment.mjs";
 import {
   ocmAt,
   ocmEnvDestroy,
@@ -533,6 +534,8 @@ export async function runSelfCheck(flags = {}) {
     checks.push(defaultGatewayResourceRoleCheck());
     checks.push(compareRepeatAggregationCheck());
     checks.push(compareMetricOrderingCheck());
+    checks.push(compareGatewayRssDedupeCheck());
+    checks.push(fixtureAccountingRenderCheck());
 
     const receiptCheck = await jsonCommandCheck(
       "dry-run-report-json",
@@ -980,6 +983,114 @@ function compareMetricOrderingCheck() {
       id: "compare-metric-ordering",
       status: "FAIL",
       command: "evaluate compare metric row ordering",
+      durationMs: 0,
+      message: error.message
+    };
+  }
+}
+
+function compareGatewayRssDedupeCheck() {
+  try {
+    const baseline = syntheticPerformanceReport({
+      runId: "baseline-gateway-rss",
+      platform: { os: "darwin", arch: "arm64", release: "test", node: "v24.0.0" },
+      target: "npm:2026.5.12",
+      records: [
+        syntheticPerformanceRecord(1, {
+          peakRssMb: 640,
+          resourcePeakGatewayRssMb: 640,
+          resourcePeakTrackedRssMb: 1100,
+          resourcePrimaryRole: "gateway",
+          resourceGateKind: "role"
+        })
+      ]
+    });
+    const current = syntheticPerformanceReport({
+      runId: "current-gateway-rss",
+      platform: baseline.platform,
+      target: "npm:2026.5.18",
+      records: [
+        syntheticPerformanceRecord(1, {
+          peakRssMb: 660,
+          resourcePeakGatewayRssMb: 660,
+          resourcePeakTrackedRssMb: 1200,
+          resourcePrimaryRole: "gateway",
+          resourceGateKind: "role"
+        })
+      ]
+    });
+    const comparison = compareReports(baseline, current, {
+      thresholds: { peakRssMb: 100, resourcePeakGatewayRssMb: 100, resourcePeakTrackedRssMb: 100 }
+    });
+    const scenario = comparison.scenarios.find((item) => item.key === "fresh-install:fresh");
+    assertEqual(Boolean(scenario.metrics.peakRssMb), true, "primary gateway rss retained");
+    assertEqual(Boolean(scenario.metrics.resourcePeakGatewayRssMb), false, "duplicate role gateway rss hidden");
+    assertEqual(Boolean(scenario.metrics.resourcePeakTrackedRssMb), true, "tracked total rss remains available");
+    assertEqual(scenario.regressions.some((regression) => regression.metric === "resourcePeakGatewayRssMb"), false, "duplicate gateway rss threshold not evaluated");
+    return {
+      id: "compare-gateway-rss-dedupe",
+      status: "PASS",
+      command: "evaluate compare gateway RSS dedupe",
+      durationMs: 0
+    };
+  } catch (error) {
+    return {
+      id: "compare-gateway-rss-dedupe",
+      status: "FAIL",
+      command: "evaluate compare gateway RSS dedupe",
+      durationMs: 0,
+      message: error.message
+    };
+  }
+}
+
+function fixtureAccountingRenderCheck() {
+  try {
+    const report = syntheticPerformanceReport({
+      runId: "fixture-accounting-render",
+      platform: { os: "darwin", arch: "arm64", release: "test", node: "v24.0.0" },
+      target: "runtime:stable",
+      records: [
+        syntheticPerformanceRecord(1, { coldReadyMs: 100, peakRssMb: 100 })
+      ]
+    });
+    report.records[0].state = { id: "large-memory-session", traits: ["session-state"] };
+    report.records[0].stateFixtureAccounting = {
+      schemaVersion: "kova.fixtureAccounting.v1",
+      stateId: "large-memory-session",
+      kind: "openclaw-session-state",
+      files: [
+        { id: "source-session-store", exists: true, shape: { kind: "openclaw-session-store", entryCount: 80 }, sizeBytes: 1024 },
+        { id: "canonical-session-store", exists: true, shape: { kind: "openclaw-session-store", entryCount: 80 }, sizeBytes: 1024 },
+        { id: "legacy-session-store", exists: true, shape: { kind: "openclaw-session-store", entryCount: 80 }, sizeBytes: 1024 },
+        { id: "source-memory", exists: true, shape: { kind: "kova-memory-fixture", itemCount: 1200 }, sizeBytes: 2048 },
+        { id: "canonical-memory", exists: true, shape: { kind: "kova-memory-fixture", itemCount: 1200 }, sizeBytes: 2048 },
+        { id: "legacy-memory", exists: true, shape: { kind: "kova-memory-fixture", itemCount: 1200 }, sizeBytes: 2048 }
+      ],
+      findings: []
+    };
+    const rendered = renderAssessment(report, { full: true, color: "never" }, process.env, process.stdout);
+    assertEqual(rendered.includes("Fixture Accounting"), true, "fixture accounting section rendered");
+    assertEqual(rendered.includes("sessions:"), true, "session accounting line rendered");
+    assertEqual(rendered.includes("store[80] source"), true, "source session store summarized");
+    assertEqual(rendered.includes("store[80] canonical"), true, "canonical session store summarized");
+    assertEqual(rendered.includes("store[80] legacy"), true, "legacy session store summarized");
+    assertEqual(rendered.includes("memory:"), true, "memory accounting line rendered");
+    assertEqual(rendered.includes("items[1200] source"), true, "source memory summarized");
+    assertEqual(rendered.includes("items[1200] canonical"), true, "canonical memory summarized");
+    assertEqual(rendered.includes("items[1200] legacy"), true, "legacy memory summarized");
+    assertEqual(rendered.includes("sessionId"), false, "fixture payload keys not dumped");
+    return {
+      id: "fixture-accounting-render",
+      status: "PASS",
+      command: "render fixture accounting summary",
+      durationMs: 0
+    };
+  } catch (error) {
+    return {
+      id: "fixture-accounting-render",
+      status: "FAIL",
+      command: "render fixture accounting summary",
       durationMs: 0,
       message: error.message
     };

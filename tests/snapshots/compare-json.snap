@@ -1466,27 +1466,6 @@
             "max": 555.7
           }
         },
-        "resourcePeakGatewayRssMb": {
-          "stat": "median",
-          "baseline": 286.8,
-          "current": 348.8,
-          "delta": 62,
-          "tolerance": 100,
-          "baselineStats": {
-            "count": 1,
-            "min": 286.8,
-            "median": 286.8,
-            "p95": null,
-            "max": 286.8
-          },
-          "currentStats": {
-            "count": 1,
-            "min": 348.8,
-            "median": 348.8,
-            "p95": null,
-            "max": 348.8
-          }
-        },
         "openclawTimelineEventCount": {
           "stat": "median",
           "baseline": 0,
