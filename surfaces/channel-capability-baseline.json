@@ -2,7 +2,7 @@
   "id": "channel-capability-baseline",
   "title": "Channel Capability Baseline",
   "ownerArea": "OpenClaw",
-  "description": "Validate the OpenClaw-owned message-channel capability catalog against the shared channel contract declarations and baseline contract tests.",
+  "description": "Validate the target OpenClaw runtime against the OpenClaw-owned message-channel capability catalog.",
   "processRoles": [
     "command-tree"
   ],
@@ -22,6 +22,9 @@
         "fresh"
       ],
       "targetKinds": [
+        "npm",
+        "release",
+        "runtime",
         "local-build"
       ],
       "metrics": []

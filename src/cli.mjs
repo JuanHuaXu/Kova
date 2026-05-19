@@ -85,6 +85,7 @@ Notes:
   Kova reports on OpenClaw behavior, not OCM behavior.
   run is dry-run/report-only unless --execute is passed.
   inventory is planner-only and reports discovered OpenClaw capabilities that are not mapped to Kova surfaces.
+  inventory plan also compares Kova's channel capability catalog to OpenClaw source when --openclaw-repo is provided.
   inventory repeated-work reports duplicated scenario commands and minimum collector pressure.
   inventory package-script discovery defaults to --script-scope product; use all or none to widen or disable it.
   Executed exhaustive matrix runs require --allow-exhaustive.

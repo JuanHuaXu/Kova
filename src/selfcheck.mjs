@@ -7142,6 +7142,7 @@ async function inventoryPlanCheck(tmp) {
   await mkdir(binDir, { recursive: true });
   await mkdir(join(repoDir, "plugins", "bundled"), { recursive: true });
   await mkdir(join(repoDir, "extensions", "dashboard"), { recursive: true });
+  await mkdir(join(repoDir, "src", "channels", "message"), { recursive: true });
   await writeFile(openclawBin, `#!/bin/sh
 case "$1" in
   --help)
@@ -7189,6 +7190,44 @@ esac
     description: "Dashboard extension",
     openclawExtension: true
   }, null, 2)}\n`, "utf8");
+  await writeFile(join(repoDir, "src", "channels", "message", "types.ts"), `export const durableFinalDeliveryCapabilities = [
+  "text",
+  "media",
+  "payload",
+  "silent",
+  "replyTo",
+  "thread",
+  "nativeQuote",
+  "messageSendingHooks",
+  "batch",
+  "reconcileUnknownSend",
+  "afterSendSuccess",
+  "afterCommit"
+] as const;
+
+export const channelMessageLiveCapabilities = [
+  "draftPreview",
+  "previewFinalization",
+  "progressUpdates",
+  "nativeStreaming",
+  "quietFinalization"
+] as const;
+
+export const livePreviewFinalizerCapabilities = [
+  "finalEdit",
+  "normalFallback",
+  "discardPending",
+  "previewReceipt",
+  "retainOnAmbiguousFailure"
+] as const;
+
+export const channelMessageReceiveAckPolicies = [
+  "after_receive_record",
+  "after_agent_dispatch",
+  "after_durable_send",
+  "manual"
+] as const;
+`, "utf8");
 
   return jsonCommandCheck(
     "inventory-plan-json",
@@ -7198,6 +7237,8 @@ esac
       assertEqual(data.sources?.find((source) => source.id === "openclaw-help")?.status, "scanned", "inventory help source");
       assertEqual(data.sources?.find((source) => source.id === "package-scripts")?.status, "scanned", "inventory package source");
       assertEqual(data.sources?.find((source) => source.id === "manifests")?.status, "scanned", "inventory manifests source");
+      assertEqual(data.sources?.find((source) => source.id === "channel-capability-catalog")?.status, "matched", "inventory channel capability source catalog");
+      assertEqual(data.channelCapabilityCatalog?.ok, true, "inventory channel capability catalog source comparison");
       assertEqual(data.sources?.find((source) => source.id === "package-scripts")?.includedScriptCount, 1, "inventory product script filter");
       assertEqual(data.capabilities?.some((capability) => capability.id === "cli:dashboard" && capability.matchedSurfaceIds?.includes("dashboard")), true, "dashboard command mapped");
       assertEqual(data.capabilities?.some((capability) => capability.id === "cli:Hint"), false, "help parser ignores help prose");

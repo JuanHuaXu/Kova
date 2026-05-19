@@ -111,6 +111,10 @@ kova matrix plan --profile smoke  --target runtime:stable --json
 kova matrix run  --profile smoke  --target runtime:stable --execute --json
 ```
 
+`inventory plan --openclaw-repo` includes a source/catalog drift check for the
+OpenClaw message-channel capability catalog. Runtime scenarios do not read the
+OpenClaw source tree; they probe the selected release-shaped package.
+
 Repo-local agent skills ship in `.agents/skills/`:
 
 - `kova-operator` — benchmark workflows, evidence rules, report handoff.

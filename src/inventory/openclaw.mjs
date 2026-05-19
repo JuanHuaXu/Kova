@@ -4,6 +4,7 @@ import { quoteShell, runCommand } from "../commands.mjs";
 import { positiveIntegerFlag } from "../run/options.mjs";
 import { resolveFromCwd } from "../cli.mjs";
 import { loadRegistryContext } from "../registries/context.mjs";
+import { discoverOpenClawChannelCapabilityCatalogSource } from "./channel-capability-source.mjs";
 
 const inventorySchemaVersion = "kova.inventory.plan.v1";
 const manifestSearchDirs = ["apps", "extensions", "packages", "plugins", "src"];
@@ -139,6 +140,13 @@ export async function buildOpenClawInventoryPlan(flags = {}) {
   sources.push(...repoInventory.sources);
   capabilities.push(...repoInventory.capabilities);
 
+  const openClawChannelCatalog = registry.channelCapabilityCatalog.find((catalog) => catalog.id === "openclaw-message");
+  const channelCatalogInventory = await discoverOpenClawChannelCapabilityCatalogSource({
+    repoPath,
+    catalog: openClawChannelCatalog
+  });
+  sources.push(channelCatalogInventory.source);
+
   const modeledSurfaces = registry.surfaces.map((surface) => ({
     id: surface.id,
     title: surface.title,
@@ -160,6 +168,7 @@ export async function buildOpenClawInventoryPlan(flags = {}) {
     sources,
     modeledSurfaces,
     capabilities: classifiedCapabilities,
+    channelCapabilityCatalog: channelCatalogInventory.result,
     coverage: summarizeCoverage(classifiedCapabilities, modeledSurfaces, {
       requiredModeled
     })

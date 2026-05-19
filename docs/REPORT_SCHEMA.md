@@ -613,11 +613,14 @@ state that cannot satisfy the requirement, fail planning before execution.
 `kova inventory plan --json` is planner-only and does not write a run report. It
 uses schema `kova.inventory.plan.v1` and includes:
 
-- `sources`: whether OpenClaw help, package scripts, and manifests were scanned
+- `sources`: whether OpenClaw help, package scripts, manifests, and optional
+  channel capability catalog source comparison were scanned
 - `modeledSurfaces`: current Kova surfaces
 - `capabilities`: discovered CLI commands, product-relevant package scripts,
   plugin manifests, and extension manifests with matched Kova surface ids when
   known
+- `channelCapabilityCatalog`: source/catalog comparison for the OpenClaw
+  message-channel capability catalog when `--openclaw-repo` is provided
 - `coverage.warnings`: unmodeled discovered capabilities
 - `coverage.ambiguous`: discovered capabilities that match multiple Kova
   surfaces

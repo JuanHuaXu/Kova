@@ -385,7 +385,7 @@
       "id": "channel-capability-baseline",
       "title": "Channel Capability Baseline",
       "ownerArea": "OpenClaw",
-      "description": "Validate the OpenClaw-owned message-channel capability catalog against the shared channel contract declarations and baseline contract tests.",
+      "description": "Validate the target OpenClaw runtime against the OpenClaw-owned message-channel capability catalog.",
       "processRoles": [
         "command-tree"
       ],
@@ -405,6 +405,9 @@
             "fresh"
           ],
           "targetKinds": [
+            "npm",
+            "release",
+            "runtime",
             "local-build"
           ],
           "metrics": []
@@ -4509,7 +4512,7 @@
       "id": "channel-capability-baseline",
       "surface": "channel-capability-baseline",
       "title": "Channel Capability Baseline",
-      "objective": "Prove OpenClaw's shared message-channel capability catalog matches the source declarations and passes the shared channel contract tests before adapter-specific conformance runs.",
+      "objective": "Prove the target OpenClaw runtime exposes the shared message-channel capability contract expected by Kova before adapter-specific conformance runs.",
       "tags": [
         "channel",
         "capability",
@@ -4517,21 +4520,42 @@
         "contracts"
       ],
       "targetKinds": [
+        "npm",
+        "release",
+        "runtime",
         "local-build"
       ],
       "timeoutMs": 180000,
+      "auth": {
+        "mode": "skip"
+      },
       "thresholds": {},
       "phases": [
         {
-          "id": "channel-capability-baseline",
-          "title": "OpenClaw Channel Capability Baseline",
-          "intent": "Inspect OpenClaw's channel message source declarations, run the shared channel contract tests, and emit one capability proof row per OpenClaw baseline capability.",
+          "id": "provision",
+          "title": "Provision Runtime Env",
+          "intent": "Create a disposable OpenClaw environment with the selected target runtime so Kova can probe the release-shaped package artifact.",
           "commands": [
-            "node {kovaRoot}/support/run-channel-capability-baseline.mjs --openclaw-repo {targetRepo} --artifact-dir {artifactDir} --timeout-ms 120000"
+            "ocm start {env} {startSelector} --json"
           ],
           "evidence": [
-            "OpenClaw channel capability catalog source match",
-            "OpenClaw channel message contract test result",
+            "OCM start JSON",
+            "env name",
+            "runtime binding"
+          ],
+          "healthScope": "readiness",
+          "collectionIntent": "service-only"
+        },
+        {
+          "id": "channel-capability-baseline",
+          "title": "OpenClaw Channel Capability Baseline",
+          "intent": "Import the selected OpenClaw runtime's packaged channel-message contract helpers and emit one capability proof row per OpenClaw baseline capability.",
+          "commands": [
+            "node {kovaRoot}/support/run-channel-capability-baseline.mjs --env {env} --artifact-dir {artifactDir} --timeout-ms 120000"
+          ],
+          "evidence": [
+            "OpenClaw runtime channel-message package export",
+            "OpenClaw runtime channel contract helper results",
             "baseline capability proof rows"
           ],
           "healthScope": "none",

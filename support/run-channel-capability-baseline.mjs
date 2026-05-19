@@ -1,211 +1,329 @@
 #!/usr/bin/env node
 import { mkdir, readFile, writeFile } from "node:fs/promises";
-import { spawn } from "node:child_process";
 import { dirname, join, resolve } from "node:path";
+import { pathToFileURL } from "node:url";
 import { fileURLToPath } from "node:url";
+import {
+  parseSupportArgs,
+  prepareOpenClawRuntimeFromOcmEnv,
+  readTimeoutMs
+} from "./openclaw-runtime.mjs";
 
 const repoRoot = dirname(dirname(fileURLToPath(import.meta.url)));
-const args = parseArgs(process.argv.slice(2));
-const openClawRepo = requiredArg(args, "openclaw-repo");
+const args = parseSupportArgs(process.argv.slice(2));
 const artifactDir = requiredArg(args, "artifact-dir");
-const timeoutMs = positiveInteger(args["timeout-ms"] ?? "120000", "timeout-ms");
-const skipTests = args["skip-tests"] === true;
+const timeoutMs = readTimeoutMs(args["timeout-ms"], 120000);
 const artifactPath = join(artifactDir, "channel-capability-baseline.json");
-
 const catalog = JSON.parse(await readFile(join(repoRoot, "channel-capabilities", "openclaw-message.json"), "utf8"));
-const sourceLists = await readOpenClawCapabilitySourceLists(openClawRepo);
-const catalogMatchesSource = compareCatalogToSource(catalog, sourceLists);
-const contractTest = skipTests
-  ? { status: 0, command: "skipped", stdout: "", stderr: "", durationMs: 0, skipped: true }
-  : await runOpenClawContractTests(openClawRepo, timeoutMs);
-const passed = catalogMatchesSource.ok && contractTest.status === 0;
 
-const rows = catalog.capabilities.map((capability) => ({
-  channelId: "openclaw",
-  group: capability.group,
-  capabilityId: capability.id,
-  required: true,
-  status: passed ? "passed" : "failed",
-  proofMode: "baseline",
-  summary: `OpenClaw baseline ${capability.group}/${capability.id}`,
-  reason: passed ? null : failureReason(catalogMatchesSource, contractTest),
-  ownerArea: "OpenClaw"
-}));
-
-const summary = {
-  schemaVersion: "kova.channelCapabilityBaselineArtifact.v1",
-  openClawRepo: resolve(openClawRepo),
-  catalogId: catalog.id,
-  catalogCapabilityCount: catalog.capabilities.length,
-  sourceCapabilityCounts: Object.fromEntries(Object.entries(sourceLists).map(([key, values]) => [key, values.length])),
-  catalogMatchesSource,
-  contractTest: compactCommandResult(contractTest),
-  capabilities: rows
-};
+let result;
+try {
+  const runtimeContext = await resolveRuntimeContext(args);
+  const probe = await probeRuntimeChannelMessageContracts({
+    catalog,
+    packageRoot: runtimeContext.packageRoot
+  });
+  result = buildResult({
+    catalog,
+    runtimeContext,
+    probe,
+    error: null,
+    timeoutMs
+  });
+} catch (error) {
+  result = buildResult({
+    catalog,
+    runtimeContext: null,
+    probe: null,
+    error,
+    timeoutMs
+  });
+}
 
 await mkdir(artifactDir, { recursive: true });
-await writeFile(artifactPath, `${JSON.stringify(summary, null, 2)}\n`, "utf8");
+await writeFile(artifactPath, `${JSON.stringify(result.artifact, null, 2)}\n`, "utf8");
 
-const output = {
+process.stdout.write(`${JSON.stringify({
   schemaVersion: "kova.channelCapabilityRun.v1",
   proofMode: "baseline",
   artifactPath,
   ownerArea: "OpenClaw",
-  capabilities: rows.map((row) => ({
+  capabilities: result.rows.map((row) => ({
     ...row,
     artifactPath
   }))
-};
-process.stdout.write(`${JSON.stringify(output, null, 2)}\n`);
-process.exit(passed ? 0 : 1);
+}, null, 2)}\n`);
+process.exit(result.ok ? 0 : 1);
 
-async function readOpenClawCapabilitySourceLists(openClawRepoPath) {
-  const typesPath = join(openClawRepoPath, "src", "channels", "message", "types.ts");
-  const text = await readFile(typesPath, "utf8");
+async function resolveRuntimeContext(parsed) {
+  if (parsed["package-root"]) {
+    return {
+      source: "package-root",
+      packageRoot: resolve(parsed["package-root"]),
+      runtime: null
+    };
+  }
+
+  const envName = requiredArg(parsed, "env");
+  const context = prepareOpenClawRuntimeFromOcmEnv(envName);
   return {
-    "durable-final": kebabValues(extractConstArray(text, "durableFinalDeliveryCapabilities")),
-    "live-preview": kebabValues(extractConstArray(text, "channelMessageLiveCapabilities")),
-    "live-finalizer": kebabValues(extractConstArray(text, "livePreviewFinalizerCapabilities")),
-    ack: kebabValues(extractConstArray(text, "channelMessageReceiveAckPolicies"))
+    source: "ocm-env",
+    envName: context.envName,
+    root: context.root,
+    gatewayPort: context.gatewayPort,
+    binaryPath: context.binaryPath,
+    packageRoot: context.packageRoot,
+    runtime: context.runtime
   };
 }
 
-function compareCatalogToSource(catalogValue, sourceLists) {
-  const byGroup = new Map();
-  for (const capability of catalogValue.capabilities ?? []) {
-    const values = byGroup.get(capability.group) ?? [];
-    values.push(capability.id);
-    byGroup.set(capability.group, values);
-  }
+async function probeRuntimeChannelMessageContracts({ catalog: catalogValue, packageRoot }) {
+  const channelMessage = await importOpenClawChannelMessage(packageRoot);
+  const groups = groupCatalogCapabilities(catalogValue);
+  const groupResults = {};
 
-  const groups = ["durable-final", "live-preview", "live-finalizer", "ack"];
-  const mismatches = [];
-  for (const group of groups) {
-    const catalogValues = byGroup.get(group) ?? [];
-    const sourceValues = sourceLists[group] ?? [];
-    if (JSON.stringify(catalogValues) !== JSON.stringify(sourceValues)) {
-      mismatches.push({ group, catalog: catalogValues, source: sourceValues });
-    }
-  }
-  return {
-    ok: mismatches.length === 0,
-    mismatches
-  };
-}
-
-function extractConstArray(text, name) {
-  const pattern = new RegExp(`export\\s+const\\s+${name}\\s*=\\s*\\[([\\s\\S]*?)\\]\\s*as\\s+const`);
-  const match = pattern.exec(text);
-  if (!match) {
-    throw new Error(`could not find ${name} in OpenClaw channel message types`);
-  }
-  return [...match[1].matchAll(/"([^"]+)"/g)].map((item) => item[1]);
-}
-
-async function runOpenClawContractTests(openClawRepoPath, commandTimeoutMs) {
-  return await runProcess("node", [
-    "scripts/run-vitest.mjs",
-    "run",
-    "--config",
-    "test/vitest/vitest.channels.config.ts",
-    "src/channels/message/contracts.test.ts"
-  ], { cwd: openClawRepoPath, timeoutMs: commandTimeoutMs });
-}
-
-function runProcess(command, values, options) {
-  const startedAt = Date.now();
-  return new Promise((resolvePromise) => {
-    const child = spawn(command, values, {
-      cwd: options.cwd,
-      stdio: ["ignore", "pipe", "pipe"],
-      env: process.env
-    });
-    let stdout = "";
-    let stderr = "";
-    let settled = false;
-    const timer = setTimeout(() => {
-      settled = true;
-      child.kill("SIGTERM");
-      resolvePromise({
-        command: [command, ...values].join(" "),
-        status: 124,
-        stdout,
-        stderr,
-        durationMs: Date.now() - startedAt,
-        timedOut: true
-      });
-    }, options.timeoutMs);
-
-    child.stdout.on("data", (chunk) => {
-      stdout += chunk.toString();
-    });
-    child.stderr.on("data", (chunk) => {
-      stderr += chunk.toString();
-    });
-    child.on("close", (status) => {
-      if (settled) {
-        return;
-      }
-      clearTimeout(timer);
-      resolvePromise({
-        command: [command, ...values].join(" "),
-        status: status ?? 1,
-        stdout,
-        stderr,
-        durationMs: Date.now() - startedAt,
-        timedOut: false
-      });
-    });
+  groupResults["durable-final"] = await proveGroup({
+    group: "durable-final",
+    capabilities: groups.get("durable-final") ?? [],
+    list: channelMessage.listDeclaredDurableFinalCapabilities,
+    verify: (capabilities, proofs) => channelMessage.verifyDurableFinalCapabilityProofs({
+      adapterName: "Kova OpenClaw baseline",
+      capabilities,
+      proofs
+    })
   });
-}
 
-function failureReason(catalogMatchesSourceResult, contractTestResult) {
-  if (!catalogMatchesSourceResult.ok) {
-    return `OpenClaw source declarations differ from Kova catalog for ${catalogMatchesSourceResult.mismatches.map((mismatch) => mismatch.group).join(", ")}`;
-  }
-  if (contractTestResult.timedOut) {
-    return "OpenClaw channel message contract tests timed out";
-  }
-  return `OpenClaw channel message contract tests exited ${contractTestResult.status}`;
-}
+  groupResults["live-preview"] = await proveGroup({
+    group: "live-preview",
+    capabilities: groups.get("live-preview") ?? [],
+    list: channelMessage.listDeclaredChannelMessageLiveCapabilities,
+    verify: (capabilities, proofs) => channelMessage.verifyChannelMessageLiveCapabilityProofs({
+      adapterName: "Kova OpenClaw baseline",
+      capabilities,
+      proofs
+    })
+  });
 
-function compactCommandResult(result) {
+  groupResults["live-finalizer"] = await proveGroup({
+    group: "live-finalizer",
+    capabilities: groups.get("live-finalizer") ?? [],
+    list: channelMessage.listDeclaredLivePreviewFinalizerCapabilities,
+    verify: (capabilities, proofs) => channelMessage.verifyLivePreviewFinalizerCapabilityProofs({
+      adapterName: "Kova OpenClaw baseline",
+      capabilities,
+      proofs
+    })
+  });
+
+  groupResults.ack = await proveReceiveAckGroup({
+    capabilities: groups.get("ack") ?? [],
+    list: channelMessage.listDeclaredReceiveAckPolicies,
+    verify: (receive, proofs) => channelMessage.verifyChannelMessageReceiveAckPolicyProofs({
+      adapterName: "Kova OpenClaw baseline",
+      receive,
+      proofs
+    })
+  });
+
   return {
-    command: result.command,
-    status: result.status,
-    durationMs: result.durationMs,
-    timedOut: result.timedOut === true,
-    skipped: result.skipped === true,
-    stdoutTail: tail(result.stdout ?? ""),
-    stderrTail: tail(result.stderr ?? "")
+    packageRoot,
+    exportPath: await resolvePackageExportPath(packageRoot, "./plugin-sdk/channel-message"),
+    groupResults
   };
 }
 
-function tail(value) {
-  return String(value).slice(-4000);
+async function importOpenClawChannelMessage(packageRoot) {
+  const exportPath = await resolvePackageExportPath(packageRoot, "./plugin-sdk/channel-message");
+  const mod = await import(pathToFileURL(exportPath).href);
+  const requiredExports = [
+    "listDeclaredDurableFinalCapabilities",
+    "listDeclaredChannelMessageLiveCapabilities",
+    "listDeclaredLivePreviewFinalizerCapabilities",
+    "listDeclaredReceiveAckPolicies",
+    "verifyDurableFinalCapabilityProofs",
+    "verifyChannelMessageLiveCapabilityProofs",
+    "verifyLivePreviewFinalizerCapabilityProofs",
+    "verifyChannelMessageReceiveAckPolicyProofs"
+  ];
+  const missing = requiredExports.filter((name) => typeof mod[name] !== "function");
+  if (missing.length > 0) {
+    throw new Error(`openclaw/plugin-sdk/channel-message is missing exports: ${missing.join(", ")}`);
+  }
+  return mod;
 }
 
-function kebabValues(values) {
-  return values.map((value) => value.replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`).replaceAll("_", "-"));
+async function resolvePackageExportPath(packageRoot, exportName) {
+  const packageJsonPath = join(packageRoot, "package.json");
+  const packageJson = JSON.parse(await readFile(packageJsonPath, "utf8"));
+  const exportEntry = packageJson.exports?.[exportName];
+  const relativePath = typeof exportEntry === "string"
+    ? exportEntry
+    : exportEntry?.default;
+  if (typeof relativePath !== "string" || relativePath.length === 0) {
+    throw new Error(`OpenClaw package does not export ${exportName}`);
+  }
+  return join(packageRoot, relativePath);
 }
 
-function parseArgs(values) {
-  const parsed = {};
-  for (let index = 0; index < values.length; index += 1) {
-    const value = values[index];
-    if (!value.startsWith("--")) {
-      throw new Error(`unexpected argument ${value}`);
+async function proveGroup({ group, capabilities, list, verify }) {
+  const runtimeKeys = capabilities.map(runtimeCapabilityKey);
+  const capabilityMap = Object.fromEntries(runtimeKeys.map((key) => [key, true]));
+  const proofs = Object.fromEntries(runtimeKeys.map((key) => [key, () => undefined]));
+  const expected = capabilities.map((capability) => capability.id);
+  const actual = list(capabilityMap).map(kebabValue);
+  let verifyError = null;
+  try {
+    await verify(capabilityMap, proofs);
+  } catch (error) {
+    verifyError = error.message;
+  }
+  return compareGroup({ group, expected, actual, verifyError });
+}
+
+async function proveReceiveAckGroup({ capabilities, list, verify }) {
+  const runtimeKeys = capabilities.map(runtimeCapabilityKey);
+  const receive = { supportedAckPolicies: runtimeKeys };
+  const proofs = Object.fromEntries(runtimeKeys.map((key) => [key, () => undefined]));
+  const expected = capabilities.map((capability) => capability.id);
+  const actual = list(receive).map(kebabValue);
+  let verifyError = null;
+  try {
+    await verify(receive, proofs);
+  } catch (error) {
+    verifyError = error.message;
+  }
+  return compareGroup({ group: "ack", expected, actual, verifyError });
+}
+
+function compareGroup({ group, expected, actual, verifyError }) {
+  const missing = expected.filter((id) => !actual.includes(id));
+  const unexpected = actual.filter((id) => !expected.includes(id));
+  return {
+    group,
+    expected,
+    actual,
+    missing,
+    unexpected,
+    verifyError,
+    ok: missing.length === 0 && unexpected.length === 0 && !verifyError
+  };
+}
+
+function buildResult({ catalog: catalogValue, runtimeContext, probe, error, timeoutMs: commandTimeoutMs }) {
+  const groups = groupCatalogCapabilities(catalogValue);
+  const probeError = error ? error.message : null;
+  const groupResults = probe?.groupResults ?? {};
+  const rows = [];
+  let ok = !probeError;
+
+  for (const [group, capabilities] of groups.entries()) {
+    const groupResult = groupResults[group] ?? null;
+    if (!groupResult?.ok) {
+      ok = false;
     }
-    const key = value.slice(2);
-    const next = values[index + 1];
-    if (!next || next.startsWith("--")) {
-      parsed[key] = true;
-    } else {
-      parsed[key] = next;
-      index += 1;
+    for (const capability of capabilities) {
+      const status = rowStatus(capability, groupResult, probeError);
+      rows.push({
+        channelId: "openclaw",
+        group: capability.group,
+        capabilityId: capability.id,
+        required: true,
+        status,
+        proofMode: "baseline",
+        summary: `OpenClaw runtime baseline ${capability.group}/${capability.id}`,
+        reason: status === "passed" ? null : rowReason(capability, groupResult, probeError),
+        ownerArea: "OpenClaw"
+      });
     }
   }
-  return parsed;
+
+  return {
+    ok,
+    rows,
+    artifact: {
+      schemaVersion: "kova.channelCapabilityBaselineArtifact.v1",
+      catalogId: catalogValue.id,
+      catalogCapabilityCount: catalogValue.capabilities.length,
+      runtimeContext: compactRuntimeContext(runtimeContext),
+      timeoutMs: commandTimeoutMs,
+      probe: probe ? {
+        packageRoot: probe.packageRoot,
+        exportPath: probe.exportPath,
+        groupResults: probe.groupResults
+      } : null,
+      error: probeError,
+      capabilities: rows
+    }
+  };
+}
+
+function rowStatus(capability, groupResult, probeError) {
+  if (probeError || groupResult?.verifyError) {
+    return "failed";
+  }
+  if (!groupResult || groupResult.missing?.includes(capability.id)) {
+    return "missing";
+  }
+  if (groupResult.unexpected?.length > 0) {
+    return "failed";
+  }
+  return "passed";
+}
+
+function rowReason(capability, groupResult, probeError) {
+  if (probeError) {
+    return probeError;
+  }
+  if (groupResult?.verifyError) {
+    return groupResult.verifyError;
+  }
+  if (!groupResult) {
+    return `OpenClaw runtime did not expose ${capability.group} contract helpers`;
+  }
+  if (groupResult.missing?.includes(capability.id)) {
+    return `OpenClaw runtime did not declare expected ${capability.group}/${capability.id}`;
+  }
+  if (groupResult.unexpected?.length > 0) {
+    return `OpenClaw runtime declared unexpected ${capability.group} capabilities: ${groupResult.unexpected.join(", ")}`;
+  }
+  return null;
+}
+
+function groupCatalogCapabilities(catalogValue) {
+  const groups = new Map();
+  for (const capability of catalogValue.capabilities ?? []) {
+    const values = groups.get(capability.group) ?? [];
+    values.push(capability);
+    groups.set(capability.group, values);
+  }
+  return groups;
+}
+
+function runtimeCapabilityKey(capability) {
+  const raw = capability.sourceSymbol?.split(".").pop();
+  if (raw) {
+    return raw;
+  }
+  if (capability.group === "ack") {
+    return capability.id.replaceAll("-", "_");
+  }
+  return capability.id.replace(/-([a-z])/g, (_, letter) => letter.toUpperCase());
+}
+
+function kebabValue(value) {
+  return String(value).replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`).replaceAll("_", "-");
+}
+
+function compactRuntimeContext(context) {
+  if (!context) {
+    return null;
+  }
+  return {
+    source: context.source,
+    envName: context.envName ?? null,
+    packageRoot: context.packageRoot,
+    runtime: context.runtime ?? null
+  };
 }
 
 function requiredArg(parsed, key) {
@@ -214,12 +332,4 @@ function requiredArg(parsed, key) {
     throw new Error(`--${key} is required`);
   }
   return value;
-}
-
-function positiveInteger(value, label) {
-  const number = Number(value);
-  if (!Number.isInteger(number) || number <= 0) {
-    throw new Error(`--${label} must be a positive integer`);
-  }
-  return number;
 }
