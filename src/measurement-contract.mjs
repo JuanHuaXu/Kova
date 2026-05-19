@@ -75,6 +75,9 @@ export function driverKindForCommand(command) {
   if (text.includes("run-gateway-session-send-turn.mjs")) {
     return "gateway-rpc";
   }
+  if (text.includes("run-channel-model-turn-baseline.mjs")) {
+    return "gateway-rpc";
+  }
   if (text.includes("run-openai-compatible-turn.mjs")) {
     return "gateway-http";
   }
@@ -119,6 +122,7 @@ export function isAgentMessageCommand(command) {
   return isAgentCliMessageCommand(text) ||
     text.includes("run-concurrent-agent-turns.mjs") ||
     text.includes("run-gateway-session-send-turn.mjs") ||
+    text.includes("run-channel-model-turn-baseline.mjs") ||
     text.includes("run-tui-message-turn.mjs") ||
     text.includes("run-openai-compatible-turn.mjs");
 }

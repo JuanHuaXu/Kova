@@ -28,16 +28,20 @@ async function main() {
       throw new Error(`gateway direct RPC unavailable: ${clientHandle.fallbackReason ?? "unknown"}`);
     }
     await waitForBaselineChannel(clientHandle.client, timeoutMs);
+    const activeStartedAtEpochMs = Date.now();
     const turn = await clientHandle.client.request(
       "kova.channelBaseline.runModelTurn",
       { message, expectedText },
       { timeoutMs }
     );
+    const activeFinishedAtEpochMs = Date.now();
     const providerRequestCountAfter = await countJsonl(providerRequestLogPath);
     result = buildResult({
       runtimeContext,
       turn,
       error: null,
+      activeStartedAtEpochMs,
+      activeFinishedAtEpochMs,
       providerRequestCountBefore,
       providerRequestCountAfter,
       timeoutMs
@@ -68,6 +72,9 @@ async function main() {
     finalText: result.artifact.turn?.finalText ?? null,
     inboundEventId: result.artifact.turn?.inboundEvent?.id ?? null,
     routeSessionKey: result.artifact.turn?.routeSessionKey ?? null,
+    activeStartedAtEpochMs: result.artifact.activeStartedAtEpochMs,
+    activeFinishedAtEpochMs: result.artifact.activeFinishedAtEpochMs,
+    activeTurnMs: result.artifact.activeTurnMs,
     providerRequestDelta: result.artifact.providerRequestDelta,
     invariants: result.artifact.invariants
   }, null, 2)}\n`);
@@ -98,10 +105,15 @@ function buildResult({
   error,
   providerRequestCountBefore,
   providerRequestCountAfter,
+  activeStartedAtEpochMs = null,
+  activeFinishedAtEpochMs = null,
   timeoutMs: commandTimeoutMs
 }) {
   const runError = error ? error.message : turn?.error ?? null;
   const providerRequestDelta = Math.max(0, providerRequestCountAfter - providerRequestCountBefore);
+  const activeTurnMs = activeStartedAtEpochMs === null || activeFinishedAtEpochMs === null
+    ? null
+    : Math.max(0, activeFinishedAtEpochMs - activeStartedAtEpochMs);
   const invariants = [
     ...(turn?.invariants ?? []),
     invariant("provider-request", !runError && providerRequestDelta >= 1, "channel model turn made at least one mock provider request"),
@@ -122,6 +134,9 @@ function buildResult({
       providerRequestCountBefore,
       providerRequestCountAfter,
       providerRequestDelta,
+      activeStartedAtEpochMs,
+      activeFinishedAtEpochMs,
+      activeTurnMs,
       turn,
       invariants
     }

@@ -1030,7 +1030,10 @@ function collectAgentTurns(record, providerEvidence, scenario, timelineSummary, 
       index += 1;
       const expectedFailure = phase.expectedAgentFailure === true || scenario.agent?.expectedFailure === true;
       const gatewaySession = extractGatewaySessionTurn(result);
-      const timingResult = gatewaySession ? resultForActiveTurnWindow(result, gatewaySession) : result;
+      const channelModelTurn = gatewaySession ? null : extractChannelModelTurn(result);
+      const timingResult = gatewaySession
+        ? resultForActiveTurnWindow(result, gatewaySession)
+        : (channelModelTurn ? resultForChannelModelTurnWindow(result, channelModelTurn) : result);
       const attribution = computeProviderTurnAttribution(timingResult, providerEvidence);
       const response = extractAgentResponse(result);
       const expectedTextPresent = typeof expectedText === "string" && expectedText.length > 0
@@ -1087,6 +1090,7 @@ function collectAgentTurns(record, providerEvidence, scenario, timelineSummary, 
         rawCommandFinishedAtEpochMs: result.finishedAtEpochMs ?? null,
         rawCommandDurationMs: result.durationMs ?? null,
         gatewaySession,
+        channelModelTurn,
         responseText: response.text,
         responseOk: expectedFailure ? expectedFailureObserved : normalResponseOk,
         assistantResponseOk: normalResponseOk,
@@ -1202,6 +1206,35 @@ function extractGatewaySessionTurn(result) {
   };
 }
 
+function extractChannelModelTurn(result) {
+  if (!result?.command?.includes("run-channel-model-turn-baseline.mjs")) {
+    return null;
+  }
+  const payload = parseJsonObject(result.stdout);
+  if (!payload || payload.schemaVersion !== "kova.channelModelTurnRun.v1") {
+    return null;
+  }
+  const activeStartedAtEpochMs = numberOrNull(payload.activeStartedAtEpochMs);
+  const activeFinishedAtEpochMs = numberOrNull(payload.activeFinishedAtEpochMs);
+  if (activeStartedAtEpochMs === null || activeFinishedAtEpochMs === null || activeFinishedAtEpochMs < activeStartedAtEpochMs) {
+    return null;
+  }
+  const activeTurnMs = numberOrNull(payload.activeTurnMs) ?? Math.max(0, activeFinishedAtEpochMs - activeStartedAtEpochMs);
+  return {
+    schemaVersion: "kova.channelModelTurn.v1",
+    surface: "channel-model-turn-baseline",
+    inboundEventId: payload.inboundEventId ?? null,
+    routeSessionKey: payload.routeSessionKey ?? null,
+    expectedTextPresent: typeof payload.finalText === "string" && typeof payload.expectedText === "string"
+      ? payload.finalText.includes(payload.expectedText)
+      : null,
+    providerRequestDelta: numberOrNull(payload.providerRequestDelta),
+    activeStartedAtEpochMs,
+    activeFinishedAtEpochMs,
+    activeTurnMs
+  };
+}
+
 function resultForActiveTurnWindow(result, gatewaySession) {
   return {
     ...result,
@@ -1210,6 +1243,17 @@ function resultForActiveTurnWindow(result, gatewaySession) {
     finishedAt: isoOrNull(gatewaySession.activeFinishedAtEpochMs),
     finishedAtEpochMs: gatewaySession.activeFinishedAtEpochMs,
     durationMs: gatewaySession.activeTurnMs
+  };
+}
+
+function resultForChannelModelTurnWindow(result, channelModelTurn) {
+  return {
+    ...result,
+    startedAt: isoOrNull(channelModelTurn.activeStartedAtEpochMs),
+    startedAtEpochMs: channelModelTurn.activeStartedAtEpochMs,
+    finishedAt: isoOrNull(channelModelTurn.activeFinishedAtEpochMs),
+    finishedAtEpochMs: channelModelTurn.activeFinishedAtEpochMs,
+    durationMs: channelModelTurn.activeTurnMs
   };
 }
 
@@ -3584,6 +3628,7 @@ function extractAgentResponse(result) {
     const finalText = findFirstString(parsed, [
       "finalAssistantVisibleText",
       "finalAssistantRawText",
+      "finalText",
       "text",
       "reply"
     ]);
