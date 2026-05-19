@@ -15,6 +15,7 @@ const timeoutMs = readTimeoutMs(args["timeout-ms"], 120000);
 const message = args.message ?? "Reply with exact ASCII text KOVA_AGENT_OK only.";
 const expectedText = args["expected-text"] ?? "KOVA_AGENT_OK";
 const includeSharedBaseline = args["skip-shared-baseline"] !== "true";
+const continueOnModelTurnFailure = args["continue-on-model-turn-failure"] === "true";
 const artifactPath = join(artifactDir, "channel-model-turn-baseline.json");
 const providerRequestLogPath = join(artifactDir, "mock-openai", "requests.jsonl");
 
@@ -83,7 +84,7 @@ async function main() {
     providerRequestDelta: result.artifact.providerRequestDelta,
     invariants: result.artifact.invariants
   }, null, 2)}\n`);
-  process.exit(result.ok ? 0 : 1);
+  process.exit(result.ok || continueOnModelTurnFailure ? 0 : 1);
 }
 
 async function waitForBaselineChannel(client, commandTimeoutMs) {

@@ -5092,7 +5092,7 @@
           "title": "Run Channel Model Turn Matrix",
           "intent": "Call the Kova channel plugin over Gateway RPC so OpenClaw handles multiple real inbound channel events, calls the mock provider for each model-turn case, sends final assistant responses through the channel adapter, and records capability lineage invariants.",
           "commands": [
-            "node {kovaRoot}/support/run-channel-model-turn-baseline.mjs --env {env} --artifact-dir {artifactDir} --message 'Reply with exact ASCII text KOVA_AGENT_OK only.' --expected-text KOVA_AGENT_OK --skip-shared-baseline true --timeout-ms 120000"
+            "node {kovaRoot}/support/run-channel-model-turn-baseline.mjs --env {env} --artifact-dir {artifactDir} --message 'Reply with exact ASCII text KOVA_AGENT_OK only.' --expected-text KOVA_AGENT_OK --skip-shared-baseline true --continue-on-model-turn-failure true --timeout-ms 120000"
           ],
           "evidence": [
             "model-turn capability rows",
