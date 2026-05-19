@@ -19,7 +19,7 @@ try {
   const message = args.message ?? "Reply with exact ASCII text KOVA_AGENT_OK only.";
   const expectedText = args["expected-text"] ?? "KOVA_AGENT_OK";
   const timeoutMs = readTimeoutMs(args.timeout, 120000);
-  const model = args.model ?? "openai/gpt-5.5";
+  const model = args.model ?? "openclaw";
   const cfg = readConfig(runtimeContext.root);
   const port = runtimeContext.gatewayPort;
   const token = readGatewayToken(cfg);

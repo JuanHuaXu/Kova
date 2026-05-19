@@ -61,7 +61,7 @@
       "title": "OpenAI-Compatible Message",
       "intent": "Exercise the `/v1/chat/completions` user API and verify final assistant output.",
       "commands": [
-        "node {kovaRoot}/support/run-openai-compatible-turn.mjs --env {env} --model openai/gpt-5.5 --message 'Reply with exact ASCII text KOVA_AGENT_OK only.' --expected-text KOVA_AGENT_OK --timeout 120000"
+        "node {kovaRoot}/support/run-openai-compatible-turn.mjs --env {env} --model openclaw --message 'Reply with exact ASCII text KOVA_AGENT_OK only.' --expected-text KOVA_AGENT_OK --timeout 120000"
       ],
       "evidence": [
         "HTTP status",
