@@ -70,8 +70,10 @@ async function main() {
     envName,
     expectedText,
     finalText: result.artifact.turn?.finalText ?? null,
-    inboundEventId: result.artifact.turn?.inboundEvent?.id ?? null,
-    routeSessionKey: result.artifact.turn?.routeSessionKey ?? null,
+    inboundEventId: result.artifact.turn?.modelTurnCases?.[0]?.inboundEvent?.id ?? result.artifact.turn?.inboundEvent?.id ?? null,
+    routeSessionKey: result.artifact.turn?.modelTurnCases?.[0]?.routeSessionKey ?? result.artifact.turn?.routeSessionKey ?? null,
+    modelTurnCaseCount: result.artifact.turn?.modelTurnCases?.length ?? null,
+    capabilityRowCount: result.artifact.turn?.capabilityRows?.length ?? null,
     activeStartedAtEpochMs: result.artifact.activeStartedAtEpochMs,
     activeFinishedAtEpochMs: result.artifact.activeFinishedAtEpochMs,
     activeTurnMs: result.artifact.activeTurnMs,
@@ -111,12 +113,13 @@ function buildResult({
 }) {
   const runError = error ? error.message : turn?.error ?? null;
   const providerRequestDelta = Math.max(0, providerRequestCountAfter - providerRequestCountBefore);
+  const expectedProviderRequests = Array.isArray(turn?.modelTurnCases) ? turn.modelTurnCases.length : 1;
   const activeTurnMs = activeStartedAtEpochMs === null || activeFinishedAtEpochMs === null
     ? null
     : Math.max(0, activeFinishedAtEpochMs - activeStartedAtEpochMs);
   const invariants = [
     ...(turn?.invariants ?? []),
-    invariant("provider-request", !runError && providerRequestDelta >= 1, "channel model turn made at least one mock provider request"),
+    invariant("provider-request", !runError && providerRequestDelta >= expectedProviderRequests, "channel model turn made the expected mock provider requests"),
     invariant("no-global-error", !runError, "channel model turn completed without transport or plugin error")
   ];
   const ok = !runError && turn?.ok === true && invariants.every((item) => item.status === "passed");
@@ -134,6 +137,7 @@ function buildResult({
       providerRequestCountBefore,
       providerRequestCountAfter,
       providerRequestDelta,
+      expectedProviderRequests,
       activeStartedAtEpochMs,
       activeFinishedAtEpochMs,
       activeTurnMs,

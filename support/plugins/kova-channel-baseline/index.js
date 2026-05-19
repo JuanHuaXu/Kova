@@ -1,3 +1,4 @@
+import { unlinkSync, writeFileSync } from "node:fs";
 import { definePluginEntry } from "openclaw/plugin-sdk/core";
 import {
   classifyDurableSendRecoveryState,
@@ -231,37 +232,51 @@ async function runModelTurn(params = {}) {
   if (!activeRuntime?.channelRuntime) {
     throw new Error("kova channel baseline runtime is not started");
   }
-  const message = typeof params.message === "string" && params.message.length > 0
-    ? params.message
-    : "Reply with exact ASCII text KOVA_AGENT_OK only.";
   const expectedText = typeof params.expectedText === "string" && params.expectedText.length > 0
     ? params.expectedText
     : "KOVA_AGENT_OK";
 
+  const capabilityBaseline = await runBaseline();
   outboundRecords = [];
   deliveryRecords = [];
   modelTurnRecords = [];
 
   const startedAt = performance.now();
-  const inboundEventId = `kova-model-turn-${Date.now()}-${Math.random().toString(16).slice(2)}`;
-  const turn = await runOpenClawModelTurn({
-    message,
-    inboundEventId,
-    replyToId: inboundEventId
-  });
-  const finalOutboundRecords = outboundRecords.filter((record) =>
-    ["text", "media", "payload"].includes(record.kind)
-  );
-  const finalTexts = finalOutboundRecords
-    .map((record) => record.text)
+  const modelTurnCases = [];
+  for (const testCase of modelTurnCaseDefinitions) {
+    modelTurnCases.push(await runModelTurnCase(testCase));
+  }
+
+  const finalOutboundRecords = outboundRecords.filter((record) => isFinalOutboundRecord(record));
+  const finalTexts = modelTurnCases
+    .map((testCase) => testCase.finalText)
     .filter((text) => typeof text === "string" && text.length > 0);
   const matchedText = finalTexts.find((text) => text.includes(expectedText)) ?? null;
+  const failedCases = modelTurnCases.filter((testCase) => testCase.status !== "passed");
+  const capabilityRows = [
+    ...(capabilityBaseline.proofs ?? []).map((proof) => ({
+      group: proof.group,
+      capabilityId: proof.capabilityId,
+      status: proof.status,
+      proofMode: "shared-runtime-baseline",
+      caseId: null,
+      reason: proof.reason ?? null
+    })),
+    ...modelTurnCases.flatMap((testCase) => testCase.capabilities.map((capability) => ({
+      group: capability.group,
+      capabilityId: capability.id,
+      status: testCase.status,
+      proofMode: "model-turn",
+      caseId: testCase.id,
+      reason: testCase.reason
+    })))
+  ];
   const invariants = [
-    invariant("turn-dispatched", turn?.dispatched === true, "channel model turn dispatched through OpenClaw runtime"),
-    invariant("expected-final-text", Boolean(matchedText), `final channel send contains ${expectedText}`),
-    invariant("single-final-send", finalOutboundRecords.length === 1, "one inbound event produced exactly one final channel send"),
-    invariant("delivery-receipt", deliveryRecords.some((record) => record.fallback === false), "durable delivery recorded a channel receipt"),
-    invariant("terminal-return", true, "channel model turn returned from OpenClaw dispatch")
+    invariant("shared-capability-baseline", capabilityBaseline.ok === true, "all shared OpenClaw channel capabilities passed before model-turn proof"),
+    invariant("model-turn-case-count", modelTurnCases.length === modelTurnCaseDefinitions.length, "all configured channel model-turn cases ran"),
+    invariant("model-turn-cases-passed", failedCases.length === 0, "all channel model-turn cases passed"),
+    invariant("expected-final-text", Boolean(matchedText), `at least one model-turn final channel send contains ${expectedText}`),
+    invariant("terminal-return", modelTurnCases.every((testCase) => testCase.dispatched === true), "all channel model turns returned from OpenClaw dispatch")
   ];
   const ok = invariants.every((item) => item.status === "passed");
 
@@ -270,24 +285,158 @@ async function runModelTurn(params = {}) {
     schemaVersion: "kova.channelModelTurnBaselinePluginRun.v1",
     channelId: CHANNEL_ID,
     accountId: activeRuntime.accountId,
-    inboundEvent: {
-      id: inboundEventId,
-      authorId: "kova-baseline-user",
-      sourceKind: "external-user",
-      targetId: TARGET_ID,
-      message
-    },
-    routeSessionKey: turn?.routeSessionKey ?? null,
-    dispatched: turn?.dispatched === true,
-    finalText: matchedText,
     expectedText,
+    finalText: finalTexts.join("\n"),
     durationMs: elapsedMs(startedAt),
+    sharedCapabilityBaseline: capabilityBaseline,
+    capabilityRows,
+    modelTurnCases,
     invariants,
     outboundRecords,
     deliveryRecords,
     modelTurnRecords
   };
 }
+
+async function runModelTurnCase(testCase) {
+  const startedAt = performance.now();
+  const beforeOutbound = outboundRecords.length;
+  const beforeDelivery = deliveryRecords.length;
+  const beforeRecords = modelTurnRecords.length;
+  const inboundEventId = `kova-model-turn-${testCase.id}-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+  let turn = null;
+  let error = null;
+
+  try {
+    if (testCase.mediaFixturePath) {
+      writeMediaFixture(testCase.mediaFixturePath);
+    }
+    turn = await runOpenClawModelTurn({
+      message: modelTurnPrompt(testCase),
+      inboundEventId,
+      replyToId: testCase.replyToId === null ? null : inboundEventId,
+      threadId: testCase.threadId,
+      silent: testCase.silent === true
+    });
+  } catch (caught) {
+    error = caught instanceof Error ? caught : new Error(String(caught));
+  } finally {
+    if (testCase.mediaFixturePath) {
+      removeMediaFixture(testCase.mediaFixturePath);
+    }
+  }
+
+  const caseOutboundRecords = outboundRecords.slice(beforeOutbound);
+  const caseDeliveryRecords = deliveryRecords.slice(beforeDelivery);
+  const caseModelTurnRecords = modelTurnRecords.slice(beforeRecords);
+  const finalOutboundRecords = caseOutboundRecords.filter((record) => isFinalOutboundRecord(record));
+  const finalTexts = finalOutboundRecords
+    .map((record) => record.text)
+    .filter((text) => typeof text === "string" && text.length > 0);
+  const matchedText = typeof testCase.expectedText === "string"
+    ? (finalTexts.find((text) => text.includes(testCase.expectedText)) ?? null)
+    : null;
+  const firstFinal = finalOutboundRecords[0] ?? null;
+  const invariants = [
+    invariant(`${testCase.id}:turn-dispatched`, !error && turn?.dispatched === true, `${testCase.id} dispatched through OpenClaw runtime`),
+    invariant(`${testCase.id}:expected-final-count`, finalOutboundRecords.length === testCase.expectedFinalSendCount, `${testCase.id} produced expected final send count`),
+    invariant(`${testCase.id}:expected-final-kind`, !testCase.expectedKind || firstFinal?.kind === testCase.expectedKind, `${testCase.id} used expected channel send kind`),
+    invariant(`${testCase.id}:expected-final-text`, !testCase.expectedText || Boolean(matchedText), `${testCase.id} final channel send contains expected text`),
+    invariant(`${testCase.id}:delivery-receipt`, testCase.expectedFinalSendCount === 0 || caseDeliveryRecords.some((record) => record.fallback === false), `${testCase.id} durable delivery recorded a channel receipt`),
+    invariant(`${testCase.id}:single-final-send`, finalOutboundRecords.length <= 1 || testCase.allowMultipleFinalSends === true, `${testCase.id} did not duplicate final channel sends`),
+    invariant(`${testCase.id}:reply-to`, !testCase.expectReplyToId || firstFinal?.replyToId === inboundEventId, `${testCase.id} preserved reply target`),
+    invariant(`${testCase.id}:thread`, !testCase.threadId || firstFinal?.threadId === testCase.threadId, `${testCase.id} preserved thread target`),
+    invariant(`${testCase.id}:silent`, testCase.silent !== true || firstFinal?.silent === true, `${testCase.id} preserved silent delivery intent`),
+    invariant(`${testCase.id}:media-url`, !testCase.expectedMediaUrl || firstFinal?.mediaUrl === testCase.expectedMediaUrl, `${testCase.id} preserved media URL`),
+    invariant(`${testCase.id}:after-send-success`, testCase.expectHooks !== true || caseOutboundRecords.some((record) => record.kind === "after-send-success"), `${testCase.id} ran after-send-success hook`),
+    invariant(`${testCase.id}:after-commit`, testCase.expectHooks !== true || caseOutboundRecords.some((record) => record.kind === "after-commit"), `${testCase.id} ran after-commit hook`),
+    invariant(`${testCase.id}:terminal-return`, !error, `${testCase.id} returned from OpenClaw dispatch`)
+  ];
+  const ok = invariants.every((item) => item.status === "passed");
+
+  return {
+    id: testCase.id,
+    status: ok ? "passed" : "failed",
+    reason: ok ? null : (error?.message ?? invariants.find((item) => item.status !== "passed")?.reason ?? "model turn case failed"),
+    capabilities: testCase.capabilities,
+    inboundEvent: {
+      id: inboundEventId,
+      authorId: "kova-baseline-user",
+      sourceKind: "external-user",
+      targetId: TARGET_ID,
+      message: testCase.prompt
+    },
+    routeSessionKey: turn?.routeSessionKey ?? null,
+    dispatched: turn?.dispatched === true,
+    finalText: matchedText,
+    expectedText: testCase.expectedText,
+    durationMs: elapsedMs(startedAt),
+    invariants,
+    outboundRecords: caseOutboundRecords,
+    deliveryRecords: caseDeliveryRecords,
+    modelTurnRecords: caseModelTurnRecords
+  };
+}
+
+const modelTurnCaseDefinitions = [
+  {
+    id: "text-final",
+    prompt: "Return the exact text response for the text final channel capability.",
+    responseText: "KOVA_AGENT_OK",
+    expectedText: "KOVA_AGENT_OK",
+    expectedKind: "text",
+    expectedFinalSendCount: 1,
+    expectReplyToId: true,
+    expectHooks: true,
+    capabilities: [
+      { group: "durable-final", id: "text" },
+      { group: "durable-final", id: "reply-to" },
+      { group: "durable-final", id: "message-sending-hooks" },
+      { group: "durable-final", id: "after-send-success" },
+      { group: "durable-final", id: "after-commit" },
+      { group: "ack", id: "after-agent-dispatch" },
+      { group: "ack", id: "after-durable-send" }
+    ]
+  },
+  {
+    id: "media-final",
+    prompt: "Return a final answer with a media directive and caption.",
+    responseText: "MEDIA:/tmp/kova-channel-model-turn-media.png\nKOVA_AGENT_MEDIA_OK",
+    expectedText: "KOVA_AGENT_MEDIA_OK",
+    expectedKind: "media",
+    expectedMediaUrl: "/tmp/kova-channel-model-turn-media.png",
+    mediaFixturePath: "/tmp/kova-channel-model-turn-media.png",
+    expectedFinalSendCount: 1,
+    expectReplyToId: true,
+    capabilities: [
+      { group: "durable-final", id: "media" }
+    ]
+  },
+  {
+    id: "thread-final",
+    prompt: "Return text that must stay in the inbound thread.",
+    responseText: "KOVA_AGENT_THREAD_OK",
+    expectedText: "KOVA_AGENT_THREAD_OK",
+    expectedKind: "text",
+    expectedFinalSendCount: 1,
+    threadId: "kova-model-turn-thread",
+    capabilities: [
+      { group: "durable-final", id: "thread" }
+    ]
+  },
+  {
+    id: "silent-final",
+    prompt: "Return text while the channel runtime marks the durable send as silent.",
+    responseText: "KOVA_AGENT_SILENT_OK",
+    expectedText: "KOVA_AGENT_SILENT_OK",
+    expectedKind: "text",
+    expectedFinalSendCount: 1,
+    silent: true,
+    capabilities: [
+      { group: "durable-final", id: "silent" }
+    ]
+  }
+];
 
 const baselineScenarios = [
   durableTurnScenario("text", { text: "KOVA_CHANNEL_TEXT_OK" }, {
@@ -713,7 +862,9 @@ async function runSyntheticTurn({
 async function runOpenClawModelTurn({
   message,
   inboundEventId,
-  replyToId
+  replyToId,
+  threadId,
+  silent
 }) {
   const runtime = activeRuntime.channelRuntime;
   const cfg = activeRuntime.cfg;
@@ -742,6 +893,7 @@ async function runOpenClawModelTurn({
     MessageSid: inboundEventId,
     MessageSidFull: inboundEventId,
     ReplyToId: replyToId,
+    MessageThreadId: threadId,
     Timestamp: new Date().toISOString(),
     OriginatingChannel: CHANNEL_ID,
     CommandAuthorized: true
@@ -760,7 +912,9 @@ async function runOpenClawModelTurn({
     delivery: {
       durable: {
         replyToMode: "first",
-        replyToId
+        replyToId,
+        threadId,
+        silent
       },
       deliver: async (delivered) => {
         deliveryRecords.push({ fallback: true, payload: delivered });
@@ -789,6 +943,33 @@ async function runOpenClawModelTurn({
     },
     messageId: inboundEventId
   });
+}
+
+function modelTurnPrompt(testCase) {
+  return [
+    testCase.prompt,
+    "The Kova mock provider must return the scripted fixture below.",
+    `KOVA_MOCK_RESPONSE_B64:${Buffer.from(testCase.responseText, "utf8").toString("base64")}`
+  ].join("\n");
+}
+
+function isFinalOutboundRecord(record) {
+  return ["text", "media", "payload"].includes(record?.kind);
+}
+
+function writeMediaFixture(path) {
+  writeFileSync(path, Buffer.from(
+    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/p9sAAAAASUVORK5CYII=",
+    "base64"
+  ));
+}
+
+function removeMediaFixture(path) {
+  try {
+    unlinkSync(path);
+  } catch {
+    // Best-effort cleanup for a short-lived test fixture.
+  }
 }
 
 async function renderPayloads(payloads) {
