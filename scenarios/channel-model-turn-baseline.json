@@ -1,0 +1,118 @@
+{
+  "id": "channel-model-turn-baseline",
+  "surface": "channel-model-turn-baseline",
+  "title": "Channel Model Turn Baseline",
+  "objective": "Install the deterministic Kova channel, inject one inbound channel event into a real OpenClaw gateway, run the agent/model loop through the mock provider, and verify exactly one final channel response with a receipt.",
+  "tags": [
+    "channel",
+    "model",
+    "agent",
+    "gateway",
+    "providers",
+    "plugins",
+    "baseline"
+  ],
+  "timeoutMs": 300000,
+  "agent": {
+    "expectedText": "KOVA_AGENT_OK"
+  },
+  "thresholds": {
+    "gatewayReadyMs": 45000,
+    "agentTurnMs": 45000,
+    "preProviderMs": 10000,
+    "providerFinalMs": 3000,
+    "peakRssMb": 900,
+    "missingDependencyErrors": 0,
+    "pluginLoadFailures": 0
+  },
+  "phases": [
+    {
+      "id": "provision",
+      "title": "Provision Channel Model Turn Env",
+      "intent": "Create a disposable OpenClaw environment without starting the gateway so Kova mock auth and the test channel plugin are installed before plugin discovery.",
+      "commands": [
+        "ocm start {env} {startSelector} --no-service --json"
+      ],
+      "evidence": [
+        "OCM start JSON",
+        "env name",
+        "runtime binding",
+        "gateway port"
+      ],
+      "healthScope": "none",
+      "collectionIntent": "service-only"
+    },
+    {
+      "id": "install-channel-baseline",
+      "title": "Install Kova Channel Plugin",
+      "intent": "Install the deterministic Kova channel plugin through the user-visible plugin install path before gateway startup.",
+      "commands": [
+        "ocm @{env} -- plugins install {kovaRoot}/support/plugins/kova-channel-baseline --force",
+        "ocm @{env} -- plugins list"
+      ],
+      "evidence": [
+        "plugin install command",
+        "installed plugin list",
+        "external plugin manifest load"
+      ],
+      "healthScope": "none",
+      "collectionIntent": "service-only"
+    },
+    {
+      "id": "gateway-start",
+      "title": "Start Gateway With Kova Channel",
+      "intent": "Start the OpenClaw gateway after mock auth and plugin installation so the channel and model provider are discovered through the normal runtime path.",
+      "commands": [
+        "ocm service install {env} --json",
+        "ocm service start {env} --json",
+        "node {kovaRoot}/support/ensure-gateway-running.mjs --env {env} --artifact-dir {artifactDir} --timeout-ms 120000"
+      ],
+      "evidence": [
+        "gateway service installed",
+        "gateway service started",
+        "gateway readiness",
+        "baseline channel startup"
+      ],
+      "healthScope": "readiness",
+      "collectionIntent": "post-ready-health"
+    },
+    {
+      "id": "channel-model-turn-baseline",
+      "title": "Run Channel Model Turn",
+      "intent": "Call the Kova channel plugin over Gateway RPC so OpenClaw handles a real inbound channel event, calls the mock provider, sends the final assistant response through the channel adapter, and records lineage invariants.",
+      "commands": [
+        "node {kovaRoot}/support/run-channel-model-turn-baseline.mjs --env {env} --artifact-dir {artifactDir} --message 'Reply with exact ASCII text KOVA_AGENT_OK only.' --expected-text KOVA_AGENT_OK --timeout-ms 120000"
+      ],
+      "evidence": [
+        "inbound channel event id",
+        "mock provider request",
+        "final assistant text",
+        "outbound channel send record",
+        "channel receipt",
+        "terminal dispatch return",
+        "duplicate-send invariant"
+      ],
+      "healthScope": "post-ready",
+      "collectionIntent": "post-ready-health"
+    },
+    {
+      "id": "post-channel-model-turn-health",
+      "title": "Post-Channel-Model-Turn Health",
+      "intent": "Verify the gateway remains responsive after the channel model turn.",
+      "commands": [
+        "ocm @{env} -- gateway status --json --require-rpc"
+      ],
+      "evidence": [
+        "gateway status probe",
+        "provider logs",
+        "plugin errors",
+        "memory after channel model turn"
+      ],
+      "healthScope": "post-ready",
+      "collectionIntent": "post-ready-health"
+    }
+  ],
+  "proves": [
+    "baseline"
+  ]
+}

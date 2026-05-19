@@ -1,0 +1,64 @@
+{
+  "id": "channel-model-turn-baseline",
+  "title": "Channel Model Turn Baseline",
+  "ownerArea": "OpenClaw",
+  "description": "Validate that a real inbound OpenClaw channel event runs through the agent/model loop and delivers exactly one final channel response.",
+  "processRoles": [
+    "gateway",
+    "command-tree",
+    "agent-process",
+    "mock-provider"
+  ],
+  "resourcePrimaryRole": "gateway",
+  "thresholds": {
+    "agentTurnMs": 45000,
+    "preProviderMs": 10000,
+    "providerFinalMs": 3000,
+    "peakRssMb": 900,
+    "postReadyHealthP95Ms": 1000
+  },
+  "roleThresholds": {
+    "gateway": {
+      "peakRssMb": 700,
+      "maxCpuPercent": 250
+    },
+    "mock-provider": {
+      "peakRssMb": 250,
+      "maxCpuPercent": 150
+    }
+  },
+  "diagnostics": {
+    "timelineRequiredForSourceBuild": true,
+    "expectedSpans": [
+      "gateway.ready",
+      "plugins.metadata.scan"
+    ]
+  },
+  "purposes": [
+    "regression",
+    "release"
+  ],
+  "requirements": [
+    {
+      "id": "baseline",
+      "states": [
+        "mock-openai-provider"
+      ],
+      "targetKinds": [
+        "npm",
+        "release",
+        "runtime",
+        "local-build"
+      ],
+      "metrics": [
+        "agentTurnMs",
+        "agentTurnP95Ms",
+        "agentTurnMaxMs",
+        "coldPreProviderMs",
+        "postReadyHealthP95Ms",
+        "peakRssMb",
+        "pluginLoadFailures"
+      ]
+    }
+  ]
+}

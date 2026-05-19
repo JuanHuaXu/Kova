@@ -12,7 +12,7 @@
     "title": "Smoke Matrix",
     "objective": "Fast OpenClaw coverage across fresh install, plugin dependency, plugin lifecycle, and gateway performance states.",
     "purpose": "regression",
-    "entryCount": 13,
+    "entryCount": 14,
     "targetKinds": null,
     "diagnostics": null,
     "calibration": null,
@@ -39,9 +39,9 @@
     "schemaVersion": "kova.resolvedCoverage.v1",
     "purpose": "regression",
     "targetKind": "runtime",
-    "total": 13,
+    "total": 14,
     "statuses": {
-      "planned": 13
+      "planned": 14
     },
     "obligations": [
       {
@@ -115,6 +115,39 @@
           "local-build"
         ],
         "requiredMetrics": []
+      },
+      {
+        "surface": "channel-model-turn-baseline",
+        "requirement": "baseline",
+        "scenario": "channel-model-turn-baseline",
+        "state": "mock-openai-provider",
+        "stateTraits": [
+          "mock-provider",
+          "provider-pressure",
+          "agent-state"
+        ],
+        "targetKind": "runtime",
+        "status": "planned",
+        "reason": null,
+        "requiredStates": [
+          "mock-openai-provider"
+        ],
+        "requiredStateTraits": [],
+        "requiredTargetKinds": [
+          "npm",
+          "release",
+          "runtime",
+          "local-build"
+        ],
+        "requiredMetrics": [
+          "agentTurnMs",
+          "agentTurnP95Ms",
+          "agentTurnMaxMs",
+          "coldPreProviderMs",
+          "postReadyHealthP95Ms",
+          "peakRssMb",
+          "pluginLoadFailures"
+        ]
       },
       {
         "surface": "release-runtime-startup",
@@ -547,6 +580,40 @@
         ]
       },
       "surface": "channel-capability-baseline",
+      "timeoutMs": 300000,
+      "platforms": null,
+      "status": "SELECTED",
+      "skipReason": null
+    },
+    {
+      "scenario": {
+        "id": "channel-model-turn-baseline",
+        "surface": "channel-model-turn-baseline",
+        "title": "Channel Model Turn Baseline",
+        "objective": "Install the deterministic Kova channel, inject one inbound channel event into a real OpenClaw gateway, run the agent/model loop through the mock provider, and verify exactly one final channel response with a receipt.",
+        "tags": [
+          "channel",
+          "model",
+          "agent",
+          "gateway",
+          "providers",
+          "plugins",
+          "baseline"
+        ]
+      },
+      "state": {
+        "id": "mock-openai-provider",
+        "title": "Mock OpenAI Provider",
+        "objective": "A local OpenAI-compatible provider endpoint wired into OpenClaw config so agent turns exercise the real OpenClaw agent path without external model dependencies.",
+        "tags": [
+          "agent",
+          "models",
+          "providers",
+          "mock",
+          "latency"
+        ]
+      },
+      "surface": "channel-model-turn-baseline",
       "timeoutMs": 300000,
       "platforms": null,
       "status": "SELECTED",

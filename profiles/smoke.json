@@ -17,6 +17,11 @@
       "timeoutMs": 300000
     },
     {
+      "scenario": "channel-model-turn-baseline",
+      "state": "mock-openai-provider",
+      "timeoutMs": 300000
+    },
+    {
       "scenario": "release-runtime-startup",
       "state": "fresh"
     },

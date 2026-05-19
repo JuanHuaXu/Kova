@@ -1,0 +1,176 @@
+#!/usr/bin/env node
+import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { join } from "node:path";
+import {
+  openDirectGatewayRpcClient,
+  parseSupportArgs,
+  prepareOpenClawRuntimeFromOcmEnv,
+  readTimeoutMs
+} from "./openclaw-runtime.mjs";
+
+const args = parseSupportArgs(process.argv.slice(2));
+const envName = requiredArg(args, "env");
+const artifactDir = requiredArg(args, "artifact-dir");
+const timeoutMs = readTimeoutMs(args["timeout-ms"], 120000);
+const message = args.message ?? "Reply with exact ASCII text KOVA_AGENT_OK only.";
+const expectedText = args["expected-text"] ?? "KOVA_AGENT_OK";
+const artifactPath = join(artifactDir, "channel-model-turn-baseline.json");
+const providerRequestLogPath = join(artifactDir, "mock-openai", "requests.jsonl");
+
+async function main() {
+  let result;
+  let clientHandle = null;
+  const providerRequestCountBefore = await countJsonl(providerRequestLogPath);
+  try {
+    const runtimeContext = prepareOpenClawRuntimeFromOcmEnv(envName);
+    clientHandle = await openDirectGatewayRpcClient(runtimeContext);
+    if (!clientHandle.client) {
+      throw new Error(`gateway direct RPC unavailable: ${clientHandle.fallbackReason ?? "unknown"}`);
+    }
+    await waitForBaselineChannel(clientHandle.client, timeoutMs);
+    const turn = await clientHandle.client.request(
+      "kova.channelBaseline.runModelTurn",
+      { message, expectedText },
+      { timeoutMs }
+    );
+    const providerRequestCountAfter = await countJsonl(providerRequestLogPath);
+    result = buildResult({
+      runtimeContext,
+      turn,
+      error: null,
+      providerRequestCountBefore,
+      providerRequestCountAfter,
+      timeoutMs
+    });
+  } catch (error) {
+    const providerRequestCountAfter = await countJsonl(providerRequestLogPath);
+    result = buildResult({
+      runtimeContext: null,
+      turn: null,
+      error,
+      providerRequestCountBefore,
+      providerRequestCountAfter,
+      timeoutMs
+    });
+  } finally {
+    clientHandle?.client?.close?.();
+  }
+
+  await mkdir(artifactDir, { recursive: true });
+  await writeFile(artifactPath, `${JSON.stringify(result.artifact, null, 2)}\n`, "utf8");
+  process.stdout.write(`${JSON.stringify({
+    schemaVersion: "kova.channelModelTurnRun.v1",
+    ok: result.ok,
+    artifactPath,
+    ownerArea: "OpenClaw",
+    envName,
+    expectedText,
+    finalText: result.artifact.turn?.finalText ?? null,
+    inboundEventId: result.artifact.turn?.inboundEvent?.id ?? null,
+    routeSessionKey: result.artifact.turn?.routeSessionKey ?? null,
+    providerRequestDelta: result.artifact.providerRequestDelta,
+    invariants: result.artifact.invariants
+  }, null, 2)}\n`);
+  process.exit(result.ok ? 0 : 1);
+}
+
+async function waitForBaselineChannel(client, commandTimeoutMs) {
+  const startedAt = Date.now();
+  let lastError = null;
+  while (Date.now() - startedAt < commandTimeoutMs) {
+    try {
+      const status = await client.request("kova.channelBaseline.status", {}, { timeoutMs: 5000 });
+      if (status?.ok === true) {
+        return status;
+      }
+      lastError = new Error("kova channel baseline plugin registered but channel runtime is not started");
+    } catch (error) {
+      lastError = error;
+    }
+    await sleep(1000);
+  }
+  throw lastError ?? new Error("timed out waiting for kova channel baseline runtime");
+}
+
+function buildResult({
+  runtimeContext,
+  turn,
+  error,
+  providerRequestCountBefore,
+  providerRequestCountAfter,
+  timeoutMs: commandTimeoutMs
+}) {
+  const runError = error ? error.message : turn?.error ?? null;
+  const providerRequestDelta = Math.max(0, providerRequestCountAfter - providerRequestCountBefore);
+  const invariants = [
+    ...(turn?.invariants ?? []),
+    invariant("provider-request", !runError && providerRequestDelta >= 1, "channel model turn made at least one mock provider request"),
+    invariant("no-global-error", !runError, "channel model turn completed without transport or plugin error")
+  ];
+  const ok = !runError && turn?.ok === true && invariants.every((item) => item.status === "passed");
+
+  return {
+    ok,
+    artifact: {
+      schemaVersion: "kova.channelModelTurnBaselineArtifact.v1",
+      runtimeContext: compactRuntimeContext(runtimeContext),
+      timeoutMs: commandTimeoutMs,
+      message,
+      expectedText,
+      error: runError,
+      providerRequestLogPath,
+      providerRequestCountBefore,
+      providerRequestCountAfter,
+      providerRequestDelta,
+      turn,
+      invariants
+    }
+  };
+}
+
+function compactRuntimeContext(context) {
+  if (!context) {
+    return null;
+  }
+  return {
+    source: "ocm-env",
+    envName: context.envName ?? null,
+    packageRoot: context.packageRoot,
+    runtime: context.runtime ?? null
+  };
+}
+
+async function countJsonl(path) {
+  try {
+    const text = await readFile(path, "utf8");
+    return text.split("\n").filter((line) => line.trim().length > 0).length;
+  } catch (error) {
+    if (error?.code === "ENOENT") {
+      return 0;
+    }
+    throw error;
+  }
+}
+
+function invariant(id, condition, summary) {
+  return {
+    id,
+    status: condition ? "passed" : "failed",
+    summary,
+    reason: condition ? null : summary
+  };
+}
+
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function requiredArg(parsed, key) {
+  const value = parsed[key];
+  if (typeof value !== "string" || value.length === 0) {
+    throw new Error(`--${key} is required`);
+  }
+  return value;
+}
+
+await main();

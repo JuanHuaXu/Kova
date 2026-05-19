@@ -235,6 +235,7 @@
           "channel-capability-preflight:preflight",
           "channel-capability-shared-runtime-smoke:shared-runtime-smoke",
           "channel-capability-baseline:baseline",
+          "channel-model-turn-baseline:baseline",
           "release-runtime-startup:baseline",
           "fresh-install:baseline",
           "upgrade-existing-user:baseline",
@@ -281,6 +282,11 @@
       {
         "scenario": "channel-capability-baseline",
         "state": "fresh"
+      },
+      {
+        "scenario": "channel-model-turn-baseline",
+        "state": "mock-openai-provider",
+        "timeoutMs": 300000
       },
       {
         "scenario": "release-runtime-startup",
@@ -465,6 +471,11 @@
     {
       "scenario": "channel-capability-baseline",
       "state": "fresh"
+    },
+    {
+      "scenario": "channel-model-turn-baseline",
+      "state": "mock-openai-provider",
+      "timeoutMs": 300000
     },
     {
       "scenario": "release-runtime-startup",

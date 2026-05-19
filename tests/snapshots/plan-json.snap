@@ -482,6 +482,70 @@
       ]
     },
     {
+      "id": "channel-model-turn-baseline",
+      "title": "Channel Model Turn Baseline",
+      "ownerArea": "OpenClaw",
+      "description": "Validate that a real inbound OpenClaw channel event runs through the agent/model loop and delivers exactly one final channel response.",
+      "processRoles": [
+        "gateway",
+        "command-tree",
+        "agent-process",
+        "mock-provider"
+      ],
+      "resourcePrimaryRole": "gateway",
+      "thresholds": {
+        "agentTurnMs": 45000,
+        "preProviderMs": 10000,
+        "providerFinalMs": 3000,
+        "peakRssMb": 900,
+        "postReadyHealthP95Ms": 1000
+      },
+      "roleThresholds": {
+        "gateway": {
+          "peakRssMb": 700,
+          "maxCpuPercent": 250
+        },
+        "mock-provider": {
+          "peakRssMb": 250,
+          "maxCpuPercent": 150
+        }
+      },
+      "diagnostics": {
+        "timelineRequiredForSourceBuild": true,
+        "expectedSpans": [
+          "gateway.ready",
+          "plugins.metadata.scan"
+        ]
+      },
+      "purposes": [
+        "regression",
+        "release"
+      ],
+      "requirements": [
+        {
+          "id": "baseline",
+          "states": [
+            "mock-openai-provider"
+          ],
+          "targetKinds": [
+            "npm",
+            "release",
+            "runtime",
+            "local-build"
+          ],
+          "metrics": [
+            "agentTurnMs",
+            "agentTurnP95Ms",
+            "agentTurnMaxMs",
+            "coldPreProviderMs",
+            "postReadyHealthP95Ms",
+            "peakRssMb",
+            "pluginLoadFailures"
+          ]
+        }
+      ]
+    },
+    {
       "id": "cross-platform-smoke",
       "title": "Cross-Platform Smoke",
       "ownerArea": "platform-runtime",
@@ -4840,6 +4904,124 @@
       ]
     },
     {
+      "id": "channel-model-turn-baseline",
+      "surface": "channel-model-turn-baseline",
+      "title": "Channel Model Turn Baseline",
+      "objective": "Install the deterministic Kova channel, inject one inbound channel event into a real OpenClaw gateway, run the agent/model loop through the mock provider, and verify exactly one final channel response with a receipt.",
+      "tags": [
+        "channel",
+        "model",
+        "agent",
+        "gateway",
+        "providers",
+        "plugins",
+        "baseline"
+      ],
+      "timeoutMs": 300000,
+      "agent": {
+        "expectedText": "KOVA_AGENT_OK"
+      },
+      "thresholds": {
+        "gatewayReadyMs": 45000,
+        "agentTurnMs": 45000,
+        "preProviderMs": 10000,
+        "providerFinalMs": 3000,
+        "peakRssMb": 900,
+        "missingDependencyErrors": 0,
+        "pluginLoadFailures": 0
+      },
+      "phases": [
+        {
+          "id": "provision",
+          "title": "Provision Channel Model Turn Env",
+          "intent": "Create a disposable OpenClaw environment without starting the gateway so Kova mock auth and the test channel plugin are installed before plugin discovery.",
+          "commands": [
+            "ocm start {env} {startSelector} --no-service --json"
+          ],
+          "evidence": [
+            "OCM start JSON",
+            "env name",
+            "runtime binding",
+            "gateway port"
+          ],
+          "healthScope": "none",
+          "collectionIntent": "service-only"
+        },
+        {
+          "id": "install-channel-baseline",
+          "title": "Install Kova Channel Plugin",
+          "intent": "Install the deterministic Kova channel plugin through the user-visible plugin install path before gateway startup.",
+          "commands": [
+            "ocm @{env} -- plugins install {kovaRoot}/support/plugins/kova-channel-baseline --force",
+            "ocm @{env} -- plugins list"
+          ],
+          "evidence": [
+            "plugin install command",
+            "installed plugin list",
+            "external plugin manifest load"
+          ],
+          "healthScope": "none",
+          "collectionIntent": "service-only"
+        },
+        {
+          "id": "gateway-start",
+          "title": "Start Gateway With Kova Channel",
+          "intent": "Start the OpenClaw gateway after mock auth and plugin installation so the channel and model provider are discovered through the normal runtime path.",
+          "commands": [
+            "ocm service install {env} --json",
+            "ocm service start {env} --json",
+            "node {kovaRoot}/support/ensure-gateway-running.mjs --env {env} --artifact-dir {artifactDir} --timeout-ms 120000"
+          ],
+          "evidence": [
+            "gateway service installed",
+            "gateway service started",
+            "gateway readiness",
+            "baseline channel startup"
+          ],
+          "healthScope": "readiness",
+          "collectionIntent": "post-ready-health"
+        },
+        {
+          "id": "channel-model-turn-baseline",
+          "title": "Run Channel Model Turn",
+          "intent": "Call the Kova channel plugin over Gateway RPC so OpenClaw handles a real inbound channel event, calls the mock provider, sends the final assistant response through the channel adapter, and records lineage invariants.",
+          "commands": [
+            "node {kovaRoot}/support/run-channel-model-turn-baseline.mjs --env {env} --artifact-dir {artifactDir} --message 'Reply with exact ASCII text KOVA_AGENT_OK only.' --expected-text KOVA_AGENT_OK --timeout-ms 120000"
+          ],
+          "evidence": [
+            "inbound channel event id",
+            "mock provider request",
+            "final assistant text",
+            "outbound channel send record",
+            "channel receipt",
+            "terminal dispatch return",
+            "duplicate-send invariant"
+          ],
+          "healthScope": "post-ready",
+          "collectionIntent": "post-ready-health"
+        },
+        {
+          "id": "post-channel-model-turn-health",
+          "title": "Post-Channel-Model-Turn Health",
+          "intent": "Verify the gateway remains responsive after the channel model turn.",
+          "commands": [
+            "ocm @{env} -- gateway status --json --require-rpc"
+          ],
+          "evidence": [
+            "gateway status probe",
+            "provider logs",
+            "plugin errors",
+            "memory after channel model turn"
+          ],
+          "healthScope": "post-ready",
+          "collectionIntent": "post-ready-health"
+        }
+      ],
+      "proves": [
+        "baseline"
+      ]
+    },
+    {
       "id": "cross-platform-smoke",
       "surface": "cross-platform-smoke",
       "title": "Cross-Platform Runtime Smoke",
@@ -8653,7 +8835,7 @@
       "title": "Release Matrix",
       "objective": "Broad OpenClaw release confidence across install, upgrade, bundled plugins, model/provider, UI, failure, soak, and platform smoke scenarios.",
       "purpose": "release",
-      "entryCount": 44,
+      "entryCount": 45,
       "targetKinds": null,
       "diagnostics": null,
       "calibration": {
@@ -8662,7 +8844,7 @@
       },
       "gate": {
         "id": "openclaw-release",
-        "blockingCount": 28,
+        "blockingCount": 29,
         "warningCount": 16
       }
     },
@@ -8671,7 +8853,7 @@
       "title": "Smoke Matrix",
       "objective": "Fast OpenClaw coverage across fresh install, plugin dependency, plugin lifecycle, and gateway performance states.",
       "purpose": "regression",
-      "entryCount": 13,
+      "entryCount": 14,
       "targetKinds": null,
       "diagnostics": null,
       "calibration": null,
@@ -8770,6 +8952,15 @@
         "scenarioCount": 1,
         "scenarios": [
           "channel-capability-shared-runtime-smoke"
+        ]
+      },
+      {
+        "id": "channel-model-turn-baseline",
+        "title": "Channel Model Turn Baseline",
+        "ownerArea": "OpenClaw",
+        "scenarioCount": 1,
+        "scenarios": [
+          "channel-model-turn-baseline"
         ]
       },
       {
@@ -9063,6 +9254,10 @@
       {
         "scenario": "channel-capability-shared-runtime-smoke",
         "surface": "channel-capability-shared-runtime-smoke"
+      },
+      {
+        "scenario": "channel-model-turn-baseline",
+        "surface": "channel-model-turn-baseline"
       },
       {
         "scenario": "cross-platform-smoke",
@@ -10237,7 +10432,7 @@
       },
       {
         "id": "release",
-        "entryCount": 44,
+        "entryCount": 45,
         "surfaces": [
           "agent-cli-local-turn",
           "agent-gateway-rpc-turn",
@@ -10247,6 +10442,7 @@
           "channel-capability-baseline",
           "channel-capability-preflight",
           "channel-capability-shared-runtime-smoke",
+          "channel-model-turn-baseline",
           "cross-platform-smoke",
           "dashboard",
           "failure-containment",
@@ -10308,6 +10504,7 @@
           "channel-capability-baseline",
           "channel-capability-preflight",
           "channel-capability-shared-runtime-smoke",
+          "channel-model-turn-baseline",
           "cross-platform-smoke",
           "dashboard-readiness",
           "failure-injection",
@@ -10343,6 +10540,7 @@
           "channel-capability-baseline:baseline",
           "channel-capability-preflight:preflight",
           "channel-capability-shared-runtime-smoke:shared-runtime-smoke",
+          "channel-model-turn-baseline:baseline",
           "cross-platform-smoke:baseline",
           "dashboard:baseline",
           "failure-containment:baseline",
@@ -10378,6 +10576,7 @@
           "channel-capability-baseline:fresh",
           "channel-capability-preflight:fresh",
           "channel-capability-shared-runtime-smoke:fresh",
+          "channel-model-turn-baseline:mock-openai-provider",
           "cross-platform-smoke:slow-filesystem",
           "dashboard:fresh",
           "failure-containment:broken-plugin-deps",
@@ -10417,6 +10616,7 @@
             "channel-capability-baseline",
             "channel-capability-preflight",
             "channel-capability-shared-runtime-smoke",
+            "channel-model-turn-baseline",
             "cross-platform-smoke",
             "dashboard",
             "failure-containment",
@@ -10460,6 +10660,7 @@
             "channel-capability-baseline",
             "channel-capability-preflight",
             "channel-capability-shared-runtime-smoke",
+            "channel-model-turn-baseline",
             "cross-platform-smoke",
             "dashboard-readiness",
             "failure-injection",
@@ -10541,6 +10742,7 @@
             "channel-capability-baseline:baseline",
             "channel-capability-preflight:preflight",
             "channel-capability-shared-runtime-smoke:shared-runtime-smoke",
+            "channel-model-turn-baseline:baseline",
             "cross-platform-smoke:baseline",
             "dashboard:baseline",
             "failure-containment:baseline",
@@ -10576,6 +10778,7 @@
             "channel-capability-baseline:fresh",
             "channel-capability-preflight:fresh",
             "channel-capability-shared-runtime-smoke:fresh",
+            "channel-model-turn-baseline:mock-openai-provider",
             "cross-platform-smoke:slow-filesystem",
             "dashboard:fresh",
             "failure-containment:broken-plugin-deps",
@@ -10743,6 +10946,9 @@
           "channel-capability-shared-runtime-smoke": [
             "fresh"
           ],
+          "channel-model-turn-baseline": [
+            "mock-openai-provider"
+          ],
           "cross-platform-smoke": [
             "slow-filesystem"
           ],
@@ -10824,6 +11030,7 @@
           "agent-state": [
             "agent-cli-local-turn",
             "agent-gateway-rpc-turn",
+            "channel-model-turn-baseline",
             "gateway-session-send-turn",
             "openai-compatible-turn",
             "tui-message-turn"
@@ -10901,6 +11108,7 @@
           "mock-provider": [
             "agent-cli-local-turn",
             "agent-gateway-rpc-turn",
+            "channel-model-turn-baseline",
             "gateway-session-send-turn",
             "openai-compatible-turn",
             "tui-message-turn"
@@ -10935,6 +11143,7 @@
           "provider-pressure": [
             "agent-cli-local-turn",
             "agent-gateway-rpc-turn",
+            "channel-model-turn-baseline",
             "gateway-performance",
             "gateway-session-send-turn",
             "openai-compatible-turn",
@@ -10953,7 +11162,7 @@
       },
       {
         "id": "smoke",
-        "entryCount": 13,
+        "entryCount": 14,
         "surfaces": [
           "agent-cli-local-turn",
           "agent-gateway-rpc-turn",
@@ -10962,6 +11171,7 @@
           "channel-capability-baseline",
           "channel-capability-preflight",
           "channel-capability-shared-runtime-smoke",
+          "channel-model-turn-baseline",
           "fresh-install",
           "gateway-performance",
           "gateway-session-send-turn",
@@ -10984,6 +11194,7 @@
           "channel-capability-baseline",
           "channel-capability-preflight",
           "channel-capability-shared-runtime-smoke",
+          "channel-model-turn-baseline",
           "fresh-install",
           "gateway-performance",
           "gateway-session-send-turn",
@@ -10999,6 +11210,7 @@
           "channel-capability-baseline:baseline",
           "channel-capability-preflight:preflight",
           "channel-capability-shared-runtime-smoke:shared-runtime-smoke",
+          "channel-model-turn-baseline:baseline",
           "fresh-install:baseline",
           "gateway-performance:baseline",
           "gateway-session-send-turn:baseline",
@@ -11014,6 +11226,7 @@
           "channel-capability-baseline:fresh",
           "channel-capability-preflight:fresh",
           "channel-capability-shared-runtime-smoke:fresh",
+          "channel-model-turn-baseline:mock-openai-provider",
           "fresh-install:fresh",
           "gateway-performance:many-bundled-plugins",
           "gateway-session-send-turn:mock-openai-provider",
@@ -11099,6 +11312,9 @@
           "channel-capability-shared-runtime-smoke": [
             "fresh"
           ],
+          "channel-model-turn-baseline": [
+            "mock-openai-provider"
+          ],
           "fresh-install": [
             "fresh"
           ],
@@ -11122,6 +11338,7 @@
           "agent-state": [
             "agent-cli-local-turn",
             "agent-gateway-rpc-turn",
+            "channel-model-turn-baseline",
             "gateway-session-send-turn",
             "openai-compatible-turn"
           ],
@@ -11148,6 +11365,7 @@
           "mock-provider": [
             "agent-cli-local-turn",
             "agent-gateway-rpc-turn",
+            "channel-model-turn-baseline",
             "gateway-session-send-turn",
             "openai-compatible-turn"
           ],
@@ -11162,6 +11380,7 @@
           "provider-pressure": [
             "agent-cli-local-turn",
             "agent-gateway-rpc-turn",
+            "channel-model-turn-baseline",
             "gateway-performance",
             "gateway-session-send-turn",
             "openai-compatible-turn"
