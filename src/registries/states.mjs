@@ -14,7 +14,6 @@ import {
 export const knownStateTraits = [
   "agent-state",
   "baseline",
-  "channel-state",
   "config-state",
   "configured-auth",
   "existing-user",
@@ -34,6 +33,7 @@ export const knownStateTraits = [
   "plugin-pressure",
   "provider-pressure",
   "runtime-deps",
+  "release-state",
   "service-state",
   "session-state",
   "upgraded-user",

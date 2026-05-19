@@ -11,15 +11,19 @@ export function resolveTarget(selector, role) {
   if (kind === "npm") {
     const target = {
       kind,
-      value
+      value,
+      selector: `${kind}:${value}`,
+      requestedSelector: selector
     };
     return withOcmSelectors(target);
   }
 
-  if (kind === "channel") {
+  if (kind === "release") {
     const target = {
-      kind,
-      value
+      kind: "release",
+      value,
+      selector: `release:${value}`,
+      requestedSelector: selector
     };
     return withOcmSelectors(target);
   }
@@ -27,7 +31,9 @@ export function resolveTarget(selector, role) {
   if (kind === "runtime") {
     const target = {
       kind,
-      value
+      value,
+      selector: `${kind}:${value}`,
+      requestedSelector: selector
     };
     return withOcmSelectors(target);
   }
@@ -38,7 +44,9 @@ export function resolveTarget(selector, role) {
       kind,
       value,
       repoPath: value,
-      runtimeName
+      runtimeName,
+      selector: `${kind}:${value}`,
+      requestedSelector: selector
     };
     return withOcmSelectors(target);
   }

@@ -235,7 +235,7 @@
     },
     {
       "scenario": "cross-platform-smoke",
-      "state": "channel-configured"
+      "state": "release-configured"
     }
   ],
   "purpose": "regression"

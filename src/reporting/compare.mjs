@@ -608,7 +608,7 @@ function targetLane(target) {
   if (kind === "local-build") {
     return "source-build";
   }
-  if (["npm", "channel", "runtime"].includes(kind)) {
+  if (["npm", "release", "runtime"].includes(kind)) {
     return "release-runtime";
   }
   return null;

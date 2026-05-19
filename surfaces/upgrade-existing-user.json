@@ -62,11 +62,11 @@
         "old-release-user",
         "onboarded-user",
         "plugin-index",
-        "stable-channel-user"
+        "stable-release-user"
       ],
       "targetKinds": [
         "npm",
-        "channel",
+        "release",
         "runtime",
         "local-build"
       ],

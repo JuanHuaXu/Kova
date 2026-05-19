@@ -30,7 +30,7 @@ data contract, not hardcoded logic.
 ## States
 
 States are declarative (26 today). They model user history and environment:
-fresh user, onboarded user, old-release user, channel-configured user,
+fresh user, onboarded user, old-release user, release-configured user,
 broken-plugin-deps, missing-plugin-index, model auth configured/missing,
 external plugin, large workspace, slow filesystem, failed upgrade, stale
 runtime deps, gateway already running, and more.
@@ -60,7 +60,7 @@ Profiles define coverage policy (8 today):
 - `release` — ship / no-ship gate
 - `diagnostic` — local release-shaped builds with timeline expectations
 - `soak` — long-running pressure and stability
-- `channel-upgrade` — published-channel upgrade matrix
+- `release-upgrade` — published release-track upgrade matrix
 - `local-build-upgrade` — upgrade into a local build
 - `official-plugins` — bundled and official plugin coverage
 - `exhaustive` — the full sweep, gated by `--allow-exhaustive`
@@ -99,7 +99,7 @@ If Kova says something passed or failed, it came from observed execution.
 
 Published releases may not carry every span yet. Kova runs two lanes:
 
-- `npm:<version>` and `channel:<name>` — proves what users install today.
+- `npm:<version>` and `release:<name>` — proves what users install today.
   Missing timeline data is informational.
 - `local-build:<repo>` — proves the release-shaped build. Timeline evidence
   is required, and slow or open spans are promoted into top-level findings.

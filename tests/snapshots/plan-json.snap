@@ -69,7 +69,7 @@
           ],
           "targetKinds": [
             "npm",
-            "channel",
+            "release",
             "runtime",
             "local-build"
           ],
@@ -146,7 +146,7 @@
           ],
           "targetKinds": [
             "npm",
-            "channel",
+            "release",
             "runtime",
             "local-build"
           ],
@@ -223,7 +223,7 @@
           ],
           "targetKinds": [
             "npm",
-            "channel",
+            "release",
             "runtime",
             "local-build"
           ],
@@ -297,7 +297,7 @@
           ],
           "targetKinds": [
             "npm",
-            "channel",
+            "release",
             "runtime",
             "local-build"
           ],
@@ -364,7 +364,7 @@
           ],
           "targetKinds": [
             "npm",
-            "channel",
+            "release",
             "runtime",
             "local-build"
           ],
@@ -421,12 +421,12 @@
         {
           "id": "baseline",
           "states": [
-            "channel-configured",
+            "release-configured",
             "slow-filesystem"
           ],
           "targetKinds": [
             "npm",
-            "channel",
+            "release",
             "runtime",
             "local-build"
           ],
@@ -483,7 +483,7 @@
           ],
           "targetKinds": [
             "npm",
-            "channel",
+            "release",
             "runtime",
             "local-build"
           ],
@@ -546,7 +546,7 @@
           ],
           "targetKinds": [
             "npm",
-            "channel",
+            "release",
             "runtime",
             "local-build"
           ],
@@ -621,7 +621,7 @@
           ],
           "targetKinds": [
             "npm",
-            "channel",
+            "release",
             "runtime",
             "local-build"
           ],
@@ -690,7 +690,7 @@
           ],
           "targetKinds": [
             "npm",
-            "channel",
+            "release",
             "runtime",
             "local-build"
           ],
@@ -762,7 +762,7 @@
           ],
           "targetKinds": [
             "npm",
-            "channel",
+            "release",
             "runtime",
             "local-build"
           ],
@@ -840,7 +840,7 @@
           ],
           "targetKinds": [
             "npm",
-            "channel",
+            "release",
             "runtime",
             "local-build"
           ],
@@ -908,7 +908,7 @@
           ],
           "targetKinds": [
             "npm",
-            "channel",
+            "release",
             "runtime",
             "local-build"
           ],
@@ -976,7 +976,7 @@
           ],
           "targetKinds": [
             "npm",
-            "channel",
+            "release",
             "runtime",
             "local-build"
           ],
@@ -1048,7 +1048,7 @@
           ],
           "targetKinds": [
             "npm",
-            "channel",
+            "release",
             "runtime",
             "local-build"
           ],
@@ -1119,7 +1119,7 @@
           ],
           "targetKinds": [
             "npm",
-            "channel",
+            "release",
             "runtime",
             "local-build"
           ],
@@ -1179,7 +1179,7 @@
           ],
           "targetKinds": [
             "npm",
-            "channel",
+            "release",
             "runtime",
             "local-build"
           ],
@@ -1243,7 +1243,7 @@
           ],
           "targetKinds": [
             "npm",
-            "channel",
+            "release",
             "runtime",
             "local-build"
           ],
@@ -1310,7 +1310,7 @@
           ],
           "targetKinds": [
             "npm",
-            "channel",
+            "release",
             "runtime",
             "local-build"
           ],
@@ -1373,7 +1373,7 @@
           ],
           "targetKinds": [
             "npm",
-            "channel",
+            "release",
             "runtime",
             "local-build"
           ],
@@ -1432,7 +1432,7 @@
           ],
           "targetKinds": [
             "npm",
-            "channel",
+            "release",
             "runtime",
             "local-build"
           ],
@@ -1490,7 +1490,7 @@
           ],
           "targetKinds": [
             "npm",
-            "channel",
+            "release",
             "runtime",
             "local-build"
           ],
@@ -1549,7 +1549,7 @@
           ],
           "targetKinds": [
             "npm",
-            "channel",
+            "release",
             "runtime",
             "local-build"
           ],
@@ -1636,7 +1636,7 @@
           "targetKinds": [
             "local-build",
             "npm",
-            "channel",
+            "release",
             "runtime"
           ],
           "metrics": [
@@ -1714,7 +1714,7 @@
           ],
           "targetKinds": [
             "npm",
-            "channel",
+            "release",
             "runtime",
             "local-build"
           ],
@@ -1788,7 +1788,7 @@
           ],
           "targetKinds": [
             "npm",
-            "channel",
+            "release",
             "runtime",
             "local-build"
           ],
@@ -1848,7 +1848,7 @@
           ],
           "targetKinds": [
             "npm",
-            "channel",
+            "release",
             "runtime",
             "local-build"
           ],
@@ -1926,11 +1926,11 @@
             "old-release-user",
             "onboarded-user",
             "plugin-index",
-            "stable-channel-user"
+            "stable-release-user"
           ],
           "targetKinds": [
             "npm",
-            "channel",
+            "release",
             "runtime",
             "local-build"
           ],
@@ -2008,7 +2008,7 @@
           ],
           "targetKinds": [
             "npm",
-            "channel",
+            "release",
             "runtime",
             "local-build"
           ],
@@ -6024,23 +6024,23 @@
       ]
     },
     {
-      "id": "upgrade-stable-channel-to-beta",
+      "id": "upgrade-stable-release-to-beta",
       "surface": "upgrade-existing-user",
-      "title": "Stable Channel To Beta Upgrade",
-      "objective": "Start a disposable OpenClaw env on the stable channel, run the real upgrade path to beta, and verify channel upgrade behavior, plugin index migration, bundled runtime deps, and gateway health.",
+      "title": "Stable Release To Beta Upgrade",
+      "objective": "Start a disposable OpenClaw env on the stable release track, run the real upgrade path to beta, and verify release upgrade behavior, plugin index migration, bundled runtime deps, and gateway health.",
       "tags": [
         "upgrade",
-        "channel",
+        "release",
         "stable",
         "beta",
         "plugins",
         "gateway"
       ],
       "states": [
-        "stable-channel-user"
+        "stable-release-user"
       ],
       "targetKinds": [
-        "channel"
+        "release"
       ],
       "targetValues": [
         "beta"
@@ -6056,14 +6056,14 @@
       "phases": [
         {
           "id": "start",
-          "title": "Start Stable Channel Env",
-          "intent": "Create a disposable env through the real stable channel before switching to beta.",
+          "title": "Start Stable Release Env",
+          "intent": "Create a disposable env through the real stable release track before switching to beta.",
           "commands": [
             "ocm start {env} --channel stable --json",
             "ocm @{env} -- status"
           ],
           "evidence": [
-            "stable channel start output",
+            "stable release start output",
             "pre-upgrade gateway status",
             "pre-upgrade OpenClaw status"
           ],
@@ -6072,7 +6072,7 @@
         {
           "id": "upgrade",
           "title": "Upgrade To Beta",
-          "intent": "Run the real OpenClaw upgrade path to the beta channel through OCM.",
+          "intent": "Run the real OpenClaw upgrade path to the beta release track through OCM.",
           "commands": [
             "ocm upgrade {env} {upgradeSelector} --json"
           ],
@@ -6087,7 +6087,7 @@
         {
           "id": "post-upgrade",
           "title": "Post-Beta Upgrade Checks",
-          "intent": "Verify OpenClaw is usable after the beta channel upgrade and capture plugin/runtime dependency evidence.",
+          "intent": "Verify OpenClaw is usable after the beta release upgrade and capture plugin/runtime dependency evidence.",
           "commands": [
             "ocm @{env} -- status",
             "ocm @{env} -- plugins list",
@@ -6109,20 +6109,20 @@
       ]
     },
     {
-      "id": "upgrade-stable-channel-to-local-build",
+      "id": "upgrade-stable-release-to-local-build",
       "surface": "upgrade-existing-user",
-      "title": "Stable Channel To Local Build Upgrade",
-      "objective": "Start a disposable OpenClaw env on the stable channel, upgrade it to a release-shaped local build, and verify the same migration/runtime behavior users would see when updating to the upcoming release.",
+      "title": "Stable Release To Local Build Upgrade",
+      "objective": "Start a disposable OpenClaw env on the stable release track, upgrade it to a release-shaped local build, and verify the same migration/runtime behavior users would see when updating to the upcoming release.",
       "tags": [
         "upgrade",
-        "channel",
+        "release",
         "stable",
         "local-build",
         "plugins",
         "gateway"
       ],
       "states": [
-        "stable-channel-user"
+        "stable-release-user"
       ],
       "targetKinds": [
         "local-build"
@@ -6138,14 +6138,14 @@
       "phases": [
         {
           "id": "start",
-          "title": "Start Stable Channel Env",
-          "intent": "Create a disposable env through the real stable channel before upgrading to the local release-shaped runtime.",
+          "title": "Start Stable Release Env",
+          "intent": "Create a disposable env through the real stable release track before upgrading to the local release-shaped runtime.",
           "commands": [
             "ocm start {env} --channel stable --json",
             "ocm @{env} -- status"
           ],
           "evidence": [
-            "stable channel start output",
+            "stable release start output",
             "pre-upgrade gateway status",
             "pre-upgrade OpenClaw status"
           ],
@@ -6354,50 +6354,6 @@
       "setupEvidence": [
         "broken plugin manifest exists",
         "missing dependency is intentional"
-      ],
-      "cleanupGuarantees": [
-        "disposable env cleanup removes state fixture files"
-      ]
-    },
-    {
-      "id": "channel-configured",
-      "title": "Channel Configured User",
-      "objective": "A user state with release channel metadata present, used to verify channel-aware update paths do not lose user intent.",
-      "tags": [
-        "upgrade",
-        "channel",
-        "config"
-      ],
-      "setup": [
-        {
-          "id": "write-channel-config",
-          "title": "Write Channel Config",
-          "intent": "Create channel config in common config locations.",
-          "afterPhases": [
-            "provision",
-            "cold-start",
-            "baseline",
-            "gateway",
-            "start",
-            "clone"
-          ],
-          "commands": [
-            "ocm env exec {env} -- node -e 'const fs=require(\"fs\"), path=require(\"path\"); const home=process.env.OPENCLAW_HOME; fs.mkdirSync(path.join(home,\"config\"),{recursive:true}); fs.writeFileSync(path.join(home,\"config\",\"channel.json\"),JSON.stringify({schemaVersion:\"kova.fixture.channel.v1\",channel:\"beta\"},null,2)); fs.writeFileSync(path.join(home,\".openclaw-channel\"),\"beta\\n\");'"
-          ],
-          "evidence": [
-            "channel config exists"
-          ],
-          "collectionIntent": "service-only"
-        }
-      ],
-      "traits": [
-        "existing-user",
-        "channel-state"
-      ],
-      "riskArea": "release-channel",
-      "ownerArea": "runtime-startup",
-      "setupEvidence": [
-        "channel config exists"
       ],
       "cleanupGuarantees": [
         "disposable env cleanup removes state fixture files"
@@ -7465,6 +7421,50 @@
       ]
     },
     {
+      "id": "release-configured",
+      "title": "Release Configured User",
+      "objective": "A user state with release-track metadata present, used to verify release-aware update paths do not lose user intent.",
+      "tags": [
+        "upgrade",
+        "release",
+        "config"
+      ],
+      "setup": [
+        {
+          "id": "write-release-config",
+          "title": "Write Release Config",
+          "intent": "Create release-track config in common config locations.",
+          "afterPhases": [
+            "provision",
+            "cold-start",
+            "baseline",
+            "gateway",
+            "start",
+            "clone"
+          ],
+          "commands": [
+            "ocm env exec {env} -- node -e 'const fs=require(\"fs\"), path=require(\"path\"); const home=process.env.OPENCLAW_HOME; fs.mkdirSync(path.join(home,\"config\"),{recursive:true}); fs.writeFileSync(path.join(home,\"config\",\"channel.json\"),JSON.stringify({schemaVersion:\"kova.fixture.channel.v1\",channel:\"beta\"},null,2)); fs.writeFileSync(path.join(home,\".openclaw-channel\"),\"beta\\n\");'"
+          ],
+          "evidence": [
+            "release config exists"
+          ],
+          "collectionIntent": "service-only"
+        }
+      ],
+      "traits": [
+        "existing-user",
+        "release-state"
+      ],
+      "riskArea": "release-track",
+      "ownerArea": "runtime-startup",
+      "setupEvidence": [
+        "release config exists"
+      ],
+      "cleanupGuarantees": [
+        "disposable env cleanup removes state fixture files"
+      ]
+    },
+    {
       "id": "slow-filesystem",
       "title": "Slow Filesystem Pressure",
       "objective": "A user state that creates many small plugin metadata files, used to expose synchronous metadata scans on slow filesystems such as WSL2.",
@@ -7512,20 +7512,20 @@
       ]
     },
     {
-      "id": "stable-channel-user",
-      "title": "Stable Channel User",
-      "objective": "A disposable OpenClaw env that has been started on the stable release channel before testing channel or local-build upgrade behavior.",
+      "id": "stable-release-user",
+      "title": "Stable Release User",
+      "objective": "A disposable OpenClaw env that has been started on the stable release track before testing beta or local-build upgrade behavior.",
       "tags": [
         "upgrade",
-        "channel",
+        "release",
         "stable",
         "existing-user"
       ],
       "setup": [
         {
-          "id": "write-stable-channel-marker",
-          "title": "Write Stable Channel Marker",
-          "intent": "Persist stable-channel metadata after the env is first started so reports can prove the upgrade source shape.",
+          "id": "write-stable-release-marker",
+          "title": "Write Stable Release Marker",
+          "intent": "Persist stable release metadata after the env is first started so reports can prove the upgrade source shape.",
           "afterPhases": [
             "start",
             "clone"
@@ -7534,26 +7534,26 @@
             "ocm env exec {env} -- node -e 'const fs=require(\"fs\"), path=require(\"path\"); const home=process.env.OPENCLAW_HOME; fs.mkdirSync(path.join(home,\"config\"),{recursive:true}); fs.writeFileSync(path.join(home,\"config\",\"channel.json\"),JSON.stringify({schemaVersion:\"kova.fixture.channel.v1\",channel:\"stable\"},null,2)); fs.writeFileSync(path.join(home,\".openclaw-channel\"),\"stable\\n\");'"
           ],
           "evidence": [
-            "stable channel marker exists"
+            "stable release marker exists"
           ],
           "collectionIntent": "service-only"
         }
       ],
       "traits": [
         "existing-user",
-        "channel-state"
+        "release-state"
       ],
-      "riskArea": "release-channel-upgrade",
+      "riskArea": "release-track-upgrade",
       "ownerArea": "upgrade",
       "setupEvidence": [
-        "stable channel marker exists"
+        "stable release marker exists"
       ],
       "cleanupGuarantees": [
-        "disposable env cleanup removes stable channel fixture files"
+        "disposable env cleanup removes stable release fixture files"
       ],
       "source": {
         "kind": "generated",
-        "note": "The scenario starts the env through the real stable channel before upgrading it."
+        "note": "The scenario starts the env through the real stable release track before upgrading it."
       }
     },
     {
@@ -7650,19 +7650,6 @@
   ],
   "profiles": [
     {
-      "id": "channel-upgrade",
-      "title": "Channel Upgrade Matrix",
-      "objective": "Focused OpenClaw channel upgrade coverage for stable-to-beta transitions through real OCM-managed envs.",
-      "purpose": "upgrade",
-      "entryCount": 1,
-      "targetKinds": [
-        "channel"
-      ],
-      "diagnostics": null,
-      "calibration": null,
-      "gate": null
-    },
-    {
       "id": "diagnostic",
       "title": "Source-Built Diagnostics",
       "objective": "Run release-shaped local OpenClaw builds with timeline diagnostics enabled so Kova can attribute startup, plugin, provider, agent, event-loop, CPU, and heap behavior to OpenClaw phases.",
@@ -7712,7 +7699,7 @@
     {
       "id": "local-build-upgrade",
       "title": "Local Build Upgrade Matrix",
-      "objective": "Focused OpenClaw upgrade coverage for release-shaped local builds against stable-channel and cloned existing-user state.",
+      "objective": "Focused OpenClaw upgrade coverage for release-shaped local builds against stable-release and cloned existing-user state.",
       "purpose": "upgrade",
       "entryCount": 3,
       "targetKinds": [
@@ -7736,6 +7723,19 @@
         "blockingCount": 1,
         "warningCount": 0
       }
+    },
+    {
+      "id": "release-upgrade",
+      "title": "Release Upgrade Matrix",
+      "objective": "Focused OpenClaw release-track upgrade coverage for stable-to-beta transitions through real OCM-managed envs.",
+      "purpose": "upgrade",
+      "entryCount": 1,
+      "targetKinds": [
+        "release"
+      ],
+      "diagnostics": null,
+      "calibration": null,
+      "gate": null
     },
     {
       "id": "release",
@@ -8043,8 +8043,8 @@
           "upgrade-existing-user",
           "upgrade-from-2026-4-20",
           "upgrade-from-2026-4-24",
-          "upgrade-stable-channel-to-beta",
-          "upgrade-stable-channel-to-local-build"
+          "upgrade-stable-release-to-beta",
+          "upgrade-stable-release-to-local-build"
         ]
       },
       {
@@ -8219,11 +8219,11 @@
         "surface": "upgrade-existing-user"
       },
       {
-        "scenario": "upgrade-stable-channel-to-beta",
+        "scenario": "upgrade-stable-release-to-beta",
         "surface": "upgrade-existing-user"
       },
       {
-        "scenario": "upgrade-stable-channel-to-local-build",
+        "scenario": "upgrade-stable-release-to-local-build",
         "surface": "upgrade-existing-user"
       },
       {
@@ -8233,69 +8233,6 @@
     ],
     "surfacesWithoutScenarios": [],
     "profiles": [
-      {
-        "id": "channel-upgrade",
-        "entryCount": 1,
-        "surfaces": [
-          "upgrade-existing-user"
-        ],
-        "states": [
-          "stable-channel-user"
-        ],
-        "scenarios": [
-          "upgrade-stable-channel-to-beta"
-        ],
-        "requirements": [
-          "upgrade-existing-user:baseline"
-        ],
-        "stateSurfaces": [
-          "upgrade-existing-user:stable-channel-user"
-        ],
-        "required": {
-          "surfaces": [],
-          "scenarios": [],
-          "states": [],
-          "traits": [],
-          "platforms": [],
-          "requirements": [],
-          "stateSurfaces": []
-        },
-        "gaps": {
-          "surfaces": [],
-          "scenarios": [],
-          "states": [],
-          "traits": [],
-          "platforms": [],
-          "requirements": [],
-          "stateSurfaces": []
-        },
-        "currentPlatformKeys": [
-          "arm64",
-          "darwin",
-          "darwin-arm64"
-        ],
-        "stateTraitCoverage": {
-          "channel-state": [
-            "stable-channel-user"
-          ],
-          "existing-user": [
-            "stable-channel-user"
-          ]
-        },
-        "stateSurfaceCoverage": {
-          "upgrade-existing-user": [
-            "stable-channel-user"
-          ]
-        },
-        "traitSurfaceCoverage": {
-          "channel-state": [
-            "upgrade-existing-user"
-          ],
-          "existing-user": [
-            "upgrade-existing-user"
-          ]
-        }
-      },
       {
         "id": "diagnostic",
         "entryCount": 8,
@@ -8550,7 +8487,6 @@
         "states": [
           "agent-auth-missing",
           "broken-plugin-deps",
-          "channel-configured",
           "corrupted-config",
           "external-plugin",
           "failed-upgrade",
@@ -8569,6 +8505,7 @@
           "old-release-user",
           "onboarded-user",
           "plugin-index",
+          "release-configured",
           "slow-filesystem",
           "stale-runtime-deps",
           "stale-service-state"
@@ -8651,7 +8588,7 @@
           "bundled-plugin-startup:fresh",
           "bundled-runtime-deps:missing-plugin-index",
           "bundled-runtime-deps:stale-runtime-deps",
-          "cross-platform-smoke:channel-configured",
+          "cross-platform-smoke:release-configured",
           "cross-platform-smoke:slow-filesystem",
           "dashboard:fresh",
           "failure-containment:broken-plugin-deps",
@@ -8722,9 +8659,6 @@
           "baseline": [
             "fresh"
           ],
-          "channel-state": [
-            "channel-configured"
-          ],
           "config-state": [
             "corrupted-config",
             "old-config-keys",
@@ -8734,14 +8668,14 @@
             "model-auth-configured"
           ],
           "existing-user": [
-            "channel-configured",
             "external-plugin",
             "failed-upgrade",
             "gateway-already-running",
             "old-config-keys",
             "old-release-user",
             "onboarded-user",
-            "plugin-index"
+            "plugin-index",
+            "release-configured"
           ],
           "external-plugin": [
             "external-plugin",
@@ -8819,6 +8753,9 @@
             "model-auth-configured",
             "model-auth-missing"
           ],
+          "release-state": [
+            "release-configured"
+          ],
           "runtime-deps": [
             "broken-plugin-deps",
             "stale-runtime-deps"
@@ -8857,7 +8794,7 @@
             "stale-runtime-deps"
           ],
           "cross-platform-smoke": [
-            "channel-configured",
+            "release-configured",
             "slow-filesystem"
           ],
           "dashboard": [
@@ -8968,9 +8905,6 @@
             "release-runtime-startup",
             "tui"
           ],
-          "channel-state": [
-            "cross-platform-smoke"
-          ],
           "config-state": [
             "failure-containment",
             "fresh-install"
@@ -9078,6 +9012,9 @@
             "provider-models",
             "tui-message-turn"
           ],
+          "release-state": [
+            "cross-platform-smoke"
+          ],
           "runtime-deps": [
             "bundled-runtime-deps",
             "failure-containment",
@@ -9108,11 +9045,11 @@
         "states": [
           "onboarded-user",
           "plugin-index",
-          "stable-channel-user"
+          "stable-release-user"
         ],
         "scenarios": [
           "upgrade-durable-clone-to-local-build",
-          "upgrade-stable-channel-to-local-build"
+          "upgrade-stable-release-to-local-build"
         ],
         "requirements": [
           "upgrade-existing-user:baseline"
@@ -9120,7 +9057,7 @@
         "stateSurfaces": [
           "upgrade-existing-user:onboarded-user",
           "upgrade-existing-user:plugin-index",
-          "upgrade-existing-user:stable-channel-user"
+          "upgrade-existing-user:stable-release-user"
         ],
         "required": {
           "surfaces": [],
@@ -9146,16 +9083,13 @@
           "darwin-arm64"
         ],
         "stateTraitCoverage": {
-          "channel-state": [
-            "stable-channel-user"
-          ],
           "config-state": [
             "onboarded-user"
           ],
           "existing-user": [
             "onboarded-user",
             "plugin-index",
-            "stable-channel-user"
+            "stable-release-user"
           ],
           "migration-state": [
             "plugin-index"
@@ -9165,19 +9099,19 @@
           ],
           "plugin-pressure": [
             "plugin-index"
+          ],
+          "release-state": [
+            "stable-release-user"
           ]
         },
         "stateSurfaceCoverage": {
           "upgrade-existing-user": [
             "onboarded-user",
             "plugin-index",
-            "stable-channel-user"
+            "stable-release-user"
           ]
         },
         "traitSurfaceCoverage": {
-          "channel-state": [
-            "upgrade-existing-user"
-          ],
           "config-state": [
             "upgrade-existing-user"
           ],
@@ -9191,6 +9125,9 @@
             "upgrade-existing-user"
           ],
           "plugin-pressure": [
+            "upgrade-existing-user"
+          ],
+          "release-state": [
             "upgrade-existing-user"
           ]
         }
@@ -9282,6 +9219,69 @@
           ],
           "plugin-pressure": [
             "official-plugin-install"
+          ]
+        }
+      },
+      {
+        "id": "release-upgrade",
+        "entryCount": 1,
+        "surfaces": [
+          "upgrade-existing-user"
+        ],
+        "states": [
+          "stable-release-user"
+        ],
+        "scenarios": [
+          "upgrade-stable-release-to-beta"
+        ],
+        "requirements": [
+          "upgrade-existing-user:baseline"
+        ],
+        "stateSurfaces": [
+          "upgrade-existing-user:stable-release-user"
+        ],
+        "required": {
+          "surfaces": [],
+          "scenarios": [],
+          "states": [],
+          "traits": [],
+          "platforms": [],
+          "requirements": [],
+          "stateSurfaces": []
+        },
+        "gaps": {
+          "surfaces": [],
+          "scenarios": [],
+          "states": [],
+          "traits": [],
+          "platforms": [],
+          "requirements": [],
+          "stateSurfaces": []
+        },
+        "currentPlatformKeys": [
+          "arm64",
+          "darwin",
+          "darwin-arm64"
+        ],
+        "stateTraitCoverage": {
+          "existing-user": [
+            "stable-release-user"
+          ],
+          "release-state": [
+            "stable-release-user"
+          ]
+        },
+        "stateSurfaceCoverage": {
+          "upgrade-existing-user": [
+            "stable-release-user"
+          ]
+        },
+        "traitSurfaceCoverage": {
+          "existing-user": [
+            "upgrade-existing-user"
+          ],
+          "release-state": [
+            "upgrade-existing-user"
           ]
         }
       },

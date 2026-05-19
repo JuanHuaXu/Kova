@@ -129,7 +129,7 @@ Use release-shaped targets when validating release behavior:
 
 ```sh
 --target npm:2026.5.12
---target channel:beta
+--target release:beta
 --target runtime:test-build-1
 --target local-build:/path/to/openclaw
 ```
@@ -196,16 +196,16 @@ inspect, upgrade, start, or otherwise touch the source env directly.
 Focused upgrade lanes are target-specific and Kova validates the selector:
 
 ```sh
-node bin/kova.mjs matrix run --profile channel-upgrade \
-  --target channel:beta --execute --json
+node bin/kova.mjs matrix run --profile release-upgrade \
+  --target release:beta --execute --json
 
 node bin/kova.mjs matrix run --profile local-build-upgrade \
   --target local-build:/path/to/openclaw \
   --source-env <existing-env> --execute --json
 ```
 
-`channel-upgrade` is specifically stable-to-beta; running it with
-`channel:stable` is rejected. `local-build-upgrade` exercises stable-channel
+`release-upgrade` is specifically stable-to-beta; running it with
+`release:stable` is rejected. `local-build-upgrade` exercises stable-release
 and cloned existing-user upgrades against the release-shaped local build.
 
 Never mutate durable envs directly for Kova tests unless a human explicitly

@@ -38,12 +38,12 @@
     {
       "id": "baseline",
       "states": [
-        "channel-configured",
+        "release-configured",
         "slow-filesystem"
       ],
       "targetKinds": [
         "npm",
-        "channel",
+        "release",
         "runtime",
         "local-build"
       ],

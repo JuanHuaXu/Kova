@@ -1,4 +1,4 @@
-export const knownTargetKinds = ["npm", "channel", "runtime", "local-build"];
+export const knownTargetKinds = ["npm", "release", "runtime", "local-build"];
 
 export function requirementsForScenario(surface, scenario) {
   return requirementsForIds(surface, scenario?.proves ?? []);

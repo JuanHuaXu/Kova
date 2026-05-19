@@ -1,14 +1,14 @@
 {
   "id": "local-build-upgrade",
   "title": "Local Build Upgrade Matrix",
-  "objective": "Focused OpenClaw upgrade coverage for release-shaped local builds against stable-channel and cloned existing-user state.",
+  "objective": "Focused OpenClaw upgrade coverage for release-shaped local builds against stable-release and cloned existing-user state.",
   "targetKinds": [
     "local-build"
   ],
   "entries": [
     {
-      "scenario": "upgrade-stable-channel-to-local-build",
-      "state": "stable-channel-user",
+      "scenario": "upgrade-stable-release-to-local-build",
+      "state": "stable-release-user",
       "timeoutMs": 300000
     },
     {

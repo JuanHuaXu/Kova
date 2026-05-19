@@ -8,7 +8,7 @@ export function ocmTargetSelector(targetPlan, commandKind = "start") {
   if (targetPlan.kind === "npm") {
     return `--version ${quoteShell(targetPlan.value)}`;
   }
-  if (targetPlan.kind === "channel") {
+  if (targetPlan.kind === "release") {
     return `--channel ${quoteShell(targetPlan.value)}`;
   }
   if (targetPlan.kind === "runtime" || targetPlan.kind === "local-build") {

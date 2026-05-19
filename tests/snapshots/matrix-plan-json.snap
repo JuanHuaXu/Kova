@@ -63,7 +63,7 @@
         "requiredTargetKinds": [
           "local-build",
           "npm",
-          "channel",
+          "release",
           "runtime"
         ],
         "requiredMetrics": [
@@ -101,7 +101,7 @@
         "requiredStateTraits": [],
         "requiredTargetKinds": [
           "npm",
-          "channel",
+          "release",
           "runtime",
           "local-build"
         ],
@@ -132,7 +132,7 @@
         "requiredStateTraits": [],
         "requiredTargetKinds": [
           "npm",
-          "channel",
+          "release",
           "runtime",
           "local-build"
         ],
@@ -169,7 +169,7 @@
         "requiredStateTraits": [],
         "requiredTargetKinds": [
           "npm",
-          "channel",
+          "release",
           "runtime",
           "local-build"
         ],
@@ -199,7 +199,7 @@
         "requiredStateTraits": [],
         "requiredTargetKinds": [
           "npm",
-          "channel",
+          "release",
           "runtime",
           "local-build"
         ],
@@ -232,7 +232,7 @@
         "requiredStateTraits": [],
         "requiredTargetKinds": [
           "npm",
-          "channel",
+          "release",
           "runtime",
           "local-build"
         ],
@@ -264,7 +264,7 @@
         "requiredStateTraits": [],
         "requiredTargetKinds": [
           "npm",
-          "channel",
+          "release",
           "runtime",
           "local-build"
         ],
@@ -304,7 +304,7 @@
         "requiredStateTraits": [],
         "requiredTargetKinds": [
           "npm",
-          "channel",
+          "release",
           "runtime",
           "local-build"
         ],
@@ -337,7 +337,7 @@
         "requiredStateTraits": [],
         "requiredTargetKinds": [
           "npm",
-          "channel",
+          "release",
           "runtime",
           "local-build"
         ],
@@ -377,7 +377,7 @@
         "requiredStateTraits": [],
         "requiredTargetKinds": [
           "npm",
-          "channel",
+          "release",
           "runtime",
           "local-build"
         ],

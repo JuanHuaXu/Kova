@@ -215,22 +215,33 @@ export async function runSelfCheck(flags = {}) {
     checks.push(await jsonCommandCheck("matrix-plan-repeat-json", "node bin/kova.mjs matrix plan --profile smoke --target runtime:stable --include scenario:fresh-install --repeat 3 --json", (data) => {
       assertEqual(data.controls?.repeat, 3, "matrix repeat control");
     }));
-    checks.push(await jsonCommandCheck("channel-upgrade-plan-json", "node bin/kova.mjs matrix plan --profile channel-upgrade --target channel:beta --json", (data) => {
-      assertEqual(data.profile?.id, "channel-upgrade", "channel upgrade profile id");
-      assertEqual(data.target, "channel:beta", "channel upgrade target");
-      assertEqual(data.entries?.[0]?.scenario?.id, "upgrade-stable-channel-to-beta", "channel upgrade scenario");
+    checks.push(await jsonCommandCheck("release-upgrade-plan-json", "node bin/kova.mjs matrix plan --profile release-upgrade --target release:beta --json", (data) => {
+      assertEqual(data.profile?.id, "release-upgrade", "release upgrade profile id");
+      assertEqual(data.target, "release:beta", "release upgrade target");
+      assertEqual(data.entries?.[0]?.scenario?.id, "upgrade-stable-release-to-beta", "release upgrade scenario");
     }));
     checks.push(await failingCommandCheck(
-      "channel-upgrade-rejects-wrong-target-value",
-      "node bin/kova.mjs matrix plan --profile channel-upgrade --target channel:stable --json",
-      "upgrade-stable-channel-to-beta supports target value beta, got stable"
+      "channel-target-selector-is-unsupported",
+      "node bin/kova.mjs matrix plan --profile release-upgrade --target channel:beta --json",
+      "unsupported target selector kind: channel"
     ));
-    checks.push(await jsonCommandCheck("local-build-upgrade-plan-json", "node bin/kova.mjs matrix plan --profile local-build-upgrade --target local-build:/tmp/openclaw --include scenario:upgrade-stable-channel-to-local-build --json", (data) => {
+    checks.push(await failingCommandCheck(
+      "channel-upgrade-profile-is-unsupported",
+      "node bin/kova.mjs matrix plan --profile channel-upgrade --target release:beta --json",
+      "no profile found for channel-upgrade"
+    ));
+    checks.push(await failingCommandCheck(
+      "release-upgrade-rejects-wrong-target-value",
+      "node bin/kova.mjs matrix plan --profile release-upgrade --target release:stable --json",
+      "upgrade-stable-release-to-beta supports target value beta, got stable"
+    ));
+    checks.push(await jsonCommandCheck("local-build-upgrade-plan-json", "node bin/kova.mjs matrix plan --profile local-build-upgrade --target local-build:/tmp/openclaw --include scenario:upgrade-stable-release-to-local-build --json", (data) => {
       assertEqual(data.profile?.id, "local-build-upgrade", "local-build upgrade profile id");
-      assertEqual(data.entries?.[0]?.scenario?.id, "upgrade-stable-channel-to-local-build", "local-build stable upgrade scenario");
+      assertEqual(data.entries?.[0]?.scenario?.id, "upgrade-stable-release-to-local-build", "local-build stable upgrade scenario");
     }));
-    checks.push(await jsonCommandCheck("channel-upgrade-dry-run-json", `node bin/kova.mjs run --target channel:beta --scenario upgrade-stable-channel-to-beta --state stable-channel-user --report-dir ${quoteShell(tmp)} --json`, async (data) => {
+    checks.push(await jsonCommandCheck("release-upgrade-dry-run-json", `node bin/kova.mjs run --target release:beta --scenario upgrade-stable-release-to-beta --state stable-release-user --report-dir ${quoteShell(tmp)} --json`, async (data) => {
       const report = JSON.parse(await readFile(data.jsonPath, "utf8"));
+      assertEqual(report.target, "release:beta", "release dry-run report target");
       const record = report.records?.[0];
       const commands = (record?.phases ?? []).flatMap((phase) => phase.commands ?? []);
       assertEqual(commands.some((command) => command.includes("ocm start") && command.includes("--channel stable")), true, "stable start command present");
@@ -637,7 +648,7 @@ export async function runSelfCheck(flags = {}) {
 function ocmCommandBuildersCheck() {
   try {
     assertEqual(ocmTargetSelector({ kind: "npm", value: "2026.4.27" }), "--version '2026.4.27'", "npm selector");
-    assertEqual(ocmTargetSelector({ kind: "channel", value: "beta" }), "--channel 'beta'", "channel selector");
+    assertEqual(ocmTargetSelector({ kind: "release", value: "beta" }), "--channel 'beta'", "release selector");
     assertEqual(ocmTargetSelector({ kind: "runtime", value: "stable" }), "--runtime 'stable'", "runtime selector");
     assertEqual(
       ocmTargetSelector({ kind: "local-build", value: "/tmp/openclaw", runtimeName: "kova-local-test" }),

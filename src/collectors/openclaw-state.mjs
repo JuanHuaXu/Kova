@@ -115,7 +115,7 @@ function runtimeSummary(runtime = {}) {
     targetValue: targetKind === "local-build" ? null : targetValue,
     targetValueHash: targetValue && targetKind === "local-build" ? sha256(targetValue).slice(0, 16) : null,
     runtimeName,
-    channel: targetKind === "channel" ? targetValue : null,
+    releaseTrack: targetKind === "release" ? targetValue : null,
     version: targetKind === "version" ? targetValue : null
   };
 }

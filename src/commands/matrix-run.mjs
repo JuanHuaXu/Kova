@@ -42,6 +42,8 @@ export async function runMatrixRun(flags) {
     validateEntries: false
   });
   const auth = await resolveRunAuthContext(flags);
+  const targetSelector = targetPlan.selector ?? target;
+  const fromSelector = fromPlan?.selector ?? flags.from ?? null;
   const regressionThresholds = await loadRegressionThresholds(flags);
   const baselinePath = resolveBaselinePath(flags.baseline);
   const saveBaselinePath = resolveBaselinePath(flags.save_baseline);
@@ -56,17 +58,18 @@ export async function runMatrixRun(flags) {
   progress.runStart({
     scenarioCount: entries.length * (controls.repeat ?? 1),
     mode: flags.execute === true ? "execution" : "dry-run",
-    target,
+    target: targetSelector,
     profile: profile.id,
   });
   const runEntry = async (entry) => {
     const context = buildRunContext({
       flags,
       registry,
-      target,
+      target: targetSelector,
       targetPlan,
       profile,
       fromPlan,
+      from: fromSelector,
       state: entry.state,
       runId,
       controls,
@@ -104,8 +107,8 @@ export async function runMatrixRun(flags) {
     outputPaths,
     mode: flags.execute === true ? "execution" : "dry-run",
     profile: profileSummary(profile),
-    target,
-    from: flags.from ?? null,
+    target: targetSelector,
+    from: fromSelector,
     controls,
     auth: authReportSummary(auth),
     state: null,

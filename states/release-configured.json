@@ -1,17 +1,17 @@
 {
-  "id": "channel-configured",
-  "title": "Channel Configured User",
-  "objective": "A user state with release channel metadata present, used to verify channel-aware update paths do not lose user intent.",
+  "id": "release-configured",
+  "title": "Release Configured User",
+  "objective": "A user state with release-track metadata present, used to verify release-aware update paths do not lose user intent.",
   "tags": [
     "upgrade",
-    "channel",
+    "release",
     "config"
   ],
   "setup": [
     {
-      "id": "write-channel-config",
-      "title": "Write Channel Config",
-      "intent": "Create channel config in common config locations.",
+      "id": "write-release-config",
+      "title": "Write Release Config",
+      "intent": "Create release-track config in common config locations.",
       "afterPhases": [
         "provision",
         "cold-start",
@@ -24,19 +24,19 @@
         "ocm env exec {env} -- node -e 'const fs=require(\"fs\"), path=require(\"path\"); const home=process.env.OPENCLAW_HOME; fs.mkdirSync(path.join(home,\"config\"),{recursive:true}); fs.writeFileSync(path.join(home,\"config\",\"channel.json\"),JSON.stringify({schemaVersion:\"kova.fixture.channel.v1\",channel:\"beta\"},null,2)); fs.writeFileSync(path.join(home,\".openclaw-channel\"),\"beta\\n\");'"
       ],
       "evidence": [
-        "channel config exists"
+        "release config exists"
       ],
       "collectionIntent": "service-only"
     }
   ],
   "traits": [
     "existing-user",
-    "channel-state"
+    "release-state"
   ],
-  "riskArea": "release-channel",
+  "riskArea": "release-track",
   "ownerArea": "runtime-startup",
   "setupEvidence": [
-    "channel config exists"
+    "release config exists"
   ],
   "cleanupGuarantees": [
     "disposable env cleanup removes state fixture files"

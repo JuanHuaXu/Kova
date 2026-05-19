@@ -158,7 +158,7 @@ function releaseStartupBindingReason(service, provision) {
     return "runtime release version was not captured";
   }
   if (typeof service.runtimeReleaseChannel !== "string" && typeof provision?.payload?.defaultRuntime !== "string") {
-    return "runtime binding/channel was not captured";
+    return "runtime release track was not captured";
   }
   if (!nonNegativeNumber(service.gatewayPort) && !nonNegativeNumber(provision?.payload?.gatewayPort)) {
     return "gateway port was not captured";

@@ -160,7 +160,7 @@ function agentGatewayRuntimeBindingReason(record) {
     return "runtime release version was not captured";
   }
   if (typeof service.runtimeReleaseChannel !== "string") {
-    return "runtime release channel was not captured";
+    return "runtime release track was not captured";
   }
   if (!nonNegativeNumber(service.gatewayPort)) {
     return "gateway port was not captured";

@@ -73,7 +73,7 @@ Usage:
 
 Selectors:
   npm:<version>              Published OpenClaw release
-  channel:<name>             Published channel such as stable or beta
+  release:<name>             Published release track such as stable or beta
   runtime:<name>             Existing OCM runtime name
   local-build:<repo-path>    OpenClaw checkout to build as a release-shaped runtime
 

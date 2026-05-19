@@ -1,26 +1,23 @@
 {
-  "id": "upgrade-stable-channel-to-beta",
+  "id": "upgrade-stable-release-to-local-build",
   "surface": "upgrade-existing-user",
-  "title": "Stable Channel To Beta Upgrade",
-  "objective": "Start a disposable OpenClaw env on the stable channel, run the real upgrade path to beta, and verify channel upgrade behavior, plugin index migration, bundled runtime deps, and gateway health.",
+  "title": "Stable Release To Local Build Upgrade",
+  "objective": "Start a disposable OpenClaw env on the stable release track, upgrade it to a release-shaped local build, and verify the same migration/runtime behavior users would see when updating to the upcoming release.",
   "tags": [
     "upgrade",
-    "channel",
+    "release",
     "stable",
-    "beta",
+    "local-build",
     "plugins",
     "gateway"
   ],
   "states": [
-    "stable-channel-user"
+    "stable-release-user"
   ],
   "targetKinds": [
-    "channel"
+    "local-build"
   ],
-  "targetValues": [
-    "beta"
-  ],
-  "timeoutMs": 240000,
+  "timeoutMs": 300000,
   "thresholds": {
     "upgradeMs": 180000,
     "gatewayReadyMs": 60000,
@@ -31,14 +28,14 @@
   "phases": [
     {
       "id": "start",
-      "title": "Start Stable Channel Env",
-      "intent": "Create a disposable env through the real stable channel before switching to beta.",
+      "title": "Start Stable Release Env",
+      "intent": "Create a disposable env through the real stable release track before upgrading to the local release-shaped runtime.",
       "commands": [
         "ocm start {env} --channel stable --json",
         "ocm @{env} -- status"
       ],
       "evidence": [
-        "stable channel start output",
+        "stable release start output",
         "pre-upgrade gateway status",
         "pre-upgrade OpenClaw status"
       ],
@@ -46,13 +43,13 @@
     },
     {
       "id": "upgrade",
-      "title": "Upgrade To Beta",
-      "intent": "Run the real OpenClaw upgrade path to the beta channel through OCM.",
+      "title": "Upgrade To Local Build",
+      "intent": "Run the real OpenClaw upgrade path to the release-shaped local build runtime.",
       "commands": [
         "ocm upgrade {env} {upgradeSelector} --json"
       ],
       "evidence": [
-        "beta upgrade JSON",
+        "local-build upgrade JSON",
         "snapshot id",
         "doctor/update output",
         "rollback status"
@@ -61,8 +58,8 @@
     },
     {
       "id": "post-upgrade",
-      "title": "Post-Beta Upgrade Checks",
-      "intent": "Verify OpenClaw is usable after the beta channel upgrade and capture plugin/runtime dependency evidence.",
+      "title": "Post-Local-Build Upgrade Checks",
+      "intent": "Verify the local build handles plugin indexes, runtime deps, doctor recovery, and gateway readiness after upgrade.",
       "commands": [
         "ocm @{env} -- status",
         "ocm @{env} -- plugins list",

@@ -1,0 +1,16 @@
+{
+  "id": "release-upgrade",
+  "title": "Release Upgrade Matrix",
+  "objective": "Focused OpenClaw release-track upgrade coverage for stable-to-beta transitions through real OCM-managed envs.",
+  "targetKinds": [
+    "release"
+  ],
+  "entries": [
+    {
+      "scenario": "upgrade-stable-release-to-beta",
+      "state": "stable-release-user",
+      "timeoutMs": 240000
+    }
+  ],
+  "purpose": "upgrade"
+}

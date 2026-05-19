@@ -17,7 +17,7 @@ browsers, soak — with **real execution evidence**, not synthetic confidence.
 
 | | |
 |---|---|
-| 🚀 **Install & upgrade** | Fresh installs, channel upgrades, version-to-version, durable-env clone → local-build, migrations. |
+| 🚀 **Install & upgrade** | Fresh installs, release-track upgrades, version-to-version, durable-env clone → local-build, migrations. |
 | 🧩 **Every runtime path** | Gateway, sessions, plugins, agent (CLI + Gateway), dashboard, TUI, MCP, browser, OpenAI-compatible, soak. |
 | 💥 **Failure containment** | Timeouts, malformed providers, streaming stalls, network offline, missing auth, concurrent load, recovery. |
 | ⏱ **Honest agent latency** | Pre-provider · provider · post-provider, split per turn with timeline span evidence. |
@@ -76,7 +76,7 @@ auto-detected.
 
 ```text
 npm:<version>              published OpenClaw release
-channel:<name>             published channel (stable, beta, …)
+release:<name>             published release track (stable, beta, …)
 runtime:<name>             existing OCM runtime
 local-build:<repo-path>    local checkout built as a release-shaped runtime
 ```
@@ -88,7 +88,7 @@ smoke                  fast confidence over core paths
 diagnostic             local-build with timeline + span expectations
 release                ship / no-ship gate coverage
 soak                   long-running pressure and stability
-channel-upgrade        published-channel upgrade matrix
+release-upgrade        published release-track upgrade matrix
 local-build-upgrade    upgrade into a local build
 official-plugins       bundled + official plugin coverage
 exhaustive             the full sweep (--allow-exhaustive)

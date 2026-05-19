@@ -3,14 +3,16 @@ import { profileSummary } from "../matrix/profile.mjs";
 import { renderMatrixPlan } from "../reporting/render-matrix-plan.mjs";
 
 export async function runMatrixPlan(flags) {
-  const { profile, target, platform, entries, resolvedCoverage, controls } = await resolveMatrixPlan(flags);
+  const { profile, target, targetPlan, fromPlan, platform, entries, resolvedCoverage, controls } = await resolveMatrixPlan(flags);
+  const targetSelector = targetPlan.selector ?? target;
+  const fromSelector = fromPlan?.selector ?? flags.from ?? null;
   const response = {
     schemaVersion: "kova.matrix.plan.v1",
     generatedAt: new Date().toISOString(),
     platform,
     profile: profileSummary(profile),
-    target,
-    from: flags.from ?? null,
+    target: targetSelector,
+    from: fromSelector,
     controls,
     resolvedCoverage,
     entries: entries.map((entry) => entry.plan)
@@ -27,9 +29,9 @@ export async function runMatrixPlan(flags) {
   }
 
   console.log(`${profile.id}: ${profile.title}`);
-  console.log(`Target: ${target}`);
-  if (flags.from) {
-    console.log(`From: ${flags.from}`);
+  console.log(`Target: ${targetSelector}`);
+  if (fromSelector) {
+    console.log(`From: ${fromSelector}`);
   }
   for (const entry of entries) {
     const suffix = entry.skipReason ? ` [SKIP: ${entry.skipReason}]` : "";

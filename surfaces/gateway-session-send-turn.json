@@ -56,7 +56,7 @@
       ],
       "targetKinds": [
         "npm",
-        "channel",
+        "release",
         "runtime",
         "local-build"
       ],

@@ -82,7 +82,7 @@ const COMMANDS = [
       "kova run --target <selector> [--scenario <id>] [--state <id>] [--auth <method>] [--repeat <n>] [--execute] [--json|--plain]",
     ],
     flags: [
-      ["--target <selector>", "npm:<v> | channel:<n> | runtime:<n> | local-build:<path>"],
+      ["--target <selector>", "npm:<v> | release:<n> | runtime:<n> | local-build:<path>"],
       ["--from <selector>", "starting target for upgrade scenarios"],
       ["--scenario <id>", "scenario id (default: fresh-install)"],
       ["--state <id>", "state id"],
@@ -114,7 +114,7 @@ const COMMANDS = [
       "kova matrix run --profile <id> --target <selector> [--parallel <n>] [--gate] [--execute] [--json|--plain]",
     ],
     flags: [
-      ["--profile <id>", "smoke|release|channel-upgrade|… (see kova plan)"],
+      ["--profile <id>", "smoke|release|release-upgrade|… (see kova plan)"],
       ["--target <selector>", "see kova run --target"],
       ["--include/--exclude <f>", "scenario:<id>, state:<id>, tag:<t>, or bare value"],
       ["--parallel <n>", "concurrent scenarios (default 1)"],
@@ -129,7 +129,7 @@ const COMMANDS = [
     examples: [
       "kova matrix plan --profile smoke --target runtime:stable",
       "kova matrix run --profile smoke --target runtime:stable --execute",
-      "kova matrix run --profile release --target channel:beta --gate --execute --json",
+      "kova matrix run --profile release --target release:beta --gate --execute --json",
     ],
   },
   {
@@ -194,7 +194,7 @@ const COMMANDS = [
 
 const SELECTORS = [
   ["npm:<version>",            "Published OpenClaw release"],
-  ["channel:<name>",           "Published channel such as stable or beta"],
+  ["release:<name>",           "Published release track such as stable or beta"],
   ["runtime:<name>",           "Existing OCM runtime name"],
   ["local-build:<repo-path>",  "Build a release-shaped runtime from a checkout"],
 ];

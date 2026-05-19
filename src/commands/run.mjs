@@ -34,6 +34,8 @@ export async function runScenarioCommand(flags) {
 
   const targetPlan = resolveTarget(target, "target");
   const fromPlan = flags.from ? resolveTarget(flags.from, "from") : null;
+  const targetSelector = targetPlan.selector ?? target;
+  const fromSelector = fromPlan?.selector ?? flags.from ?? null;
   const state = await loadState(flags.state ?? "fresh");
   const scenarios = await loadScenarios(flags.scenario);
   for (const scenario of scenarios) {
@@ -53,9 +55,10 @@ export async function runScenarioCommand(flags) {
   const context = buildRunContext({
     flags,
     registry,
-    target,
+    target: targetSelector,
     targetPlan,
     fromPlan,
+    from: fromSelector,
     state,
     runId,
     auth,
@@ -66,7 +69,7 @@ export async function runScenarioCommand(flags) {
   progress.runStart({
     scenarioCount: scenarios.length * repeat,
     mode: context.execute ? "execution" : "dry-run",
-    target,
+    target: targetSelector,
   });
 
   for (const scenario of scenarios) {
@@ -82,8 +85,8 @@ export async function runScenarioCommand(flags) {
     runId,
     outputPaths,
     mode: context.execute ? "execution" : "dry-run",
-    target,
-    from: flags.from ?? null,
+    target: targetSelector,
+    from: fromSelector,
     state: {
       id: state.id,
       title: state.title,

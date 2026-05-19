@@ -72,7 +72,7 @@
       "targetKinds": [
         "local-build",
         "npm",
-        "channel",
+        "release",
         "runtime"
       ],
       "metrics": [
