@@ -8,10 +8,6 @@
       "state": "fresh"
     },
     {
-      "scenario": "channel-capability-shared-runtime-smoke",
-      "state": "fresh"
-    },
-    {
       "scenario": "channel-capability-baseline",
       "state": "fresh",
       "timeoutMs": 300000

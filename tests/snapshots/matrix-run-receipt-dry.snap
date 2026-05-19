@@ -1,10 +1,10 @@
 ╔══════════════════════════════════════════════════════════════════════════════╗
 ║  KOVA  ·  matrix run                                                         ║
 ╚══════════════════════════════════════════════════════════════════════════════╝
-   [DRY-RUN]   14 planned
+   [DRY-RUN]   13 planned
                mode: dry-run · target: runtime:stable · runId: kova-<runId>
 
-  Entries 14   ·   Dry-run 14   ·   Failed 0   ·   Performance 14 groups
+  Entries 13   ·   Dry-run 13   ·   Failed 0   ·   Performance 13 groups
 
 ─── artifacts ──────────────────────────────────────────────────────────────────
   ◆ markdown    ~/.kova/reports/kova-<runId>-smoke.md
@@ -14,21 +14,20 @@
 
 ─── scenarios ──────────────────────────────────────────────────────────────────
 
-scenario                         target          samples  verdict    worst metr…
-channel-capability-preflight     runtime:stable      0/1  [DRY-RUN]  —
-channel-capability-shared-runt…  runtime:stable      0/1  [DRY-RUN]  —
-channel-capability-baseline      runtime:stable      0/1  [DRY-RUN]  —
-channel-model-turn-baseline      runtime:stable      0/1  [DRY-RUN]  —
-release-runtime-startup          runtime:stable      0/1  [DRY-RUN]  —
-fresh-install                    runtime:stable      0/1  [DRY-RUN]  —
-bundled-runtime-deps             runtime:stable      0/1  [DRY-RUN]  —
-plugin-lifecycle                 runtime:stable      0/1  [DRY-RUN]  —
-bundled-plugin-startup           runtime:stable      0/1  [DRY-RUN]  —
-gateway-performance              runtime:stable      0/1  [DRY-RUN]  —
-agent-cold-warm-message          runtime:stable      0/1  [DRY-RUN]  —
-agent-gateway-rpc-turn           runtime:stable      0/1  [DRY-RUN]  —
-gateway-session-send-turn        runtime:stable      0/1  [DRY-RUN]  —
-openai-compatible-turn           runtime:stable      0/1  [DRY-RUN]  —
+scenario                      target          samples  verdict    worst metric
+channel-capability-preflight  runtime:stable      0/1  [DRY-RUN]  —
+channel-capability-baseline   runtime:stable      0/1  [DRY-RUN]  —
+channel-model-turn-baseline   runtime:stable      0/1  [DRY-RUN]  —
+release-runtime-startup       runtime:stable      0/1  [DRY-RUN]  —
+fresh-install                 runtime:stable      0/1  [DRY-RUN]  —
+bundled-runtime-deps          runtime:stable      0/1  [DRY-RUN]  —
+plugin-lifecycle              runtime:stable      0/1  [DRY-RUN]  —
+bundled-plugin-startup        runtime:stable      0/1  [DRY-RUN]  —
+gateway-performance           runtime:stable      0/1  [DRY-RUN]  —
+agent-cold-warm-message       runtime:stable      0/1  [DRY-RUN]  —
+agent-gateway-rpc-turn        runtime:stable      0/1  [DRY-RUN]  —
+gateway-session-send-turn     runtime:stable      0/1  [DRY-RUN]  —
+openai-compatible-turn        runtime:stable      0/1  [DRY-RUN]  —
 
 ─── next ───────────────────────────────────────────────────────────────────────
 
