@@ -129,7 +129,11 @@ function buildResult({
     : Math.max(0, activeFinishedAtEpochMs - activeStartedAtEpochMs);
   const invariants = [
     ...(turn?.invariants ?? []),
-    invariant("provider-request", !runError && providerRequestDelta >= expectedProviderRequests, "channel model turn made the expected mock provider requests"),
+    invariant(
+      "provider-request-count",
+      !runError && providerRequestDelta === expectedProviderRequests,
+      `channel model turn made exactly ${expectedProviderRequests} mock provider request${expectedProviderRequests === 1 ? "" : "s"}; observed ${providerRequestDelta}`
+    ),
     invariant("no-global-error", !runError, "channel model turn completed without transport or plugin error")
   ];
   const ok = !runError && turn?.ok === true && invariants.every((item) => item.status === "passed");
