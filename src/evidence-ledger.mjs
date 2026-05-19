@@ -18,13 +18,14 @@ export function applyEvidenceLedgerGating(record) {
   const missing = ledger.entries.filter((entry) => entry.required && entry.status === "missing");
   const failed = ledger.entries.filter((entry) => entry.required && entry.status === "failed");
   const failedCommands = failed.filter((entry) => entry.category === "command");
-  const failedEvidence = failed.filter((entry) => entry.category !== "command" && entry.category !== "invariant");
   const failedInvariants = failed.filter((entry) => entry.category === "invariant");
+  const failedChannelCapabilities = failed.filter((entry) => entry.category === "channel-capability");
+  const failedEvidence = failed.filter((entry) => !isBehaviorFailureCategory(entry.category));
   ledger.completeness = missing.length > 0 || failedEvidence.length > 0 ? "incomplete" : "complete";
   ledger.summary.requiredMissing = missing.length;
   ledger.summary.requiredFailed = failed.length;
 
-  if (record.status === RECORD_STATUS.PASS && (failedCommands.length > 0 || failedInvariants.length > 0)) {
+  if (record.status === RECORD_STATUS.PASS && (failedCommands.length > 0 || failedInvariants.length > 0 || failedChannelCapabilities.length > 0)) {
     record.status = RECORD_STATUS.FAIL;
   }
   if (record.status === RECORD_STATUS.PASS && (missing.length > 0 || failedEvidence.length > 0)) {
@@ -56,12 +57,34 @@ export function buildEvidenceLedger(record) {
   for (const cleanup of record.cleanupEvidence ?? []) {
     entries.push(cleanupEntry(cleanup));
   }
+  for (const capability of record.channelCapabilityEvidence ?? []) {
+    entries.push(channelCapabilityEntry(capability));
+  }
 
   return {
     schemaVersion: EVIDENCE_LEDGER_SCHEMA,
     completeness: record.status === RECORD_STATUS.DRY_RUN ? "not-evaluated" : completenessForEntries(entries),
     summary: summarizeEntries(entries),
     entries
+  };
+}
+
+function channelCapabilityEntry(capability) {
+  return {
+    id: `channel-capability:${capability.channelId}:${capability.group}:${capability.capabilityId}`,
+    category: "channel-capability",
+    required: capability.required !== false,
+    status: capability.status,
+    phaseId: capability.phaseId ?? null,
+    commandIndex: capability.commandIndex ?? null,
+    summary: capability.summary,
+    artifactPath: capability.artifactPath ?? null,
+    reason: capability.reason ?? null,
+    channelId: capability.channelId,
+    capabilityId: capability.capabilityId,
+    group: capability.group,
+    proofMode: capability.proofMode ?? null,
+    ownerArea: capability.ownerArea ?? null
   };
 }
 
@@ -105,6 +128,10 @@ function invariantEntry(invariant) {
     artifactPath: invariant.artifactPath ?? null,
     reason: invariant.reason ?? null
   };
+}
+
+function isBehaviorFailureCategory(category) {
+  return category === "command" || category === "invariant" || category === "channel-capability";
 }
 
 function completenessForEntries(entries) {

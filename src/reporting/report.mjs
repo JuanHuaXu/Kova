@@ -628,6 +628,12 @@ function ledgerFindings(record, index, state) {
         kind: "invariant",
         actual: "invariant failed"
       }));
+    } else if (entry.status === "failed" && entry.category === "channel-capability") {
+      findings.push(ledgerFinding(record, index, state, entry, {
+        severity: "fail",
+        kind: "channel-capability",
+        actual: "capability behavior failed"
+      }));
     } else if (entry.status === "failed" && entry.category !== "command") {
       findings.push(ledgerFinding(record, index, state, entry, {
         severity: "incomplete",
@@ -647,7 +653,7 @@ function ledgerFinding(record, index, state, entry, { severity, kind, actual }) 
     scenario: record.scenario ?? null,
     state,
     sampleIndex: record.repeat?.index ?? index + 1,
-    ownerArea: record.likelyOwner ?? null,
+    ownerArea: entry.ownerArea ?? record.likelyOwner ?? null,
     metric: null,
     summary: `${entry.category} proof ${entry.status}: ${entry.summary ?? entry.id}`,
     expected: "required proof obligation passes",

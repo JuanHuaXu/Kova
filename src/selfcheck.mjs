@@ -1297,6 +1297,57 @@ function evidenceLedgerGatingCheck() {
     applyEvidenceLedgerGating(failedInvariantRecord);
     assertEqual(failedInvariantRecord.status, "FAIL", "failed required invariant gates pass as fail");
 
+    const failedChannelCapabilityRecord = {
+      ...record,
+      status: "PASS",
+      incompleteReason: undefined,
+      incompleteEvidence: undefined,
+      phases: [],
+      channelCapabilityEvidence: [{
+        channelId: "telegram",
+        group: "durable-final",
+        capabilityId: "media",
+        required: true,
+        status: "failed",
+        proofMode: "deterministic-shim",
+        summary: "Telegram durable-final media delivery preserves the generated media payload",
+        reason: "adapter returned success but Telegram sendMedia was not called",
+        ownerArea: "telegram adapter"
+      }]
+    };
+    attachEvidenceLedger(failedChannelCapabilityRecord);
+    applyEvidenceLedgerGating(failedChannelCapabilityRecord);
+    assertEqual(failedChannelCapabilityRecord.status, "FAIL", "failed required channel capability gates pass as fail");
+    assertEqual(failedChannelCapabilityRecord.evidenceLedger.completeness, "complete", "failed channel capability is complete proof");
+    assertEqual(
+      failedChannelCapabilityRecord.evidenceLedger.entries[0].id,
+      "channel-capability:telegram:durable-final:media",
+      "channel capability ledger id"
+    );
+
+    const missingChannelCapabilityRecord = {
+      ...record,
+      status: "PASS",
+      incompleteReason: undefined,
+      incompleteEvidence: undefined,
+      phases: [],
+      channelCapabilityEvidence: [{
+        channelId: "telegram",
+        group: "durable-final",
+        capabilityId: "media",
+        required: true,
+        status: "missing",
+        proofMode: "deterministic-shim",
+        summary: "Telegram durable-final media delivery preserves the generated media payload",
+        reason: "scenario helper did not emit a media proof row",
+        ownerArea: "Kova"
+      }]
+    };
+    attachEvidenceLedger(missingChannelCapabilityRecord);
+    applyEvidenceLedgerGating(missingChannelCapabilityRecord);
+    assertEqual(missingChannelCapabilityRecord.status, "INCOMPLETE", "missing required channel capability gates pass as incomplete");
+    assertEqual(missingChannelCapabilityRecord.incompleteEvidence?.[0], "channel-capability:telegram:durable-final:media", "missing channel capability evidence id");
+
     return {
       id: "evidence-ledger-gating",
       status: "PASS",
