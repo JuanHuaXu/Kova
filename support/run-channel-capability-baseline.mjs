@@ -14,7 +14,9 @@ const args = parseSupportArgs(process.argv.slice(2));
 const envName = requiredArg(args, "env");
 const artifactDir = requiredArg(args, "artifact-dir");
 const timeoutMs = readTimeoutMs(args["timeout-ms"], 120000);
-const artifactPath = join(artifactDir, "channel-capability-baseline.json");
+const capabilityGroup = args.group ?? "all";
+const continueOnFailedCapabilities = args["continue-on-failed-capabilities"] === "true";
+const artifactPath = join(artifactDir, `channel-capability-baseline-${safeArtifactSegment(capabilityGroup)}.json`);
 const catalog = JSON.parse(await readFile(join(repoRoot, "channel-capabilities", "openclaw-message.json"), "utf8"));
 
 async function main() {
@@ -27,7 +29,11 @@ async function main() {
       throw new Error(`gateway direct RPC unavailable: ${clientHandle.fallbackReason ?? "unknown"}`);
     }
     await waitForBaselineChannel(clientHandle.client, timeoutMs);
-    const baseline = await clientHandle.client.request("kova.channelBaseline.run", {}, { timeoutMs });
+    const baseline = await clientHandle.client.request(
+      "kova.channelBaseline.run",
+      capabilityGroup === "all" ? {} : { group: capabilityGroup },
+      { timeoutMs }
+    );
     result = buildResult({
       catalog,
       runtimeContext,
@@ -55,12 +61,13 @@ async function main() {
     proofMode: "baseline",
     artifactPath,
     ownerArea: "OpenClaw",
+    group: capabilityGroup,
     capabilities: result.rows.map((row) => ({
       ...row,
       artifactPath
     }))
   }, null, 2)}\n`);
-  process.exit(result.ok ? 0 : 1);
+  process.exit(result.ok || continueOnFailedCapabilities ? 0 : 1);
 }
 
 async function waitForBaselineChannel(client, commandTimeoutMs) {
@@ -88,6 +95,9 @@ function buildResult({ catalog: catalogValue, runtimeContext, baseline, error, t
   let ok = !runError && baseline?.ok === true;
 
   for (const capability of catalogValue.capabilities ?? []) {
+    if (capabilityGroup !== "all" && capability.group !== capabilityGroup) {
+      continue;
+    }
     const proof = proofByCapability.get(`${capability.group}:${capability.id}`) ?? null;
     const status = runError ? "failed" : proof?.status ?? "missing";
     if (status !== "passed") {
@@ -115,12 +125,14 @@ function buildResult({ catalog: catalogValue, runtimeContext, baseline, error, t
       schemaVersion: "kova.channelCapabilityBaselineArtifact.v1",
       catalogId: catalogValue.id,
       catalogCapabilityCount: catalogValue.capabilities.length,
+      group: capabilityGroup,
       runtimeContext: compactRuntimeContext(runtimeContext),
       timeoutMs: commandTimeoutMs,
       baseline: baseline ? {
         schemaVersion: baseline.schemaVersion ?? null,
         channelId: baseline.channelId ?? null,
         accountId: baseline.accountId ?? null,
+        groups: baseline.groups ?? null,
         proofCount: baseline.proofCount ?? baseline.proofs?.length ?? 0,
         passed: (baseline.proofs ?? []).filter((proof) => proof.status === "passed").length,
         failed: (baseline.proofs ?? []).filter((proof) => proof.status === "failed").length,
@@ -135,6 +147,10 @@ function buildResult({ catalog: catalogValue, runtimeContext, baseline, error, t
       capabilities: rows
     }
   };
+}
+
+function safeArtifactSegment(value) {
+  return String(value ?? "all").replace(/[^a-zA-Z0-9._-]+/g, "-");
 }
 
 function compactRuntimeContext(context) {

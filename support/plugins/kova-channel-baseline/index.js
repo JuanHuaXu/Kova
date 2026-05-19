@@ -154,9 +154,9 @@ export default definePluginEntry({
     );
     api.registerGatewayMethod(
       "kova.channelBaseline.run",
-      async ({ respond }) => {
+      async ({ params, respond }) => {
         try {
-          const result = await runBaseline();
+          const result = await runBaseline(params);
           respond(true, result);
         } catch (error) {
           respond(true, {
@@ -185,15 +185,23 @@ export default definePluginEntry({
   }
 });
 
-async function runBaseline() {
+async function runBaseline(params = {}) {
   if (!activeRuntime?.channelRuntime) {
     throw new Error("kova channel baseline runtime is not started");
   }
   outboundRecords = [];
   deliveryRecords = [];
 
+  const requestedGroups = normalizeRequestedGroups(params.group ?? params.groups);
+  const scenarios = baselineScenarios.filter((scenario) =>
+    requestedGroups === null || requestedGroups.has(scenario.group)
+  );
+  if (scenarios.length === 0) {
+    throw new Error(`no kova channel baseline scenarios matched group ${JSON.stringify(params.group ?? params.groups)}`);
+  }
+
   const proofs = [];
-  for (const scenario of baselineScenarios) {
+  for (const scenario of scenarios) {
     const startedAt = performance.now();
     try {
       const evidence = await scenario.run();
@@ -221,11 +229,25 @@ async function runBaseline() {
     schemaVersion: "kova.channelCapabilityBaselinePluginRun.v1",
     channelId: CHANNEL_ID,
     accountId: activeRuntime.accountId,
+    groups: requestedGroups === null ? null : [...requestedGroups].sort(),
     proofCount: proofs.length,
     proofs,
     outboundRecords,
     deliveryRecords
   };
+}
+
+function normalizeRequestedGroups(value) {
+  if (value == null || value === "" || value === "all") {
+    return null;
+  }
+  const values = Array.isArray(value)
+    ? value
+    : String(value).split(",").map((item) => item.trim()).filter(Boolean);
+  if (values.length === 0) {
+    return null;
+  }
+  return new Set(values);
 }
 
 async function runModelTurn(params = {}) {
