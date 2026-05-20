@@ -25,6 +25,7 @@ import {
   validateChannelCapabilityShape
 } from "./registries/channel-capabilities.mjs";
 import { loadChannelCapabilityCatalog, validateChannelCapabilityCatalogShape } from "./registries/channel-capability-catalog.mjs";
+import { loadChannelWorkflowCaseCatalog, validateChannelWorkflowCaseCatalogReferences } from "./registries/channel-workflow-cases.mjs";
 import { loadProcessRoles } from "./registries/process-roles.mjs";
 import { validateProfileShape } from "./registries/profiles.mjs";
 import { validateScenarioShape } from "./registries/scenarios.mjs";
@@ -181,10 +182,14 @@ export async function runSelfCheck(flags = {}) {
       assertArrayNotEmpty(data.processRoles, "plan process roles");
       assertArrayNotEmpty(data.metrics, "plan metrics");
       assertArrayNotEmpty(data.channelCapabilityCatalog, "plan channel capability catalog");
+      assertArrayNotEmpty(data.channelWorkflowCaseCatalog, "plan channel workflow case catalog");
       assertArrayNotEmpty(data.channelCapabilities, "plan channel capabilities");
       const openClawCatalog = data.channelCapabilityCatalog.find((catalog) => catalog.id === "openclaw-message");
       assertEqual(Boolean(openClawCatalog), true, "OpenClaw message capability catalog present");
       assertEqual(openClawCatalog?.capabilities?.some((capability) => capability.group === "durable-final" && capability.id === "native-quote"), true, "OpenClaw native quote catalog capability present");
+      const workflowCatalog = data.channelWorkflowCaseCatalog.find((catalog) => catalog.id === "openclaw-channel-workflow-cases");
+      assertEqual(Boolean(workflowCatalog), true, "OpenClaw channel workflow case catalog present");
+      assertEqual(workflowCatalog?.cases?.some((testCase) => testCase.id === "source-visible-delivery.media.message-tool-only"), true, "source visible media workflow case present");
       const telegramChannel = data.channelCapabilities.find((channel) => channel.id === "telegram");
       assertEqual(Boolean(telegramChannel), true, "telegram channel capability registry present");
       assertEqual(telegramChannel?.capabilities?.some((capability) => capability.group === "durable-final" && capability.id === "media"), true, "telegram media durable-final capability present");
@@ -9201,12 +9206,19 @@ function scenarioCloneFirstValidationCheck() {
 async function channelCapabilityRegistryCheck() {
   try {
     const catalogs = await loadChannelCapabilityCatalog();
+    const workflowCatalogs = await loadChannelWorkflowCaseCatalog();
     const openClawCatalog = catalogs.find((catalog) => catalog.id === "openclaw-message");
     assertEqual(Boolean(openClawCatalog), true, "OpenClaw message capability catalog present");
     assertOpenClawChannelCapabilityCatalog(openClawCatalog);
     validateChannelCapabilityCatalogReferences(await loadChannelCapabilities(), catalogs);
+    validateChannelWorkflowCaseCatalogReferences(workflowCatalogs, catalogs);
 
     const channels = await loadChannelCapabilities();
+    const workflowCatalog = workflowCatalogs.find((catalog) => catalog.id === "openclaw-channel-workflow-cases");
+    assertEqual(Boolean(workflowCatalog), true, "OpenClaw channel workflow case catalog present");
+    const sourceMediaCase = workflowCatalog?.cases?.find((testCase) => testCase.id === "source-visible-delivery.media.message-tool-only");
+    assertEqual(Boolean(sourceMediaCase), true, "source visible media workflow case present");
+    assertEqual(sourceMediaCase?.atoms?.some((atom) => atom.group === "workflow" && atom.id === "source-visible-delivery"), true, "source media workflow declares source delivery atom");
     const telegram = channels.find((channel) => channel.id === "telegram");
     assertEqual(Boolean(telegram), true, "telegram channel capability registry present");
     assertEqual(telegram.adapterId, "telegram", "telegram adapter id");
