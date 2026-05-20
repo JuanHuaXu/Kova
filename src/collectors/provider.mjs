@@ -401,6 +401,11 @@ function normalizeProviderRequest(raw, line) {
   const firstByteAtEpochMs = numberOrParsedTime(raw.firstByteAtEpochMs, raw.firstByteAt);
   const firstChunkAtEpochMs = numberOrParsedTime(raw.firstChunkAtEpochMs, raw.firstChunkAt);
   const route = raw.route ?? raw.path ?? null;
+  const responseType = typeof raw.responseType === "string" ? raw.responseType : null;
+  const matchedScriptStep = typeof raw.matchedScriptStep === "string" ? raw.matchedScriptStep : null;
+  const inferredMode = mockAiProviderMode(raw, matchedScriptStep, responseType);
+  const inferredOutcome = mockAiProviderOutcome(raw, responseType);
+  const inferredErrorClass = mockAiProviderErrorClass(raw, responseType);
   return {
     schemaVersion: raw.schemaVersion ?? "kova.mockProvider.request.legacy",
     line,
@@ -417,21 +422,78 @@ function normalizeProviderRequest(raw, line) {
     firstChunkAtEpochMs,
     firstChunkLatencyMs: numberOrNull(raw.firstChunkLatencyMs) ?? durationBetween(receivedAtEpochMs, firstChunkAtEpochMs),
     method: raw.method ?? null,
-    mode: raw.mode ?? raw.behavior ?? null,
-    behavior: raw.behavior ?? raw.mode ?? null,
-    outcome: raw.outcome ?? null,
-    errorClass: raw.errorClass ?? null,
+    mode: raw.mode ?? raw.behavior ?? inferredMode,
+    behavior: raw.behavior ?? raw.mode ?? inferredMode,
+    outcome: raw.outcome ?? inferredOutcome,
+    errorClass: inferredErrorClass,
     providerCallIndex: numberOrNull(raw.providerCallIndex),
     route,
     path: raw.path ?? route,
-    model: raw.model ?? modelFromBody(raw.body),
-    stream: typeof raw.stream === "boolean" ? raw.stream : streamFromBody(raw.body),
+    model: raw.model ?? modelFromBody(raw.body ?? raw.requestBody),
+    stream: typeof raw.stream === "boolean" ? raw.stream : streamFromBody(raw.body ?? raw.requestBody),
     status: numberOrNull(raw.status),
     usage: normalizeUsage(raw.usage),
     statusClass: raw.statusClass ?? (typeof raw.status === "number" ? `${Math.floor(raw.status / 100)}xx` : null),
-    bodyBytes: numberOrNull(raw.bodyBytes) ?? (typeof raw.body === "string" ? Buffer.byteLength(raw.body) : null),
-    parseError: raw.parseError ?? null
+    bodyBytes: numberOrNull(raw.bodyBytes) ?? (typeof raw.body === "string" ? Buffer.byteLength(raw.body) : null) ?? (raw.requestBody ? Buffer.byteLength(JSON.stringify(raw.requestBody)) : null),
+    parseError: raw.parseError ?? null,
+    provider: raw.providerId ?? raw.provider ?? null,
+    apiSurface: raw.apiSurface ?? null,
+    matchedScriptStep,
+    responseType,
+    toolCallsEmitted: numberOrNull(raw.toolCallsEmitted),
+    finalTextEmitted: typeof raw.finalTextEmitted === "string" ? raw.finalTextEmitted : null
   };
+}
+
+function mockAiProviderMode(raw, matchedScriptStep, responseType) {
+  if (raw.schemaVersion !== "mock-ai-provider.request.v1") {
+    return null;
+  }
+  const text = `${matchedScriptStep ?? ""} ${responseType ?? ""}`;
+  for (const mode of ["error-then-recover", "concurrent-pressure", "streaming-stall", "malformed", "timeout", "slow", "normal"]) {
+    if (text.includes(mode)) {
+      return mode;
+    }
+  }
+  if (responseType === "delay") {
+    return "slow";
+  }
+  return "normal";
+}
+
+function mockAiProviderOutcome(raw, responseType) {
+  if (raw.outcome) {
+    return raw.outcome;
+  }
+  if (responseType === "timeout") {
+    return "timeout";
+  }
+  if (responseType === "malformed") {
+    return "malformed";
+  }
+  if (typeof raw.status === "number" && raw.status >= 400) {
+    return "error";
+  }
+  if (responseType) {
+    return "completed";
+  }
+  return null;
+}
+
+function mockAiProviderErrorClass(raw, responseType) {
+  if (responseType === "timeout" || raw.errorClass === "timeout_error") {
+    return "provider-timeout";
+  }
+  if (responseType === "malformed") {
+    return "malformed-response";
+  }
+  if (raw.errorClass === "provider-error") {
+    return "provider-error";
+  }
+  if (raw.errorClass) {
+    return raw.errorClass;
+  }
+  return null;
 }
 
 function summarizeBy(requests, key) {

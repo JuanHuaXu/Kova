@@ -93,6 +93,7 @@ import {
   ocmServiceStatusJson,
   ocmTargetSelector
 } from "./ocm/commands.mjs";
+import { mockAiProviderServeCommand } from "./auth.mjs";
 import {
   checkAggregateThreshold,
   checkDuration,
@@ -778,7 +779,7 @@ function localBuildTargetSetupResourceExclusionCheck() {
           id: "auth-prepare",
           measurementScope: "harness",
           results: [{
-            command: "node support/mock-openai-server.mjs",
+            command: "mock-ai-provider serve --providers openai",
             status: 0,
             durationMs: 500,
             resourceSamples: syntheticResourceSamples({
@@ -5519,12 +5520,25 @@ function syntheticTurn({
 async function mockProviderBehaviorCheck(tmp) {
   const dir = join(tmp, "mock-provider-behavior");
   await mkdir(dir, { recursive: true });
+  const scriptPath = join(dir, "script.json");
+  const requestLogPath = join(dir, "requests.jsonl");
+  const serverLogPath = join(dir, "server.log");
+  const portPath = join(dir, "port");
+  const pidPath = join(dir, "pid");
+  const writePort = [
+    "node",
+    "-e",
+    quoteShell("const fs=require('fs'); const [logPath, portPath] = process.argv.slice(1); const line=fs.readFileSync(logPath,'utf8').split(/\\r?\\n/).find(Boolean); if (!line) process.exit(1); const startup=JSON.parse(line); if (!startup.port) process.exit(1); fs.writeFileSync(portPath, String(startup.port));"),
+    quoteShell(serverLogPath),
+    quoteShell(portPath)
+  ].join(" ");
   const command = [
-    `node support/mock-openai-server.mjs --port-file ${quoteShell(join(dir, "port"))} --request-log ${quoteShell(join(dir, "requests.jsonl"))} --mode error-then-recover --error-status 503 >${quoteShell(join(dir, "server.log"))} 2>&1 & echo $! >${quoteShell(join(dir, "pid"))}`,
-    `for i in $(seq 1 50); do test -s ${quoteShell(join(dir, "port"))} && break; sleep 0.1; done`,
-    `port=$(cat ${quoteShell(join(dir, "port"))})`,
+    `node support/write-mock-ai-provider-script.mjs --output ${quoteShell(scriptPath)} --mode error-then-recover --error-status 503`,
+    mockAiProviderServeCommand({ scriptPath, requestLog: requestLogPath, serverLog: serverLogPath, pidFile: pidPath }),
+    `for i in $(seq 1 50); do ${writePort} >/dev/null 2>&1 && test -s ${quoteShell(portPath)} && break; sleep 0.1; done`,
+    `port=$(cat ${quoteShell(portPath)})`,
     "node -e 'const port=process.argv[1]; const body=JSON.stringify({model:\"gpt-5.5\",stream:false}); const send=()=>fetch(`http://127.0.0.1:${port}/v1/responses`,{method:\"POST\",headers:{\"content-type\":\"application/json\"},body}).then(async r=>({status:r.status,text:await r.text()})); const first=await send(); const second=await send(); console.log(JSON.stringify({first:first.status,second:second.status}));' \"$port\"",
-    `kill "$(cat ${quoteShell(join(dir, "pid"))})" 2>/dev/null || true`
+    `kill "$(cat ${quoteShell(pidPath)})" 2>/dev/null || true`
   ].join("; ");
   const result = await runCommand(command, { timeoutMs: 10000 });
   try {
@@ -5534,11 +5548,12 @@ async function mockProviderBehaviorCheck(tmp) {
     const response = JSON.parse(result.stdout.trim().split(/\r?\n/).at(-1));
     assertEqual(response.first, 503, "first transient provider status");
     assertEqual(response.second, 200, "second recovered provider status");
-    const evidence = parseProviderRequestLog(await readFile(join(dir, "requests.jsonl"), "utf8"));
+    const evidence = parseProviderRequestLog(await readFile(requestLogPath, "utf8"));
     assertEqual(evidence.requestCount, 2, "behavior request count");
     assertEqual(evidence.requests[0]?.mode, "error-then-recover", "first request behavior");
     assertEqual(evidence.requests[0]?.errorClass, "provider-error", "first request error class");
-    assertEqual(evidence.requests[1]?.mode, "normal", "second request behavior");
+    assertEqual(evidence.requests[1]?.status, 200, "second recovered request status");
+    assertEqual(evidence.requests[1]?.errorClass, null, "second request error class");
     return {
       id: "mock-provider-behavior",
       status: "PASS",
@@ -8270,7 +8285,7 @@ async function resourceRootCommandRoleBoundaryCheck() {
 async function resourceRolePollutionCheck() {
   try {
     const processRoles = await loadProcessRoles();
-    const mockProviderCommand = "node /tmp/kova-browser-automation-smoke/mock-openai-server.mjs --marker KOVA_AGENT_OK";
+    const mockProviderCommand = "mock-ai-provider serve --providers openai --marker KOVA_AGENT_OK";
     const mockProviderRoles = classifyRegistryRolesForProcess(
       { command: `/bin/zsh -lc ${mockProviderCommand}` },
       {

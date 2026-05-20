@@ -564,15 +564,14 @@ function mockDir(artifactDir) {
 }
 
 function startMockProviderCommand(dir, mockProvider = {}) {
-  const server = join(repoRoot, "support/mock-openai-server.mjs");
   const portFile = join(dir, "port");
   const requestLog = join(dir, "requests.jsonl");
   const serverLog = join(dir, "server.log");
   const pidFile = join(dir, "pid");
+  const scriptPath = join(dir, "script.json");
   const mode = mockProvider.mode ?? "normal";
-  const args = [
-    "--port-file", portFile,
-    "--request-log", requestLog,
+  const scriptArgs = [
+    "--output", scriptPath,
     "--marker", "KOVA_AGENT_OK",
     "--mode", mode
   ];
@@ -582,17 +581,32 @@ function startMockProviderCommand(dir, mockProvider = {}) {
     ["errorStatus", "--error-status"]
   ]) {
     if (mockProvider[key] !== undefined) {
-      args.push(flag, String(mockProvider[key]));
+      scriptArgs.push(flag, String(mockProvider[key]));
     }
   }
-  const argText = args.map(quoteShell).join(" ");
+  const scriptArgText = scriptArgs.map(quoteShell).join(" ");
+  const writePort = [
+    "node",
+    "-e",
+    quoteShell("const fs=require('fs'); const [logPath, portPath] = process.argv.slice(1); const line=fs.readFileSync(logPath,'utf8').split(/\\r?\\n/).find(Boolean); if (!line) process.exit(1); const startup=JSON.parse(line); if (!startup.port) process.exit(1); fs.writeFileSync(portPath, String(startup.port));"),
+    quoteShell(serverLog),
+    quoteShell(portFile)
+  ].join(" ");
   return [
     `mkdir -p ${quoteShell(dir)}`,
-    `node ${quoteShell(server)} ${argText} >${quoteShell(serverLog)} 2>&1 & echo $! >${quoteShell(pidFile)}`,
-    `for i in $(seq 1 100); do test -s ${quoteShell(portFile)} && node -e 'fetch("http://127.0.0.1:"+process.argv[1]+"/health").then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))' "$(cat ${quoteShell(portFile)})" && exit 0; sleep 0.1; done`,
+    `node ${quoteShell(join(repoRoot, "support/write-mock-ai-provider-script.mjs"))} ${scriptArgText}`,
+    mockAiProviderServeCommand({ scriptPath, requestLog, serverLog, pidFile }),
+    `for i in $(seq 1 100); do ${writePort} >/dev/null 2>&1 && test -s ${quoteShell(portFile)} && node -e 'fetch("http://127.0.0.1:"+process.argv[1]+"/health").then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))' "$(cat ${quoteShell(portFile)})" && exit 0; sleep 0.1; done`,
     `cat ${quoteShell(serverLog)} >&2`,
     "exit 1"
   ].join("; ");
+}
+
+export function mockAiProviderServeCommand({ scriptPath, requestLog, serverLog, pidFile }) {
+  const bin = `\${KOVA_MOCK_AI_PROVIDER_BIN:-${quoteShell(join(repoRoot, "node_modules/.bin/mock-ai-provider"))}}`;
+  const args = `serve --providers openai --script ${quoteShell(scriptPath)} --port 0 --request-log ${quoteShell(requestLog)}`;
+  const output = `>${quoteShell(serverLog)} 2>&1 & echo $! >${quoteShell(pidFile)}`;
+  return `mock_provider_bin=${bin}; if [ -x "$mock_provider_bin" ]; then "$mock_provider_bin" ${args} ${output}; else node "$mock_provider_bin" ${args} ${output}; fi`;
 }
 
 function mockProviderPolicy(scenario, state) {
