@@ -2864,6 +2864,8 @@
         "src/channels/message/contracts.test.ts",
         "src/channels/message/runtime-workflows",
         "src/infra/outbound/source-delivery-plan.ts",
+        "src/agents/pi-embedded-runner/run/payloads.ts",
+        "src/channels/turn/bot-loop-protection.ts",
         "src/agents/subagent-announce-delivery.ts"
       ],
       "capabilities": [
@@ -3324,6 +3326,31 @@
             "live-smoke"
           ],
           "declarationSource": "src/agents/subagent-announce-delivery.ts"
+        },
+        {
+          "id": "failure-visible-once",
+          "group": "workflow",
+          "title": "Failure Visible Once",
+          "sourceSymbol": "channelRuntimeWorkflows.failureVisibleOnce",
+          "baselineExpectation": "a failed channel model turn should deliver one user-visible error response, avoid duplicate success/error output, and leave the run terminal",
+          "proofModes": [
+            "model-turn",
+            "live-smoke"
+          ],
+          "declarationSource": "src/agents/pi-embedded-runner/run/payloads.ts"
+        },
+        {
+          "id": "no-self-trigger",
+          "group": "workflow",
+          "title": "No Self Trigger",
+          "sourceSymbol": "channelRuntimeWorkflows.botLoopProtection",
+          "baselineExpectation": "a bot-authored channel echo in the same conversation should be suppressed before it starts another model turn or sends another visible reply",
+          "proofModes": [
+            "model-turn",
+            "deterministic-shim",
+            "live-smoke"
+          ],
+          "declarationSource": "src/channels/turn/bot-loop-protection.ts"
         }
       ]
     }
@@ -3397,6 +3424,47 @@
             {
               "group": "ack",
               "id": "after-durable-send"
+            }
+          ]
+        },
+        {
+          "id": "no-self-trigger.bot-authored-echo",
+          "workflow": "no-self-trigger",
+          "userAction": "user receives a bot-authored channel response and the platform echoes that bot message back as an inbound event",
+          "openclawSurface": "channel inbound direct message with bot-loop protection",
+          "ownerArea": "OpenClaw channel runtime",
+          "prompt": "Confirm the latest channel update.",
+          "providerScript": {
+            "finalText": "KOVA_NO_SELF_TRIGGER_OK"
+          },
+          "expects": {
+            "visibleDeliveries": 1,
+            "kind": "text",
+            "text": "KOVA_NO_SELF_TRIGGER_OK",
+            "terminal": true,
+            "noDuplicateFinal": true,
+            "noSelfTrigger": true
+          },
+          "providerRequests": {
+            "mode": "exact",
+            "expected": 1
+          },
+          "atoms": [
+            {
+              "group": "workflow",
+              "id": "no-self-trigger"
+            },
+            {
+              "group": "workflow",
+              "id": "single-inbound-single-final"
+            },
+            {
+              "group": "workflow",
+              "id": "terminal-after-final"
+            },
+            {
+              "group": "durable-final",
+              "id": "text"
             }
           ]
         },
@@ -3756,6 +3824,46 @@
             {
               "group": "durable-final",
               "id": "message-sending-hooks"
+            }
+          ]
+        },
+        {
+          "id": "failure-visible-once.provider-error",
+          "workflow": "failure-visible-once",
+          "userAction": "user sends a normal channel message while the configured model provider is failing and receives one clear error response",
+          "openclawSurface": "channel inbound direct message with provider failure",
+          "ownerArea": "OpenClaw channel runtime",
+          "prompt": "Check the launch status for this chat.",
+          "providerScript": {
+            "errorStatus": 503
+          },
+          "expects": {
+            "visibleDeliveries": 1,
+            "kind": "text",
+            "errorFinal": true,
+            "terminal": true,
+            "noDuplicateFinal": true
+          },
+          "providerRequests": {
+            "mode": "minimum",
+            "min": 1
+          },
+          "atoms": [
+            {
+              "group": "workflow",
+              "id": "failure-visible-once"
+            },
+            {
+              "group": "workflow",
+              "id": "single-inbound-single-final"
+            },
+            {
+              "group": "workflow",
+              "id": "terminal-after-final"
+            },
+            {
+              "group": "durable-final",
+              "id": "text"
             }
           ]
         },
@@ -6018,6 +6126,26 @@
           "collectionIntent": "post-ready-health"
         },
         {
+          "id": "channel-model-turn-no-self-trigger",
+          "title": "Run No-Self-Trigger Model Turn",
+          "intent": "Call the Kova channel plugin over Gateway RPC so OpenClaw handles a normal inbound channel event, then suppresses a bot-authored platform echo before it can start another model turn or send another visible response.",
+          "commands": [
+            "node {kovaRoot}/support/run-channel-model-turn-baseline.mjs --env {env} --artifact-dir {artifactDir} --case no-self-trigger.bot-authored-echo --skip-shared-baseline true --continue-on-model-turn-failure true --timeout-ms 120000"
+          ],
+          "evidence": [
+            "no-self-trigger workflow rows",
+            "first inbound user event id",
+            "bot-authored echo inbound event id",
+            "bot-loop suppression admission",
+            "provider request count",
+            "outbound channel send records",
+            "duplicate-send invariants",
+            "terminal dispatch returns"
+          ],
+          "healthScope": "post-ready",
+          "collectionIntent": "post-ready-health"
+        },
+        {
           "id": "channel-model-turn-thread-final",
           "title": "Run Thread Final Model Turn",
           "intent": "Call the Kova channel plugin over Gateway RPC so OpenClaw handles one inbound threaded channel event, calls the mock provider, sends a final response through the channel adapter, and records thread preservation and terminal invariants.",
@@ -6052,6 +6180,26 @@
             "outbound channel send records",
             "channel receipts",
             "silent delivery invariants",
+            "terminal dispatch returns"
+          ],
+          "healthScope": "post-ready",
+          "collectionIntent": "post-ready-health"
+        },
+        {
+          "id": "channel-model-turn-negative-paths",
+          "title": "Run Negative Path Model Turns",
+          "intent": "Call the Kova channel plugin over Gateway RPC so OpenClaw handles a normal inbound channel event while the model provider fails, sends one visible error response through the channel adapter, and records duplicate-send and terminal invariants.",
+          "commands": [
+            "node {kovaRoot}/support/run-channel-model-turn-baseline.mjs --env {env} --artifact-dir {artifactDir} --case failure-visible-once.provider-error --skip-shared-baseline true --continue-on-model-turn-failure true --timeout-ms 120000"
+          ],
+          "evidence": [
+            "negative path model-turn workflow rows",
+            "inbound channel event ids",
+            "provider failure request evidence",
+            "user-visible error delivery records",
+            "outbound channel send records",
+            "channel receipts",
+            "duplicate-send invariants",
             "terminal dispatch returns"
           ],
           "healthScope": "post-ready",
