@@ -21,8 +21,9 @@ const continueOnModelTurnFailure = args["continue-on-model-turn-failure"] === "t
 const providerRequestPolicyOverride = parseProviderRequestPolicyArg(args["provider-request-policy"]);
 const artifactPath = join(artifactDir, `channel-model-turn-baseline-${safeArtifactSegment(modelTurnCase)}.json`);
 const providerRequestLogPath = join(artifactDir, "mock-openai", "requests.jsonl");
+const capabilityCatalog = JSON.parse(await readFile(join(repoRoot, "channel-capabilities", "openclaw-message.json"), "utf8"));
 const workflowCaseCatalog = JSON.parse(await readFile(join(repoRoot, "channel-capabilities", "channel-workflow-cases.json"), "utf8"));
-const selectedWorkflowCases = selectWorkflowCases(workflowCaseCatalog, modelTurnCase);
+const selectedWorkflowCases = selectWorkflowCases(workflowCaseCatalog, capabilityCatalog, modelTurnCase);
 
 async function main() {
   let result;
@@ -189,7 +190,8 @@ function buildResult({
   };
 }
 
-function selectWorkflowCases(catalog, requestedCase) {
+function selectWorkflowCases(catalog, capabilityCatalogValue, requestedCase) {
+  const knownAtoms = new Set((capabilityCatalogValue?.capabilities ?? []).map((capability) => `${capability.group}:${capability.id}`));
   const cases = Array.isArray(catalog?.cases)
     ? catalog.cases.map(normalizeWorkflowCase)
     : [];
@@ -202,6 +204,12 @@ function selectWorkflowCases(catalog, requestedCase) {
       throw new Error(`channel workflow case catalog ${catalog?.id ?? "<unknown>"} duplicates case id ${testCase.id}`);
     }
     ids.add(testCase.id);
+    for (const capability of testCase.capabilities) {
+      const key = `${capability.group}:${capability.id}`;
+      if (!knownAtoms.has(key)) {
+        throw new Error(`channel workflow case ${testCase.id} references unknown OpenClaw channel capability ${key}`);
+      }
+    }
   }
   if (requestedCase == null || requestedCase === "" || requestedCase === "all") {
     return cases;
