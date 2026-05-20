@@ -1292,11 +1292,11 @@ function extractGatewaySessionTurn(result) {
 }
 
 function extractChannelModelTurn(result) {
-  if (!result?.command?.includes("run-channel-model-turn-baseline.mjs") && !result?.command?.includes("run-channel-probe-turn.mjs")) {
+  if (!result?.command?.includes("run-channel-probe-turn.mjs")) {
     return null;
   }
   const payload = parseJsonObject(result.stdout);
-  if (!payload || (payload.schemaVersion !== "kova.channelModelTurnRun.v1" && payload.schemaVersion !== "kova.channelProbeTurnRun.v1")) {
+  if (!payload || payload.schemaVersion !== "kova.channelProbeTurnRun.v1") {
     return null;
   }
   const activeStartedAtEpochMs = numberOrNull(payload.activeStartedAtEpochMs);

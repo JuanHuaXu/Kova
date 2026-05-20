@@ -1615,10 +1615,10 @@ function channelModelTurnMultiInvariantEvaluationCheck() {
       phases: [{
         id: "channel-model-turn-final-delivery",
         results: [{
-          command: "node support/run-channel-model-turn-baseline.mjs --case media-batch-final",
+          command: "node support/run-channel-probe-turn.mjs --case media-batch-final",
           status: 0,
           stdout: JSON.stringify({
-            schemaVersion: "kova.channelModelTurnRun.v1",
+            schemaVersion: "kova.channelProbeTurnRun.v1",
             ok: false,
             envName: "kova-self-check",
             case: failedCaseId,

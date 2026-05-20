@@ -2389,9 +2389,11 @@
       "title": "Mock Provider",
       "description": "Kova-controlled provider fixtures used to test OpenClaw model and agent paths without external provider instability.",
       "commandPatterns": [
+        "mock-ai-provider",
         "mock-openai-server"
       ],
       "processPatterns": [
+        "mock-ai-provider",
         "mock-openai-server"
       ]
     },
@@ -7118,7 +7120,8 @@
         "expectedText": "KOVA_AGENT_OK"
       },
       "mockProvider": {
-        "kovaMediaGeneration": true
+        "kovaMediaGeneration": true,
+        "channelWorkflowCases": true
       },
       "thresholds": {
         "gatewayReadyMs": 45000,
@@ -7190,9 +7193,10 @@
           "title": "Run Final Delivery Model Turns",
           "intent": "Call the Kova channel plugin over Gateway RPC so OpenClaw handles normal final text, media, reply, thread, and silent user-facing model turns through the shared channel adapter path.",
           "commands": [
-            "node {kovaRoot}/support/run-channel-model-turn-baseline.mjs --env {env} --artifact-dir {artifactDir} --case text-final,media-final,media-thread-final,media-reply-thread-final,media-batch-final,thread-final,silent-final --skip-shared-baseline true --continue-on-model-turn-failure true --timeout-ms 120000"
+            "node {kovaRoot}/support/run-channel-probe-turn.mjs --env {env} --artifact-dir {artifactDir} --case text-final,media-final,media-thread-final,media-reply-thread-final,media-batch-final,thread-final,silent-final --continue-on-failure true --timeout-ms 120000"
           ],
           "evidence": [
+            "thin probe text turn artifact",
             "final delivery model-turn capability rows",
             "inbound channel event ids",
             "provider request policy and observed count",
@@ -7210,7 +7214,7 @@
           "title": "Run Source Delivery Model Turn",
           "intent": "Call the Kova channel plugin over Gateway RPC so OpenClaw handles one normal inbound user event, follows its supported source-delivery contract, sends visible source output through the message tool when required, and records payload, receipt, duplicate-send, and terminal invariants.",
           "commands": [
-            "node {kovaRoot}/support/run-channel-model-turn-baseline.mjs --env {env} --artifact-dir {artifactDir} --case source-visible-delivery.text.automatic-final,source-visible-delivery.text.message-tool-only,source-visible-delivery.media.message-tool-only,source-visible-delivery.media-thread.message-tool-only,source-visible-delivery.attachment.message-tool-only --skip-shared-baseline true --continue-on-model-turn-failure true --timeout-ms 120000"
+            "node {kovaRoot}/support/run-channel-probe-turn.mjs --env {env} --artifact-dir {artifactDir} --case source-visible-delivery.text.automatic-final,source-visible-delivery.text.message-tool-only,source-visible-delivery.media.message-tool-only,source-visible-delivery.media-thread.message-tool-only,source-visible-delivery.attachment.message-tool-only --continue-on-failure true --timeout-ms 120000"
           ],
           "evidence": [
             "source delivery model-turn capability rows",
@@ -7230,7 +7234,7 @@
           "title": "Run Background Artifact Completion Model Turn",
           "intent": "Call the Kova channel plugin over Gateway RPC so OpenClaw handles one normal media-generation completion shape, follows its supported message-tool source delivery contract, and records artifact, receipt, duplicate-send, and terminal invariants.",
           "commands": [
-            "node {kovaRoot}/support/run-channel-model-turn-baseline.mjs --env {env} --artifact-dir {artifactDir} --case background-artifact-completion.image.message-tool-only,background-artifact-completion.video.message-tool-only,background-artifact-completion.music.message-tool-only --skip-shared-baseline true --continue-on-model-turn-failure true --timeout-ms 120000"
+            "node {kovaRoot}/support/run-channel-probe-turn.mjs --env {env} --artifact-dir {artifactDir} --case background-artifact-completion.image.message-tool-only,background-artifact-completion.video.message-tool-only,background-artifact-completion.music.message-tool-only --continue-on-failure true --timeout-ms 120000"
           ],
           "evidence": [
             "background artifact completion workflow rows",
@@ -7250,7 +7254,7 @@
           "title": "Run Completion Handoff Model Turns",
           "intent": "Call the Kova channel plugin over Gateway RPC so OpenClaw starts a real generated-image background task, wakes the requester completion handoff, delivers generated media through the supported message-tool path, and records delivery, route, duplicate-send, and terminal invariants.",
           "commands": [
-            "node {kovaRoot}/support/run-channel-model-turn-baseline.mjs --env {env} --artifact-dir {artifactDir} --case completion-handoff.image.generated-direct,completion-handoff.image.generated-thread --skip-shared-baseline true --continue-on-model-turn-failure true --timeout-ms 120000"
+            "node {kovaRoot}/support/run-channel-probe-turn.mjs --env {env} --artifact-dir {artifactDir} --case completion-handoff.image.generated-direct,completion-handoff.image.generated-thread --continue-on-failure true --timeout-ms 120000"
           ],
           "evidence": [
             "completion handoff workflow rows",
@@ -7271,7 +7275,7 @@
           "title": "Run Channel Lifecycle Model Turns",
           "intent": "Call the Kova channel plugin over Gateway RPC so OpenClaw handles a normal inbound channel event, then suppresses a bot-authored platform echo before it can start another model turn or send another visible response.",
           "commands": [
-            "node {kovaRoot}/support/run-channel-model-turn-baseline.mjs --env {env} --artifact-dir {artifactDir} --case no-self-trigger.bot-authored-echo --skip-shared-baseline true --continue-on-model-turn-failure true --timeout-ms 120000"
+            "node {kovaRoot}/support/run-channel-probe-turn.mjs --env {env} --artifact-dir {artifactDir} --case no-self-trigger.bot-authored-echo --continue-on-failure true --timeout-ms 120000"
           ],
           "evidence": [
             "lifecycle workflow rows",
@@ -7292,7 +7296,7 @@
           "intent": "Call the Kova channel plugin over Gateway RPC so OpenClaw handles a normal inbound channel event while the model provider fails, sends one visible error response through the channel adapter, and records duplicate-send and terminal invariants.",
           "expectedAgentFailure": true,
           "commands": [
-            "node {kovaRoot}/support/run-channel-model-turn-baseline.mjs --env {env} --artifact-dir {artifactDir} --case failure-visible-once.provider-error --skip-shared-baseline true --continue-on-model-turn-failure true --timeout-ms 120000"
+            "node {kovaRoot}/support/run-channel-probe-turn.mjs --env {env} --artifact-dir {artifactDir} --case failure-visible-once.provider-error --continue-on-failure true --timeout-ms 120000"
           ],
           "evidence": [
             "negative path model-turn workflow rows",
