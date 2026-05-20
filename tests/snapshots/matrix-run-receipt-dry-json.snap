@@ -8,7 +8,7 @@
     "title": "Smoke Matrix",
     "objective": "Fast OpenClaw coverage across fresh install, plugin dependency, plugin lifecycle, and gateway performance states.",
     "purpose": "regression",
-    "entryCount": 13,
+    "entryCount": 12,
     "targetKinds": null,
     "diagnostics": null,
     "calibration": null,
@@ -26,7 +26,7 @@
     "repeat": 1,
     "parallel": 1,
     "parallelContaminated": false,
-    "groupCount": 13,
+    "groupCount": 12,
     "unstableGroupCount": 0,
     "profiledRunCount": 0,
     "baselineRegressionCount": null,
@@ -36,9 +36,9 @@
     "savedBaselinePath": null
   },
   "summary": {
-    "total": 13,
+    "total": 12,
     "statuses": {
-      "DRY-RUN": 13
+      "DRY-RUN": 12
     }
   }
 }

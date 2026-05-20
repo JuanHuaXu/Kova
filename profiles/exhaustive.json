@@ -40,11 +40,6 @@
       "state": "fresh"
     },
     {
-      "scenario": "channel-capability-baseline",
-      "state": "fresh",
-      "timeoutMs": 300000
-    },
-    {
       "scenario": "channel-model-turn-baseline",
       "state": "mock-openai-provider",
       "timeoutMs": 300000

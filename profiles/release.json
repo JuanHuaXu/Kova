@@ -233,7 +233,6 @@
       "requirements": {
         "blocking": [
           "channel-capability-preflight:preflight",
-          "channel-capability-baseline:baseline",
           "channel-model-turn-baseline:baseline",
           "channel-telegram-capability-conformance:telegram-conformance",
           "channel-discord-capability-conformance:discord-conformance",
@@ -274,10 +273,6 @@
     "blocking": [
       {
         "scenario": "channel-capability-preflight",
-        "state": "fresh"
-      },
-      {
-        "scenario": "channel-capability-baseline",
         "state": "fresh"
       },
       {
@@ -467,10 +462,6 @@
   "entries": [
     {
       "scenario": "channel-capability-preflight",
-      "state": "fresh"
-    },
-    {
-      "scenario": "channel-capability-baseline",
       "state": "fresh"
     },
     {

@@ -12,7 +12,7 @@
     "title": "Smoke Matrix",
     "objective": "Fast OpenClaw coverage across fresh install, plugin dependency, plugin lifecycle, and gateway performance states.",
     "purpose": "regression",
-    "entryCount": 13,
+    "entryCount": 12,
     "targetKinds": null,
     "diagnostics": null,
     "calibration": null,
@@ -39,39 +39,15 @@
     "schemaVersion": "kova.resolvedCoverage.v1",
     "purpose": "regression",
     "targetKind": "runtime",
-    "total": 13,
+    "total": 12,
     "statuses": {
-      "planned": 13
+      "planned": 12
     },
     "obligations": [
       {
         "surface": "channel-capability-preflight",
         "requirement": "preflight",
         "scenario": "channel-capability-preflight",
-        "state": "fresh",
-        "stateTraits": [
-          "fresh-user",
-          "baseline"
-        ],
-        "targetKind": "runtime",
-        "status": "planned",
-        "reason": null,
-        "requiredStates": [
-          "fresh"
-        ],
-        "requiredStateTraits": [],
-        "requiredTargetKinds": [
-          "npm",
-          "release",
-          "runtime",
-          "local-build"
-        ],
-        "requiredMetrics": []
-      },
-      {
-        "surface": "channel-capability-baseline",
-        "requirement": "baseline",
-        "scenario": "channel-capability-baseline",
         "state": "fresh",
         "stateTraits": [
           "fresh-user",
@@ -500,35 +476,6 @@
       },
       "surface": "channel-capability-preflight",
       "timeoutMs": 180000,
-      "platforms": null,
-      "status": "SELECTED",
-      "skipReason": null
-    },
-    {
-      "scenario": {
-        "id": "channel-capability-baseline",
-        "surface": "channel-capability-baseline",
-        "title": "Channel Capability Baseline",
-        "objective": "Install a deterministic Kova channel into a real OpenClaw gateway, inject channel turns through OpenClaw's channel runtime, and emit one baseline proof row for every OpenClaw channel capability.",
-        "tags": [
-          "channel",
-          "capability",
-          "baseline",
-          "runtime",
-          "plugins"
-        ]
-      },
-      "state": {
-        "id": "fresh",
-        "title": "Fresh OpenClaw User",
-        "objective": "A new isolated OpenClaw home with no intentional state mutations beyond normal scenario provisioning.",
-        "tags": [
-          "fresh",
-          "baseline"
-        ]
-      },
-      "surface": "channel-capability-baseline",
-      "timeoutMs": 300000,
       "platforms": null,
       "status": "SELECTED",
       "skipReason": null

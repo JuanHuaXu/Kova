@@ -1,14 +1,13 @@
 ╔══════════════════════════════════════════════════════════════════════════════╗
 ║  KOVA  ·  matrix plan                                                        ║
 ╚══════════════════════════════════════════════════════════════════════════════╝
-   [PLAN]   13 runnable · 13 entries     profile: smoke · target: runtime:stable
+   [PLAN]   12 runnable · 12 entries     profile: smoke · target: runtime:stable
 
-  Total 13   ·   Runnable ██████████ 13   ·   Skipped ░░░░░░░░░░ 0
+  Total 12   ·   Runnable ██████████ 12   ·   Skipped ░░░░░░░░░░ 0
 
 ─── entries ────────────────────────────────────────────────────────────────────
   verdict  scenario                   state               note
   RUN      channel-capability-prefl…  fresh               Channel Capability Pr…
-  RUN      channel-capability-basel…  fresh               Channel Capability Ba…
   RUN      channel-model-turn-basel…  mock-openai-provi…  Channel Model Turn Ba…
   RUN      release-runtime-startup    fresh               Release Runtime Start…
   RUN      fresh-install              fresh               Fresh OpenClaw Instal…
