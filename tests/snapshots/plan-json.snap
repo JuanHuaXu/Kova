@@ -3355,6 +3355,576 @@
       ]
     }
   ],
+  "channelWorkflowInventory": [
+    {
+      "schemaVersion": "kova.channelWorkflowInventory.v1",
+      "id": "openclaw-channel-workflow-inventory",
+      "title": "OpenClaw Channel Workflow Inventory",
+      "description": "Source-derived inventory of user-shaped OpenClaw channel workflows that Kova should turn into executable workflow matrix rows.",
+      "declarationSources": [
+        "src/channels/message/types.ts",
+        "src/channels/message/receive.ts",
+        "src/channels/turn/kernel.ts",
+        "src/channels/turn/durable-delivery.ts",
+        "src/channels/turn/bot-loop-protection.ts",
+        "src/infra/outbound/source-delivery-plan.ts",
+        "src/infra/outbound/bound-delivery-router.ts",
+        "src/agents/pi-embedded-runner/run/payloads.ts",
+        "src/agents/pi-embedded-runner/run/attempt.ts",
+        "src/agents/pi-embedded-runner/run/message-tool-terminal.ts",
+        "src/agents/subagent-announce-delivery.ts",
+        "extensions/telegram/src/channel.ts",
+        "extensions/telegram/src/bot-message-dispatch.ts",
+        "extensions/discord/src/channel.ts",
+        "extensions/discord/src/monitor/message-handler.process.ts"
+      ],
+      "workflows": [
+        {
+          "id": "final-delivery",
+          "title": "Final Channel Delivery",
+          "userAction": "user sends a normal channel message and receives OpenClaw's final answer in the same conversation",
+          "openclawSurface": "channel inbound message with durable final reply",
+          "ownerArea": "OpenClaw channel runtime",
+          "sourceRefs": [
+            "src/channels/turn/kernel.ts#runChannelTurn",
+            "src/channels/turn/durable-delivery.ts#deliverDurableInboundReplyPayload",
+            "src/channels/message/types.ts#durableFinalDeliveryCapabilities"
+          ],
+          "contentKinds": [
+            "text",
+            "media",
+            "payload",
+            "batch"
+          ],
+          "routeKinds": [
+            "direct",
+            "thread",
+            "reply",
+            "reply-thread"
+          ],
+          "deliveryModes": [
+            "final"
+          ],
+          "lifecycles": [
+            "success",
+            "terminal"
+          ],
+          "atoms": [
+            {
+              "group": "durable-final",
+              "id": "text"
+            },
+            {
+              "group": "durable-final",
+              "id": "media"
+            },
+            {
+              "group": "durable-final",
+              "id": "payload"
+            },
+            {
+              "group": "durable-final",
+              "id": "reply-to"
+            },
+            {
+              "group": "durable-final",
+              "id": "thread"
+            },
+            {
+              "group": "durable-final",
+              "id": "message-sending-hooks"
+            },
+            {
+              "group": "durable-final",
+              "id": "batch"
+            },
+            {
+              "group": "durable-final",
+              "id": "after-send-success"
+            },
+            {
+              "group": "durable-final",
+              "id": "after-commit"
+            },
+            {
+              "group": "workflow",
+              "id": "single-inbound-single-final"
+            },
+            {
+              "group": "workflow",
+              "id": "final-delivery-receipt-required"
+            },
+            {
+              "group": "workflow",
+              "id": "terminal-after-final"
+            }
+          ]
+        },
+        {
+          "id": "source-visible-delivery",
+          "title": "Source Visible Delivery",
+          "userAction": "user asks OpenClaw for output that must be delivered to the source chat instead of only becoming a private final answer",
+          "openclawSurface": "channel inbound message with source delivery plan",
+          "ownerArea": "OpenClaw source delivery runtime",
+          "sourceRefs": [
+            "src/infra/outbound/source-delivery-plan.ts#createSourceDeliveryPlan",
+            "src/infra/outbound/source-delivery-plan.ts#resolveSourceDeliveryOutcome",
+            "src/agents/pi-embedded-runner/run/message-tool-terminal.ts",
+            "src/agents/pi-embedded-runner/run/payloads.ts"
+          ],
+          "contentKinds": [
+            "text",
+            "media",
+            "payload",
+            "attachment"
+          ],
+          "routeKinds": [
+            "direct",
+            "thread",
+            "reply",
+            "reply-thread"
+          ],
+          "deliveryModes": [
+            "automatic-source-delivery",
+            "message-tool-only-source-delivery"
+          ],
+          "lifecycles": [
+            "success",
+            "terminal"
+          ],
+          "atoms": [
+            {
+              "group": "workflow",
+              "id": "source-visible-delivery"
+            },
+            {
+              "group": "workflow",
+              "id": "message-tool-only-source-delivery"
+            },
+            {
+              "group": "durable-final",
+              "id": "text"
+            },
+            {
+              "group": "durable-final",
+              "id": "media"
+            },
+            {
+              "group": "durable-final",
+              "id": "payload"
+            },
+            {
+              "group": "durable-final",
+              "id": "reply-to"
+            },
+            {
+              "group": "durable-final",
+              "id": "thread"
+            },
+            {
+              "group": "durable-final",
+              "id": "message-sending-hooks"
+            }
+          ]
+        },
+        {
+          "id": "background-artifact-completion",
+          "title": "Background Artifact Completion",
+          "userAction": "user asks OpenClaw to generate an image, video, or audio artifact and receives the completed artifact back in the source conversation",
+          "openclawSurface": "channel inbound message with async generated artifact completion",
+          "ownerArea": "OpenClaw completion delivery runtime",
+          "sourceRefs": [
+            "src/agents/subagent-announce-delivery.ts",
+            "src/agents/pi-embedded-runner/run/payloads.ts",
+            "src/infra/outbound/source-delivery-plan.ts",
+            "src/infra/outbound/bound-delivery-router.ts"
+          ],
+          "contentKinds": [
+            "image",
+            "video",
+            "audio",
+            "media"
+          ],
+          "routeKinds": [
+            "direct",
+            "thread",
+            "reply",
+            "reply-thread",
+            "bound-requester"
+          ],
+          "deliveryModes": [
+            "background-completion",
+            "message-tool-only-source-delivery"
+          ],
+          "lifecycles": [
+            "async-completion",
+            "success",
+            "terminal"
+          ],
+          "atoms": [
+            {
+              "group": "workflow",
+              "id": "background-artifact-completion"
+            },
+            {
+              "group": "workflow",
+              "id": "source-visible-delivery"
+            },
+            {
+              "group": "workflow",
+              "id": "message-tool-only-source-delivery"
+            },
+            {
+              "group": "durable-final",
+              "id": "media"
+            },
+            {
+              "group": "durable-final",
+              "id": "thread"
+            },
+            {
+              "group": "durable-final",
+              "id": "message-sending-hooks"
+            }
+          ]
+        },
+        {
+          "id": "completion-handoff",
+          "title": "Completion Handoff To Requester",
+          "userAction": "user starts long-running generated work from a channel conversation and OpenClaw routes the later completion back to that requester conversation",
+          "openclawSurface": "background task completion routed to the requester channel session",
+          "ownerArea": "OpenClaw completion delivery runtime",
+          "sourceRefs": [
+            "src/agents/subagent-announce-delivery.ts#deliverSubagentAnnouncement",
+            "src/infra/outbound/bound-delivery-router.ts#createBoundDeliveryRouter",
+            "src/infra/outbound/source-delivery-plan.ts#sourceDeliveryTargetsMatch"
+          ],
+          "contentKinds": [
+            "media",
+            "image",
+            "video",
+            "audio"
+          ],
+          "routeKinds": [
+            "direct",
+            "thread",
+            "reply-thread",
+            "bound-requester"
+          ],
+          "deliveryModes": [
+            "completion-handoff",
+            "message-tool-only-source-delivery",
+            "background-completion"
+          ],
+          "lifecycles": [
+            "async-completion",
+            "success",
+            "terminal"
+          ],
+          "atoms": [
+            {
+              "group": "workflow",
+              "id": "background-artifact-completion"
+            },
+            {
+              "group": "workflow",
+              "id": "source-visible-delivery"
+            },
+            {
+              "group": "workflow",
+              "id": "message-tool-only-source-delivery"
+            },
+            {
+              "group": "durable-final",
+              "id": "media"
+            },
+            {
+              "group": "durable-final",
+              "id": "thread"
+            },
+            {
+              "group": "workflow",
+              "id": "terminal-after-final"
+            }
+          ]
+        },
+        {
+          "id": "live-preview-finalization",
+          "title": "Live Preview And Finalization",
+          "userAction": "user receives progress or draft output while OpenClaw works, then sees the preview finalize or fall back to a normal final message",
+          "openclawSurface": "channel live preview and live finalizer",
+          "ownerArea": "OpenClaw live channel runtime and adapter",
+          "sourceRefs": [
+            "src/channels/message/types.ts#channelMessageLiveCapabilities",
+            "src/channels/message/types.ts#livePreviewFinalizerCapabilities",
+            "extensions/telegram/src/channel.ts",
+            "extensions/discord/src/channel.ts"
+          ],
+          "contentKinds": [
+            "text",
+            "media"
+          ],
+          "routeKinds": [
+            "direct",
+            "thread"
+          ],
+          "deliveryModes": [
+            "live-preview",
+            "live-finalizer",
+            "final"
+          ],
+          "lifecycles": [
+            "success",
+            "ambiguous-send",
+            "terminal"
+          ],
+          "atoms": [
+            {
+              "group": "live-preview",
+              "id": "draft-preview"
+            },
+            {
+              "group": "live-preview",
+              "id": "preview-finalization"
+            },
+            {
+              "group": "live-preview",
+              "id": "progress-updates"
+            },
+            {
+              "group": "live-preview",
+              "id": "native-streaming"
+            },
+            {
+              "group": "live-preview",
+              "id": "quiet-finalization"
+            },
+            {
+              "group": "live-finalizer",
+              "id": "final-edit"
+            },
+            {
+              "group": "live-finalizer",
+              "id": "normal-fallback"
+            },
+            {
+              "group": "live-finalizer",
+              "id": "discard-pending"
+            },
+            {
+              "group": "live-finalizer",
+              "id": "preview-receipt"
+            },
+            {
+              "group": "live-finalizer",
+              "id": "retain-on-ambiguous-failure"
+            }
+          ]
+        },
+        {
+          "id": "receive-ack",
+          "title": "Receive Acknowledgement",
+          "userAction": "user sends a channel message and the channel adapter acknowledges the platform event at the configured stage",
+          "openclawSurface": "channel receive context and acknowledgement policy",
+          "ownerArea": "OpenClaw channel receive runtime and adapter",
+          "sourceRefs": [
+            "src/channels/message/receive.ts#createMessageReceiveContext",
+            "src/channels/message/receive.ts#shouldAckMessageAfterStage",
+            "src/channels/message/types.ts#channelMessageReceiveAckPolicies",
+            "extensions/telegram/src/channel.ts",
+            "extensions/discord/src/channel.ts"
+          ],
+          "contentKinds": [
+            "text",
+            "media"
+          ],
+          "routeKinds": [
+            "direct",
+            "thread"
+          ],
+          "deliveryModes": [
+            "ack"
+          ],
+          "lifecycles": [
+            "success",
+            "terminal"
+          ],
+          "atoms": [
+            {
+              "group": "ack",
+              "id": "after-receive-record"
+            },
+            {
+              "group": "ack",
+              "id": "after-agent-dispatch"
+            },
+            {
+              "group": "ack",
+              "id": "after-durable-send"
+            },
+            {
+              "group": "ack",
+              "id": "manual"
+            }
+          ]
+        },
+        {
+          "id": "failure-visible-once",
+          "title": "Failure Visible Once",
+          "userAction": "user sends a channel message while provider or runtime work fails and receives one clear visible failure response",
+          "openclawSurface": "channel model turn with provider/runtime failure",
+          "ownerArea": "OpenClaw channel runtime",
+          "sourceRefs": [
+            "src/agents/pi-embedded-runner/run/payloads.ts",
+            "src/agents/pi-embedded-runner/run/attempt.ts",
+            "src/channels/turn/kernel.ts"
+          ],
+          "contentKinds": [
+            "error",
+            "text"
+          ],
+          "routeKinds": [
+            "direct",
+            "thread",
+            "reply"
+          ],
+          "deliveryModes": [
+            "final"
+          ],
+          "lifecycles": [
+            "provider-failure",
+            "terminal"
+          ],
+          "atoms": [
+            {
+              "group": "workflow",
+              "id": "failure-visible-once"
+            },
+            {
+              "group": "workflow",
+              "id": "single-inbound-single-final"
+            },
+            {
+              "group": "workflow",
+              "id": "terminal-after-final"
+            },
+            {
+              "group": "durable-final",
+              "id": "text"
+            }
+          ]
+        },
+        {
+          "id": "no-self-trigger",
+          "title": "No Self Trigger",
+          "userAction": "user receives an OpenClaw channel response and the platform echoes that bot-authored message back without starting another user turn",
+          "openclawSurface": "channel inbound bot/self echo protection",
+          "ownerArea": "OpenClaw channel runtime and adapter preflight",
+          "sourceRefs": [
+            "src/channels/turn/bot-loop-protection.ts",
+            "src/channels/turn/kernel.ts",
+            "extensions/telegram/src/bot-message-dispatch.ts",
+            "extensions/discord/src/monitor/message-handler.process.ts"
+          ],
+          "contentKinds": [
+            "text",
+            "media"
+          ],
+          "routeKinds": [
+            "direct",
+            "thread",
+            "reply"
+          ],
+          "deliveryModes": [
+            "final"
+          ],
+          "lifecycles": [
+            "bot-echo",
+            "terminal"
+          ],
+          "atoms": [
+            {
+              "group": "workflow",
+              "id": "no-self-trigger"
+            },
+            {
+              "group": "workflow",
+              "id": "single-inbound-single-final"
+            },
+            {
+              "group": "workflow",
+              "id": "terminal-after-final"
+            },
+            {
+              "group": "durable-final",
+              "id": "text"
+            },
+            {
+              "group": "durable-final",
+              "id": "media"
+            }
+          ]
+        },
+        {
+          "id": "retry-ambiguous-send",
+          "title": "Retry And Ambiguous Send Reconciliation",
+          "userAction": "user receives exactly one visible response even when a channel send outcome is ambiguous or retried",
+          "openclawSurface": "durable final send retry and unknown-send reconciliation",
+          "ownerArea": "OpenClaw channel runtime and adapter",
+          "sourceRefs": [
+            "src/channels/message/types.ts#reconcileUnknownSend",
+            "src/channels/turn/durable-delivery.ts",
+            "extensions/telegram/src/channel.ts",
+            "extensions/discord/src/channel.ts"
+          ],
+          "contentKinds": [
+            "text",
+            "media",
+            "payload"
+          ],
+          "routeKinds": [
+            "direct",
+            "thread",
+            "reply"
+          ],
+          "deliveryModes": [
+            "final"
+          ],
+          "lifecycles": [
+            "ambiguous-send",
+            "retry",
+            "terminal"
+          ],
+          "atoms": [
+            {
+              "group": "durable-final",
+              "id": "reconcile-unknown-send"
+            },
+            {
+              "group": "durable-final",
+              "id": "after-send-success"
+            },
+            {
+              "group": "durable-final",
+              "id": "after-commit"
+            },
+            {
+              "group": "workflow",
+              "id": "single-inbound-single-final"
+            },
+            {
+              "group": "workflow",
+              "id": "final-delivery-receipt-required"
+            },
+            {
+              "group": "workflow",
+              "id": "terminal-after-final"
+            }
+          ]
+        }
+      ]
+    }
+  ],
   "channelWorkflowCaseCatalog": [
     {
       "schemaVersion": "kova.channelWorkflowCaseCatalog.v1",

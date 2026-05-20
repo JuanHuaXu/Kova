@@ -26,6 +26,7 @@ import {
   validateChannelCapabilityShape
 } from "./registries/channel-capabilities.mjs";
 import { loadChannelCapabilityCatalog, validateChannelCapabilityCatalogShape } from "./registries/channel-capability-catalog.mjs";
+import { loadChannelWorkflowInventory, validateChannelWorkflowInventoryReferences } from "./registries/channel-workflow-inventory.mjs";
 import { loadChannelWorkflowCaseCatalog, validateChannelWorkflowCaseCatalogReferences } from "./registries/channel-workflow-cases.mjs";
 import { loadProcessRoles } from "./registries/process-roles.mjs";
 import { validateProfileShape } from "./registries/profiles.mjs";
@@ -183,11 +184,15 @@ export async function runSelfCheck(flags = {}) {
       assertArrayNotEmpty(data.processRoles, "plan process roles");
       assertArrayNotEmpty(data.metrics, "plan metrics");
       assertArrayNotEmpty(data.channelCapabilityCatalog, "plan channel capability catalog");
+      assertArrayNotEmpty(data.channelWorkflowInventory, "plan channel workflow inventory");
       assertArrayNotEmpty(data.channelWorkflowCaseCatalog, "plan channel workflow case catalog");
       assertArrayNotEmpty(data.channelCapabilities, "plan channel capabilities");
       const openClawCatalog = data.channelCapabilityCatalog.find((catalog) => catalog.id === "openclaw-message");
       assertEqual(Boolean(openClawCatalog), true, "OpenClaw message capability catalog present");
       assertEqual(openClawCatalog?.capabilities?.some((capability) => capability.group === "durable-final" && capability.id === "native-quote"), true, "OpenClaw native quote catalog capability present");
+      const workflowInventory = data.channelWorkflowInventory.find((inventory) => inventory.id === "openclaw-channel-workflow-inventory");
+      assertEqual(Boolean(workflowInventory), true, "OpenClaw channel workflow inventory present");
+      assertEqual(workflowInventory?.workflows?.some((workflow) => workflow.id === "completion-handoff"), true, "completion handoff workflow inventory present");
       const workflowCatalog = data.channelWorkflowCaseCatalog.find((catalog) => catalog.id === "openclaw-channel-workflow-cases");
       assertEqual(Boolean(workflowCatalog), true, "OpenClaw channel workflow case catalog present");
       assertEqual(workflowCatalog?.cases?.some((testCase) => testCase.id === "source-visible-delivery.media.message-tool-only"), true, "source visible media workflow case present");
@@ -9222,12 +9227,20 @@ function scenarioCloneFirstValidationCheck() {
 async function channelCapabilityRegistryCheck() {
   try {
     const catalogs = await loadChannelCapabilityCatalog();
+    const workflowInventories = await loadChannelWorkflowInventory();
     const workflowCatalogs = await loadChannelWorkflowCaseCatalog();
     const openClawCatalog = catalogs.find((catalog) => catalog.id === "openclaw-message");
     assertEqual(Boolean(openClawCatalog), true, "OpenClaw message capability catalog present");
     assertOpenClawChannelCapabilityCatalog(openClawCatalog);
     validateChannelCapabilityCatalogReferences(await loadChannelCapabilities(), catalogs);
+    validateChannelWorkflowInventoryReferences(workflowInventories, catalogs);
     validateChannelWorkflowCaseCatalogReferences(workflowCatalogs, catalogs);
+    const workflowInventory = workflowInventories.find((inventory) => inventory.id === "openclaw-channel-workflow-inventory");
+    assertEqual(Boolean(workflowInventory), true, "OpenClaw channel workflow inventory present");
+    const completionHandoff = workflowInventory?.workflows?.find((workflow) => workflow.id === "completion-handoff");
+    assertEqual(Boolean(completionHandoff), true, "completion handoff workflow inventory present");
+    assertEqual(completionHandoff?.deliveryModes?.includes("completion-handoff"), true, "completion handoff declares delivery mode");
+    assertEqual(completionHandoff?.atoms?.some((atom) => atom.group === "workflow" && atom.id === "background-artifact-completion"), true, "completion handoff maps to background completion atom");
 
     const channels = await loadChannelCapabilities();
     validateChannelCapabilityWorkflowReferences(channels, workflowCatalogs);
