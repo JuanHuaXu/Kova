@@ -46,6 +46,7 @@ export function validateChannelCapabilityShape(channel, sourceName = "channel ca
   requireString(channel, "supportStatus", errors);
   validateKnownValue(channel?.supportStatus, channelSupportStatuses, "supportStatus", errors);
   validateStringArray(channel?.declarationSources, "declarationSources", errors, { nonEmpty: true });
+  validateStringArray(channel?.workflowCaseIds, "workflowCaseIds", errors, { optional: true });
   requireArray(channel, "capabilities", errors);
   validateCapabilities(channel, errors);
   assertNoShapeErrors(errors, sourceName);
@@ -66,6 +67,44 @@ export function validateChannelCapabilityCatalogReferences(channels, catalogs) {
     }
   }
   assertNoShapeErrors(errors, "channel capability catalog references");
+}
+
+export function validateChannelCapabilityWorkflowReferences(channels, workflowCatalogs) {
+  const workflowCaseMap = new Map();
+  for (const catalog of workflowCatalogs ?? []) {
+    for (const testCase of catalog.cases ?? []) {
+      workflowCaseMap.set(testCase.id, testCase);
+    }
+  }
+
+  const errors = [];
+  for (const channel of channels ?? []) {
+    const supportedAtoms = new Set((channel.capabilities ?? []).map((capability) => `${capability.group}:${capability.id}`));
+    const seen = new Set();
+    for (const caseId of channel.workflowCaseIds ?? []) {
+      if (seen.has(caseId)) {
+        errors.push(`${channel.id}.workflowCaseIds duplicates '${caseId}'`);
+        continue;
+      }
+      seen.add(caseId);
+      const testCase = workflowCaseMap.get(caseId);
+      if (!testCase) {
+        errors.push(`${channel.id}.workflowCaseIds references unknown channel workflow case '${caseId}'`);
+        continue;
+      }
+      for (const atom of testCase.atoms ?? []) {
+        if (atom.group === "workflow") {
+          continue;
+        }
+        const key = `${atom.group}:${atom.id}`;
+        if (!supportedAtoms.has(key)) {
+          errors.push(`${channel.id}.workflowCaseIds '${caseId}' requires unsupported adapter atom ${key}`);
+        }
+      }
+    }
+  }
+
+  assertNoShapeErrors(errors, "channel capability workflow references");
 }
 
 function validateCapabilities(channel, errors) {

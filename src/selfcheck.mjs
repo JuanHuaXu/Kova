@@ -22,6 +22,7 @@ import { buildPerformanceSummary } from "./performance/stats.mjs";
 import {
   loadChannelCapabilities,
   validateChannelCapabilityCatalogReferences,
+  validateChannelCapabilityWorkflowReferences,
   validateChannelCapabilityShape
 } from "./registries/channel-capabilities.mjs";
 import { loadChannelCapabilityCatalog, validateChannelCapabilityCatalogShape } from "./registries/channel-capability-catalog.mjs";
@@ -9214,6 +9215,7 @@ async function channelCapabilityRegistryCheck() {
     validateChannelWorkflowCaseCatalogReferences(workflowCatalogs, catalogs);
 
     const channels = await loadChannelCapabilities();
+    validateChannelCapabilityWorkflowReferences(channels, workflowCatalogs);
     const workflowCatalog = workflowCatalogs.find((catalog) => catalog.id === "openclaw-channel-workflow-cases");
     assertEqual(Boolean(workflowCatalog), true, "OpenClaw channel workflow case catalog present");
     const sourceMediaCase = workflowCatalog?.cases?.find((testCase) => testCase.id === "source-visible-delivery.media.message-tool-only");
@@ -9233,6 +9235,7 @@ async function channelCapabilityRegistryCheck() {
     assertEqual(telegram.capabilities.every((capability) =>
       capability.catalogId === `${capability.group}:${capability.id}`
     ), true, "telegram capabilities reference OpenClaw catalog ids");
+    assertEqual(telegram.workflowCaseIds?.includes("source-visible-delivery.media.message-tool-only"), true, "telegram maps to shared source media workflow case");
 
     let rejectedGroup = false;
     try {
@@ -9352,6 +9355,28 @@ async function channelCapabilityRegistryCheck() {
       rejectedCatalogReference = /not defined in the OpenClaw channel capability catalog/.test(error.message);
     }
     assertEqual(rejectedCatalogReference, true, "channel capability must reference OpenClaw catalog");
+
+    let rejectedWorkflowCaseReference = false;
+    try {
+      validateChannelCapabilityWorkflowReferences([{
+        ...telegram,
+        workflowCaseIds: ["imaginary-workflow-case"]
+      }], workflowCatalogs);
+    } catch (error) {
+      rejectedWorkflowCaseReference = /unknown channel workflow case/.test(error.message);
+    }
+    assertEqual(rejectedWorkflowCaseReference, true, "channel workflow case references must exist");
+
+    let rejectedUnsupportedWorkflowAtom = false;
+    try {
+      validateChannelCapabilityWorkflowReferences([{
+        ...telegram,
+        workflowCaseIds: ["text-final"]
+      }], workflowCatalogs);
+    } catch (error) {
+      rejectedUnsupportedWorkflowAtom = /requires unsupported adapter atom/.test(error.message);
+    }
+    assertEqual(rejectedUnsupportedWorkflowAtom, true, "channel workflow case references must match adapter atoms");
 
     return {
       id: "channel-capability-registry",

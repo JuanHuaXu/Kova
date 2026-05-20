@@ -9,6 +9,15 @@
     "extensions/telegram/src/channel.ts",
     "extensions/telegram/src/outbound-adapter.ts"
   ],
+  "workflowCaseIds": [
+    "media-final",
+    "thread-final",
+    "silent-final",
+    "source-visible-delivery.text.automatic-final",
+    "source-visible-delivery.text.message-tool-only",
+    "source-visible-delivery.media.message-tool-only",
+    "background-artifact-completion.video.message-tool-only"
+  ],
   "capabilities": [
     {
       "id": "text",
