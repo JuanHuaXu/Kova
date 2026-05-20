@@ -2796,7 +2796,8 @@
         "src/channels/message/types.ts",
         "src/channels/message/contracts.ts",
         "src/channels/message/contracts.test.ts",
-        "src/channels/message/runtime-workflows"
+        "src/channels/message/runtime-workflows",
+        "src/infra/outbound/source-delivery-plan.ts"
       ],
       "capabilities": [
         {
@@ -3217,6 +3218,19 @@
             "live-smoke"
           ],
           "declarationSource": "src/channels/message/runtime-workflows"
+        },
+        {
+          "id": "generated-media-message-tool",
+          "group": "workflow",
+          "title": "Generated Media Message Tool Delivery",
+          "sourceSymbol": "SourceReplyDeliveryMode.message_tool_only",
+          "baselineExpectation": "a generated media completion must use the source conversation message-tool delivery path, preserve media evidence, and produce one visible final channel delivery",
+          "proofModes": [
+            "model-turn",
+            "deterministic-shim",
+            "live-smoke"
+          ],
+          "declarationSource": "src/infra/outbound/source-delivery-plan.ts"
         }
       ]
     }
@@ -5019,6 +5033,26 @@
             "channel receipts",
             "terminal dispatch returns",
             "duplicate-send invariants"
+          ],
+          "healthScope": "post-ready",
+          "collectionIntent": "post-ready-health"
+        },
+        {
+          "id": "channel-model-turn-generated-media-message-tool",
+          "title": "Run Generated Media Message-Tool Turn",
+          "intent": "Call the Kova channel plugin over Gateway RPC so OpenClaw handles one inbound channel event, receives a mock-provider message-tool call with generated media, delivers it through the source channel path, and records media, receipt, duplicate-send, and terminal invariants.",
+          "commands": [
+            "node {kovaRoot}/support/run-channel-model-turn-baseline.mjs --env {env} --artifact-dir {artifactDir} --case generated-media-message-tool --skip-shared-baseline true --continue-on-model-turn-failure true --timeout-ms 120000"
+          ],
+          "evidence": [
+            "generated media message-tool model-turn capability rows",
+            "inbound channel event ids",
+            "provider request policy and observed count",
+            "message-tool generated media delivery",
+            "outbound channel send records",
+            "channel receipts",
+            "duplicate-send invariants",
+            "terminal dispatch returns"
           ],
           "healthScope": "post-ready",
           "collectionIntent": "post-ready-health"

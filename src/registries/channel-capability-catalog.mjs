@@ -19,6 +19,7 @@ export const channelCapabilityGroups = [
 export const channelCapabilityProofModes = [
   "preflight",
   "baseline",
+  "model-turn",
   "deterministic-shim",
   "live-smoke",
   "unsupported-fallback"

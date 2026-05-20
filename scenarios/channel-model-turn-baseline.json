@@ -117,6 +117,26 @@
       "collectionIntent": "post-ready-health"
     },
     {
+      "id": "channel-model-turn-generated-media-message-tool",
+      "title": "Run Generated Media Message-Tool Turn",
+      "intent": "Call the Kova channel plugin over Gateway RPC so OpenClaw handles one inbound channel event, receives a mock-provider message-tool call with generated media, delivers it through the source channel path, and records media, receipt, duplicate-send, and terminal invariants.",
+      "commands": [
+        "node {kovaRoot}/support/run-channel-model-turn-baseline.mjs --env {env} --artifact-dir {artifactDir} --case generated-media-message-tool --skip-shared-baseline true --continue-on-model-turn-failure true --timeout-ms 120000"
+      ],
+      "evidence": [
+        "generated media message-tool model-turn capability rows",
+        "inbound channel event ids",
+        "provider request policy and observed count",
+        "message-tool generated media delivery",
+        "outbound channel send records",
+        "channel receipts",
+        "duplicate-send invariants",
+        "terminal dispatch returns"
+      ],
+      "healthScope": "post-ready",
+      "collectionIntent": "post-ready-health"
+    },
+    {
       "id": "channel-model-turn-thread-final",
       "title": "Run Thread Final Model Turn",
       "intent": "Call the Kova channel plugin over Gateway RPC so OpenClaw handles one inbound threaded channel event, calls the mock provider, sends a final response through the channel adapter, and records thread preservation and terminal invariants.",

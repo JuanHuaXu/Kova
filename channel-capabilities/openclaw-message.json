@@ -6,7 +6,8 @@
     "src/channels/message/types.ts",
     "src/channels/message/contracts.ts",
     "src/channels/message/contracts.test.ts",
-    "src/channels/message/runtime-workflows"
+    "src/channels/message/runtime-workflows",
+    "src/infra/outbound/source-delivery-plan.ts"
   ],
   "capabilities": [
     {
@@ -287,6 +288,15 @@
       "baselineExpectation": "the shared channel turn must return cleanly after final delivery so completed work does not remain active",
       "proofModes": ["baseline", "deterministic-shim", "live-smoke"],
       "declarationSource": "src/channels/message/runtime-workflows"
+    },
+    {
+      "id": "generated-media-message-tool",
+      "group": "workflow",
+      "title": "Generated Media Message Tool Delivery",
+      "sourceSymbol": "SourceReplyDeliveryMode.message_tool_only",
+      "baselineExpectation": "a generated media completion must use the source conversation message-tool delivery path, preserve media evidence, and produce one visible final channel delivery",
+      "proofModes": ["model-turn", "deterministic-shim", "live-smoke"],
+      "declarationSource": "src/infra/outbound/source-delivery-plan.ts"
     }
   ]
 }

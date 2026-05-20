@@ -18,6 +18,8 @@ import {
 const CHANNEL_ID = "kova-channel-baseline";
 const ACCOUNT_ID = "default";
 const TARGET_ID = "dm:kova-baseline-user";
+const TARGET_USER_ID = "kova-baseline-user";
+const TARGET_DISPLAY = "Kova Baseline User";
 
 let activeRuntime = null;
 let outboundRecords = [];
@@ -112,6 +114,26 @@ const plugin = {
     isEnabled: () => true,
     resolveDefaultTo: () => TARGET_ID
   },
+  messaging: {
+    normalizeTarget: normalizeKovaTarget,
+    inferTargetChatType: ({ to }) => normalizeKovaTarget(to) === TARGET_ID ? "direct" : undefined,
+    targetResolver: {
+      looksLikeId: (raw, normalized) =>
+        normalizeKovaTarget(normalized ?? raw) === TARGET_ID,
+      hint: "dm:kova-baseline-user",
+      resolveTarget: async ({ input, normalized }) => {
+        const target = normalizeKovaTarget(normalized) ?? normalizeKovaTarget(input);
+        return target === TARGET_ID
+          ? {
+              to: TARGET_ID,
+              kind: "user",
+              display: TARGET_DISPLAY,
+              source: "normalized"
+            }
+          : null;
+      }
+    }
+  },
   gateway: {
     startAccount: async (ctx) => {
       activeRuntime = {
@@ -133,6 +155,20 @@ const plugin = {
   },
   message: messageAdapter
 };
+
+function normalizeKovaTarget(raw) {
+  const value = typeof raw === "string" ? raw.trim() : "";
+  if (!value) {
+    return undefined;
+  }
+  if (value === TARGET_ID || value === TARGET_USER_ID) {
+    return TARGET_ID;
+  }
+  if (value === `${CHANNEL_ID}:${TARGET_ID}` || value === `${CHANNEL_ID}:${TARGET_USER_ID}`) {
+    return TARGET_ID;
+  }
+  return undefined;
+}
 
 export default definePluginEntry({
   id: "kova-channel-baseline",
@@ -364,7 +400,8 @@ async function runModelTurnCase(testCase) {
       inboundEventId,
       replyToId: testCase.replyToId === null ? null : inboundEventId,
       threadId: testCase.threadId,
-      silent: testCase.silent === true
+      silent: testCase.silent === true,
+      sourceReplyDeliveryMode: testCase.sourceReplyDeliveryMode
     });
   } catch (caught) {
     error = caught instanceof Error ? caught : new Error(String(caught));
@@ -389,6 +426,7 @@ async function runModelTurnCase(testCase) {
     : null;
   const firstFinal = finalDeliveryRecords[0] ?? null;
   const finalDeliveryPolicy = normalizeFinalDeliveries(testCase.finalDeliveries);
+  const mediaExpectation = mediaSourceExpectation(testCase);
   const invariants = [
     invariant(`${testCase.id}:turn-dispatched`, !error && turn?.dispatched === true, `${testCase.id} dispatched through OpenClaw runtime`),
     finalDeliveryInvariant(testCase.id, finalDeliveryPolicy, finalDeliveryRecords.length),
@@ -399,7 +437,7 @@ async function runModelTurnCase(testCase) {
     invariant(`${testCase.id}:reply-to`, !testCase.expectReplyToId || firstFinal?.replyToId === inboundEventId, `${testCase.id} preserved reply target`),
     invariant(`${testCase.id}:thread`, !testCase.threadId || firstFinal?.threadId === testCase.threadId, `${testCase.id} preserved thread target`),
     invariant(`${testCase.id}:silent`, testCase.silent !== true || firstFinal?.silent === true, `${testCase.id} preserved silent delivery intent`),
-    invariant(`${testCase.id}:media-url`, !testCase.expectedLocalMediaSource || isManagedOutboundMedia(firstFinal?.mediaUrl, testCase.expectedLocalMediaSource), `${testCase.id} staged local media for outbound delivery`),
+    invariant(`${testCase.id}:media-url`, !testCase.expectedLocalMediaSource || mediaExpectation.check(firstFinal), mediaExpectation.summary),
     invariant(`${testCase.id}:after-send-success`, testCase.expectHooks !== true || caseOutboundRecords.some((record) => record.kind === "after-send-success"), `${testCase.id} ran after-send-success hook`),
     invariant(`${testCase.id}:after-commit`, testCase.expectHooks !== true || caseOutboundRecords.some((record) => record.kind === "after-commit"), `${testCase.id} ran after-commit hook`),
     invariant(`${testCase.id}:terminal-return`, !error, `${testCase.id} returned from OpenClaw dispatch`)
@@ -492,6 +530,32 @@ const modelTurnCaseDefinitions = [
     silent: true,
     capabilities: [
       { group: "durable-final", id: "silent" }
+    ]
+  },
+  {
+    id: "generated-media-message-tool",
+    prompt: "Deliver generated media back to the source conversation through the message tool.",
+    responseText: "KOVA_AGENT_GENERATED_MEDIA_PRIVATE_DONE",
+    toolCall: {
+      name: "message",
+      arguments: {
+        action: "send",
+        message: "KOVA_GENERATED_MEDIA_READY",
+        media: "/tmp/kova-channel-generated-media.mp4"
+      }
+    },
+    expectedText: "KOVA_GENERATED_MEDIA_READY",
+    expectedKind: "media",
+    expectedLocalMediaSource: "/tmp/kova-channel-generated-media.mp4",
+    expectedMediaSourcePolicy: "sendable-local-or-managed",
+    mediaFixturePath: "/tmp/kova-channel-generated-media.mp4",
+    sourceReplyDeliveryMode: "message_tool_only",
+    finalDeliveries: { mode: "exact", expected: 1 },
+    providerRequests: { mode: "exact", expected: 2 },
+    capabilities: [
+      { group: "workflow", id: "generated-media-message-tool" },
+      { group: "durable-final", id: "media" },
+      { group: "durable-final", id: "message-sending-hooks" }
     ]
   }
 ];
@@ -1025,7 +1089,8 @@ async function runOpenClawModelTurn({
   inboundEventId,
   replyToId,
   threadId,
-  silent
+  silent,
+  sourceReplyDeliveryMode
 }) {
   const runtime = activeRuntime.channelRuntime;
   const cfg = activeRuntime.cfg;
@@ -1099,6 +1164,7 @@ async function runOpenClawModelTurn({
       }
     },
     replyPipeline: {},
+    replyOptions: sourceReplyDeliveryMode ? { sourceReplyDeliveryMode } : undefined,
     record: {
       onRecordError: (error) => {
         throw error instanceof Error ? error : new Error(String(error));
@@ -1112,13 +1178,19 @@ async function runOpenClawModelTurn({
 }
 
 function modelTurnPrompt(testCase, inboundEventId) {
-  return [
+  const lines = [
     testCase.prompt,
     `KOVA_MODEL_TURN_CASE:${testCase.id}`,
     `KOVA_INBOUND_EVENT_ID:${inboundEventId}`,
     "The Kova mock provider must return the scripted fixture below.",
     `KOVA_MOCK_RESPONSE_B64:${Buffer.from(testCase.responseText, "utf8").toString("base64")}`
-  ].join("\n");
+  ];
+  if (testCase.toolCall) {
+    lines.push(
+      `KOVA_MOCK_TOOL_CALL_B64:${Buffer.from(JSON.stringify(testCase.toolCall), "utf8").toString("base64")}`
+    );
+  }
+  return lines.join("\n");
 }
 
 function normalizeProviderRequests(value) {
@@ -1220,6 +1292,31 @@ function isManagedOutboundMedia(mediaUrl, sourcePath) {
   const stem = sourceName.slice(0, dotIndex);
   const extension = sourceName.slice(dotIndex);
   return outboundName === sourceName || (outboundName.startsWith(`${stem}---`) && outboundName.endsWith(extension));
+}
+
+function mediaSourceExpectation(testCase) {
+  const sourcePath = testCase.expectedLocalMediaSource;
+  if (!sourcePath) {
+    return {
+      summary: `${testCase.id} has no local media expectation`,
+      check: () => true
+    };
+  }
+  if (testCase.expectedMediaSourcePolicy === "sendable-local-or-managed") {
+    return {
+      summary: `${testCase.id} provided deliverable local media to the channel send path`,
+      check: (record) =>
+        isManagedOutboundMedia(record?.mediaUrl, sourcePath) || isSameExistingLocalMedia(record, sourcePath)
+    };
+  }
+  return {
+    summary: `${testCase.id} staged local media for outbound delivery`,
+    check: (record) => isManagedOutboundMedia(record?.mediaUrl, sourcePath)
+  };
+}
+
+function isSameExistingLocalMedia(record, sourcePath) {
+  return record?.mediaUrl === sourcePath && record.mediaPathExists === true;
 }
 
 function writeMediaFixture(path) {
@@ -1329,6 +1426,7 @@ async function recordOutbound(kind, ctx) {
     to: ctx.to ?? null,
     text: ctx.text ?? null,
     mediaUrl: ctx.mediaUrl ?? null,
+    mediaPathExists: typeof ctx.mediaUrl === "string" && existsSync(ctx.mediaUrl),
     payload: ctx.payload ?? null,
     silent: ctx.silent ?? false,
     threadId: ctx.threadId ?? null,
