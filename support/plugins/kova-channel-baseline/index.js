@@ -360,7 +360,7 @@ async function runModelTurnCase(testCase) {
       writeMediaFixture(testCase.mediaFixturePath);
     }
     turn = await runOpenClawModelTurn({
-      message: modelTurnPrompt(testCase),
+      message: modelTurnPrompt(testCase, inboundEventId),
       inboundEventId,
       replyToId: testCase.replyToId === null ? null : inboundEventId,
       threadId: testCase.threadId,
@@ -419,6 +419,7 @@ async function runModelTurnCase(testCase) {
     },
     routeSessionKey: turn?.routeSessionKey ?? null,
     dispatched: turn?.dispatched === true,
+    providerRequests: normalizeProviderRequests(testCase.providerRequests),
     finalText: matchedText,
     expectedText: testCase.expectedText,
     durationMs: elapsedMs(startedAt),
@@ -437,6 +438,7 @@ const modelTurnCaseDefinitions = [
     expectedText: "KOVA_AGENT_OK",
     expectedKind: "text",
     expectedFinalSendCount: 1,
+    providerRequests: { mode: "exact", expected: 1 },
     expectReplyToId: true,
     expectHooks: true,
     capabilities: [
@@ -458,6 +460,7 @@ const modelTurnCaseDefinitions = [
     expectedLocalMediaSource: "/tmp/kova-channel-model-turn-media.png",
     mediaFixturePath: "/tmp/kova-channel-model-turn-media.png",
     expectedFinalSendCount: 1,
+    providerRequests: { mode: "exact", expected: 1 },
     expectReplyToId: true,
     capabilities: [
       { group: "durable-final", id: "media" }
@@ -470,6 +473,7 @@ const modelTurnCaseDefinitions = [
     expectedText: "KOVA_AGENT_THREAD_OK",
     expectedKind: "text",
     expectedFinalSendCount: 1,
+    providerRequests: { mode: "exact", expected: 1 },
     threadId: "kova-model-turn-thread",
     capabilities: [
       { group: "durable-final", id: "thread" }
@@ -482,6 +486,7 @@ const modelTurnCaseDefinitions = [
     expectedText: "KOVA_AGENT_SILENT_OK",
     expectedKind: "text",
     expectedFinalSendCount: 1,
+    providerRequests: { mode: "exact", expected: 1 },
     silent: true,
     capabilities: [
       { group: "durable-final", id: "silent" }
@@ -1006,12 +1011,24 @@ async function runOpenClawModelTurn({
   });
 }
 
-function modelTurnPrompt(testCase) {
+function modelTurnPrompt(testCase, inboundEventId) {
   return [
     testCase.prompt,
+    `KOVA_MODEL_TURN_CASE:${testCase.id}`,
+    `KOVA_INBOUND_EVENT_ID:${inboundEventId}`,
     "The Kova mock provider must return the scripted fixture below.",
     `KOVA_MOCK_RESPONSE_B64:${Buffer.from(testCase.responseText, "utf8").toString("base64")}`
   ].join("\n");
+}
+
+function normalizeProviderRequests(value) {
+  if (value?.mode === "exact" && Number.isInteger(value.expected) && value.expected >= 0) {
+    return { mode: "exact", expected: value.expected };
+  }
+  if ((value?.mode === "minimum" || value?.mode === "min") && Number.isInteger(value.min) && value.min >= 0) {
+    return { mode: "minimum", min: value.min };
+  }
+  return { mode: "observe" };
 }
 
 function isFinalOutboundRecord(record) {

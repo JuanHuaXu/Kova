@@ -17,6 +17,7 @@ const expectedText = args["expected-text"] ?? null;
 const modelTurnCase = args.case ?? "all";
 const includeSharedBaseline = args["skip-shared-baseline"] !== "true";
 const continueOnModelTurnFailure = args["continue-on-model-turn-failure"] === "true";
+const providerRequestPolicyOverride = parseProviderRequestPolicyArg(args["provider-request-policy"]);
 const artifactPath = join(artifactDir, `channel-model-turn-baseline-${safeArtifactSegment(modelTurnCase)}.json`);
 const providerRequestLogPath = join(artifactDir, "mock-openai", "requests.jsonl");
 
@@ -43,6 +44,7 @@ async function main() {
     );
     const activeFinishedAtEpochMs = Date.now();
     const providerRequestCountAfter = await countJsonl(providerRequestLogPath);
+    const providerRequestScopedCount = await countScopedProviderRequests(providerRequestLogPath, turn?.modelTurnCases);
     result = buildResult({
       runtimeContext,
       turn,
@@ -51,6 +53,7 @@ async function main() {
       activeFinishedAtEpochMs,
       providerRequestCountBefore,
       providerRequestCountAfter,
+      providerRequestScopedCount,
       timeoutMs
     });
   } catch (error) {
@@ -88,6 +91,10 @@ async function main() {
     activeFinishedAtEpochMs: result.artifact.activeFinishedAtEpochMs,
     activeTurnMs: result.artifact.activeTurnMs,
     providerRequestDelta: result.artifact.providerRequestDelta,
+    providerRequestScopedCount: result.artifact.providerRequestScopedCount,
+    providerRequestObserved: result.artifact.providerRequestObserved,
+    providerRequestScope: result.artifact.providerRequestScope,
+    providerRequestPolicy: result.artifact.providerRequestPolicy,
     invariants: result.artifact.invariants
   }, null, 2)}\n`);
   process.exit(result.ok || continueOnModelTurnFailure ? 0 : 1);
@@ -117,23 +124,21 @@ function buildResult({
   error,
   providerRequestCountBefore,
   providerRequestCountAfter,
+  providerRequestScopedCount,
   activeStartedAtEpochMs = null,
   activeFinishedAtEpochMs = null,
   timeoutMs: commandTimeoutMs
 }) {
   const runError = error ? error.message : turn?.error ?? null;
   const providerRequestDelta = Math.max(0, providerRequestCountAfter - providerRequestCountBefore);
-  const expectedProviderRequests = Array.isArray(turn?.modelTurnCases) ? turn.modelTurnCases.length : 1;
+  const providerRequestObserved = Number.isInteger(providerRequestScopedCount) ? providerRequestScopedCount : providerRequestDelta;
+  const providerRequestPolicy = providerRequestPolicyOverride ?? resolveProviderRequestPolicy(turn?.modelTurnCases);
   const activeTurnMs = activeStartedAtEpochMs === null || activeFinishedAtEpochMs === null
     ? null
     : Math.max(0, activeFinishedAtEpochMs - activeStartedAtEpochMs);
   const invariants = [
     ...(turn?.invariants ?? []),
-    invariant(
-      "provider-request-count",
-      !runError && providerRequestDelta === expectedProviderRequests,
-      `channel model turn made exactly ${expectedProviderRequests} mock provider request${expectedProviderRequests === 1 ? "" : "s"}; observed ${providerRequestDelta}`
-    ),
+    providerRequestInvariant(providerRequestPolicy, providerRequestObserved, runError),
     invariant("no-global-error", !runError, "channel model turn completed without transport or plugin error")
   ];
   const ok = !runError && turn?.ok === true && invariants.every((item) => item.status === "passed");
@@ -152,7 +157,10 @@ function buildResult({
       providerRequestCountBefore,
       providerRequestCountAfter,
       providerRequestDelta,
-      expectedProviderRequests,
+      providerRequestScopedCount,
+      providerRequestObserved,
+      providerRequestScope: Number.isInteger(providerRequestScopedCount) ? "kova-inbound-event" : "before-after-delta",
+      providerRequestPolicy,
       activeStartedAtEpochMs,
       activeFinishedAtEpochMs,
       activeTurnMs,
@@ -160,6 +168,85 @@ function buildResult({
       invariants
     }
   };
+}
+
+function resolveProviderRequestPolicy(cases) {
+  if (!Array.isArray(cases) || cases.length === 0) {
+    return { mode: "observe", reason: "no completed model-turn cases declared a provider request policy" };
+  }
+  const policies = cases.map((testCase) => normalizeProviderRequestPolicy(testCase?.providerRequests));
+  if (policies.every((policy) => policy.mode === "exact")) {
+    return {
+      mode: "exact",
+      expected: policies.reduce((total, policy) => total + policy.expected, 0),
+      source: "model-turn-cases"
+    };
+  }
+  if (policies.every((policy) => policy.mode === "minimum")) {
+    return {
+      mode: "minimum",
+      min: policies.reduce((total, policy) => total + policy.min, 0),
+      source: "model-turn-cases"
+    };
+  }
+  return {
+    mode: "observe",
+    reason: "mixed or observational provider request policies; provider request count is recorded but not a failure gate"
+  };
+}
+
+function parseProviderRequestPolicyArg(value) {
+  if (value === undefined || value === null || value === "") {
+    return null;
+  }
+  const text = String(value).trim();
+  if (text === "observe") {
+    return { mode: "observe", source: "cli" };
+  }
+  const exact = text.match(/^exact:(\d+)$/);
+  if (exact) {
+    return { mode: "exact", expected: Number(exact[1]), source: "cli" };
+  }
+  const minimum = text.match(/^(?:minimum|min):(\d+)$/);
+  if (minimum) {
+    return { mode: "minimum", min: Number(minimum[1]), source: "cli" };
+  }
+  throw new Error(`unsupported provider request policy '${text}'; expected observe, exact:<count>, or min:<count>`);
+}
+
+function normalizeProviderRequestPolicy(value) {
+  if (value?.mode === "exact" && Number.isInteger(value.expected) && value.expected >= 0) {
+    return { mode: "exact", expected: value.expected };
+  }
+  if ((value?.mode === "minimum" || value?.mode === "min") && Number.isInteger(value.min) && value.min >= 0) {
+    return { mode: "minimum", min: value.min };
+  }
+  if (value?.mode === "observe") {
+    return { mode: "observe" };
+  }
+  return { mode: "observe" };
+}
+
+function providerRequestInvariant(policy, observed, runError) {
+  if (policy?.mode === "exact") {
+    return invariant(
+      "provider-request-count",
+      !runError && observed === policy.expected,
+      `channel model turn made exactly ${policy.expected} mock provider request${policy.expected === 1 ? "" : "s"}; observed ${observed}`
+    );
+  }
+  if (policy?.mode === "minimum") {
+    return invariant(
+      "provider-request-count",
+      !runError && observed >= policy.min,
+      `channel model turn made at least ${policy.min} mock provider request${policy.min === 1 ? "" : "s"}; observed ${observed}`
+    );
+  }
+  return invariant(
+    "provider-request-count-observed",
+    true,
+    `channel model turn provider request count observed without gating; observed ${observed}`
+  );
 }
 
 function safeArtifactSegment(value) {
@@ -208,6 +295,45 @@ async function countJsonl(path) {
     }
     throw error;
   }
+}
+
+async function countScopedProviderRequests(path, cases) {
+  const inboundEventIds = new Set(
+    Array.isArray(cases)
+      ? cases
+          .map((testCase) => testCase?.inboundEvent?.id)
+          .filter((id) => typeof id === "string" && id.length > 0)
+      : []
+  );
+  if (inboundEventIds.size === 0) {
+    return null;
+  }
+  let text;
+  try {
+    text = await readFile(path, "utf8");
+  } catch (error) {
+    if (error?.code === "ENOENT") {
+      return 0;
+    }
+    throw error;
+  }
+  let count = 0;
+  for (const line of text.split("\n")) {
+    if (line.trim().length === 0) {
+      continue;
+    }
+    let entry;
+    try {
+      entry = JSON.parse(line);
+    } catch {
+      continue;
+    }
+    const entryInboundIds = Array.isArray(entry?.kova?.inboundEventIds) ? entry.kova.inboundEventIds : [];
+    if (entryInboundIds.some((id) => inboundEventIds.has(id))) {
+      count += 1;
+    }
+  }
+  return count;
 }
 
 function invariant(id, condition, summary) {

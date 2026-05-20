@@ -4909,7 +4909,7 @@
           "evidence": [
             "text final model-turn capability rows",
             "inbound channel event ids",
-            "mock provider request count",
+            "provider request policy and observed count",
             "final assistant texts",
             "outbound channel send records",
             "channel receipts",
@@ -4929,7 +4929,7 @@
           "evidence": [
             "media final model-turn capability rows",
             "inbound channel event ids",
-            "mock provider request count",
+            "provider request policy and observed count",
             "final assistant media records",
             "outbound channel send records",
             "channel receipts",
@@ -4949,7 +4949,7 @@
           "evidence": [
             "thread final model-turn capability rows",
             "inbound channel event ids",
-            "mock provider request count",
+            "provider request policy and observed count",
             "final assistant texts",
             "outbound channel send records",
             "channel receipts",
@@ -4969,7 +4969,7 @@
           "evidence": [
             "silent final model-turn capability rows",
             "inbound channel event ids",
-            "mock provider request count",
+            "provider request policy and observed count",
             "final assistant texts",
             "outbound channel send records",
             "channel receipts",

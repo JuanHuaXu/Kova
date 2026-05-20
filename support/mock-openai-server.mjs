@@ -226,7 +226,8 @@ const server = http.createServer(async (req, res) => {
       usage,
       statusClass: typeof status === "number" ? `${Math.floor(status / 100)}xx` : null,
       bodyBytes: Buffer.byteLength(bodyText),
-      parseError
+      parseError,
+      kova: extractKovaRequestMarkers(bodyText)
     };
     fs.appendFileSync(requestLog, `${JSON.stringify(entry)}\n`);
   }
@@ -340,6 +341,18 @@ function resolveResponseText(requestBodyText) {
   } catch {
     return marker;
   }
+}
+
+function extractKovaRequestMarkers(requestBodyText) {
+  const text = String(requestBodyText ?? "");
+  return {
+    modelTurnCases: uniqueMatches(text, /KOVA_MODEL_TURN_CASE:([A-Za-z0-9._-]+)/g),
+    inboundEventIds: uniqueMatches(text, /KOVA_INBOUND_EVENT_ID:([A-Za-z0-9._:-]+)/g)
+  };
+}
+
+function uniqueMatches(text, pattern) {
+  return [...new Set([...text.matchAll(pattern)].map((match) => match[1]))];
 }
 
 async function applyDelayForBehavior(behavior) {
