@@ -1292,11 +1292,11 @@ function extractGatewaySessionTurn(result) {
 }
 
 function extractChannelModelTurn(result) {
-  if (!result?.command?.includes("run-channel-model-turn-baseline.mjs")) {
+  if (!result?.command?.includes("run-channel-model-turn-baseline.mjs") && !result?.command?.includes("run-channel-probe-turn.mjs")) {
     return null;
   }
   const payload = parseJsonObject(result.stdout);
-  if (!payload || payload.schemaVersion !== "kova.channelModelTurnRun.v1") {
+  if (!payload || (payload.schemaVersion !== "kova.channelModelTurnRun.v1" && payload.schemaVersion !== "kova.channelProbeTurnRun.v1")) {
     return null;
   }
   const activeStartedAtEpochMs = numberOrNull(payload.activeStartedAtEpochMs);
@@ -1318,8 +1318,8 @@ function extractChannelModelTurn(result) {
     providerRequestDelta: numberOrNull(payload.providerRequestDelta),
     modelTurnCaseCount: numberOrNull(payload.modelTurnCaseCount),
     capabilityRowCount: numberOrNull(payload.capabilityRowCount),
-    failedModelTurnCases: Array.isArray(payload.failedModelTurnCases)
-      ? payload.failedModelTurnCases.map(compactFailedModelTurnCase).filter(Boolean)
+    failedModelTurnCases: Array.isArray(payload.failedModelTurnCases) || Array.isArray(payload.failedCases)
+      ? (payload.failedModelTurnCases ?? payload.failedCases).map(compactFailedModelTurnCase).filter(Boolean)
       : [],
     activeStartedAtEpochMs,
     activeFinishedAtEpochMs,

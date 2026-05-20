@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { existsSync, unlinkSync, writeFileSync } from "node:fs";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -83,20 +84,30 @@ async function main() {
     case: requestedCase,
     workflowCaseCatalogId: workflowCaseCatalog.id,
     workflowCaseIds: selectedCases.map((testCase) => testCase.id),
+    modelTurnCaseCount: result.rows.length,
+    failedModelTurnCases: result.rows
+      .filter((row) => row.status !== "passed")
+      .map(formatFailedCase),
     failedCases: result.rows
       .filter((row) => row.status !== "passed")
-      .map((row) => ({
-        id: row.id,
-        workflow: row.workflow,
-        userAction: row.userAction,
-        ownerArea: row.ownerArea,
-        reason: row.reason,
-        failedInvariants: row.invariants.filter((item) => item.status !== "passed")
-      })),
+      .map(formatFailedCase),
     providerRequestDelta: result.artifact.providerRequestDelta,
     activeTurnMs: result.artifact.activeTurnMs
   }, null, 2)}\n`);
   process.exit(result.ok || continueOnFailure ? 0 : 1);
+}
+
+function formatFailedCase(row) {
+  return {
+    id: row.id,
+    workflow: row.workflow,
+    inventoryWorkflow: row.inventoryWorkflow,
+    matrix: row.matrix,
+    userAction: row.userAction,
+    ownerArea: row.ownerArea,
+    reason: row.reason,
+    failedInvariants: row.invariants.filter((item) => item.status !== "passed")
+  };
 }
 
 async function runProbeCase(client, testCase) {
@@ -112,7 +123,17 @@ async function runProbeCase(client, testCase) {
     sourceReplyDeliveryMode: typeof testCase.sourceReplyDeliveryMode === "string" ? testCase.sourceReplyDeliveryMode : undefined
   };
   const startedAtEpochMs = Date.now();
-  const injectResult = await client.request("kova.channelProbe.inject", params, { timeoutMs });
+  let injectResult = null;
+  try {
+    for (const fixturePath of mediaFixturePaths(testCase)) {
+      writeMediaFixture(fixturePath);
+    }
+    injectResult = await client.request("kova.channelProbe.inject", params, { timeoutMs });
+  } finally {
+    for (const fixturePath of mediaFixturePaths(testCase)) {
+      removeMediaFixture(fixturePath);
+    }
+  }
   const finishedAtEpochMs = Date.now();
   const observation = injectResult?.observation ?? null;
   const invariants = evaluateCase(testCase, observation, injectResult);
@@ -144,6 +165,7 @@ function evaluateCase(testCase, observation, injectResult) {
   const firstFinal = finalRecords[0] ?? null;
   const visibleDeliveryPolicy = normalizeVisibleDeliveries(expects.visibleDeliveries);
   const expectedText = typeof expects.text === "string" ? expects.text : null;
+  const mediaExpectation = mediaSourceExpectation(testCase);
   const modelDispatchStarts = modelTurnRecords(observation).filter((record) => record.stage === "dispatch" && record.event === "start");
   const modelDispatchDones = modelTurnRecords(observation).filter((record) => record.stage === "dispatch" && record.event === "done");
   const modelRecordStarts = modelTurnRecords(observation).filter((record) => record.stage === "record" && record.event === "start");
@@ -161,6 +183,8 @@ function evaluateCase(testCase, observation, injectResult) {
     invariant(`${testCase.id}:no-reply-target`, expects.replyTo !== "none" || firstFinal?.replyToId == null, `${testCase.id} did not attach a reply target`),
     invariant(`${testCase.id}:thread-target`, typeof expects.threadId !== "string" || firstFinal?.threadId === expects.threadId, `${testCase.id} preserved the thread target`),
     invariant(`${testCase.id}:silent`, expects.silent !== true || firstFinal?.silent === true, `${testCase.id} preserved silent delivery intent`),
+    invariant(`${testCase.id}:media`, mediaExpectation.check(finalRecords), mediaExpectation.summary),
+    invariant(`${testCase.id}:unique-media`, !hasMediaExpectation(testCase) || hasUniqueFinalMedia(finalRecords), `${testCase.id} did not deliver the same media item more than once`),
     invariant(`${testCase.id}:single-final`, expects.allowMultipleFinalSends === true || finalRecords.length <= 1, `${testCase.id} did not duplicate final visible delivery`),
     invariant(`${testCase.id}:single-inbound-turn`, modelDispatchStarts.length === 1, `${testCase.id} processed exactly one OpenClaw model turn for one user input; observed ${modelDispatchStarts.length}`),
     invariant(`${testCase.id}:record-terminal`, modelRecordStarts.length === modelRecordDones.length, `${testCase.id} closed every recorded OpenClaw model turn; starts ${modelRecordStarts.length}, done ${modelRecordDones.length}`),
@@ -197,6 +221,7 @@ function normalizeWorkflowCase(entry) {
     prompt,
     sourceReplyDeliveryMode: typeof entry.sourceReplyDeliveryMode === "string" ? entry.sourceReplyDeliveryMode : null,
     expects,
+    fixtures: objectOrEmpty(entry.fixtures),
     providerRequests: objectOrEmpty(entry.providerRequests)
   };
 }
@@ -238,6 +263,120 @@ function hasReceipt(finalRecords, observation) {
     (Array.isArray(observation?.deliveryRecords) && observation.deliveryRecords.some((record) =>
       Array.isArray(record?.messageIds) && record.messageIds.length > 0
     ));
+}
+
+function mediaSourceExpectation(testCase) {
+  const expects = objectOrEmpty(testCase.expects);
+  const sources = [];
+  if (typeof expects.mediaSource === "string" && expects.mediaSource.length > 0) {
+    sources.push(expects.mediaSource);
+  }
+  if (Array.isArray(expects.mediaSources)) {
+    for (const source of expects.mediaSources) {
+      if (typeof source === "string" && source.length > 0) {
+        sources.push(source);
+      }
+    }
+  }
+  if (sources.length === 0) {
+    return {
+      check: () => true,
+      summary: `${testCase.id} has no media source expectation`
+    };
+  }
+  if (expects.mediaSourcePolicy === "exact") {
+    return {
+      check: (records) => sources.every((source) =>
+        records.some((record) => isManagedOutboundMedia(record?.mediaUrl, source) || isSameExistingLocalMedia(record, source))
+      ),
+      summary: `${testCase.id} delivered every expected exact media source`
+    };
+  }
+  return {
+    check: (records) => records.some(hasPresentMedia),
+    summary: `${testCase.id} delivered present media to the channel send path`
+  };
+}
+
+function hasMediaExpectation(testCase) {
+  const expects = objectOrEmpty(testCase.expects);
+  return typeof expects.mediaSource === "string" ||
+    (Array.isArray(expects.mediaSources) && expects.mediaSources.length > 0);
+}
+
+function hasUniqueFinalMedia(records) {
+  const mediaUrls = records
+    .flatMap((record) => Array.isArray(record.mediaUrls) && record.mediaUrls.length > 0 ? record.mediaUrls : [record.mediaUrl])
+    .filter((mediaUrl) => typeof mediaUrl === "string" && mediaUrl.length > 0);
+  return mediaUrls.length === new Set(mediaUrls).size;
+}
+
+function hasPresentMedia(record) {
+  const mediaUrls = Array.isArray(record?.mediaUrls) && record.mediaUrls.length > 0
+    ? record.mediaUrls
+    : [record?.mediaUrl];
+  return mediaUrls.some((mediaUrl) =>
+    typeof mediaUrl === "string" &&
+    mediaUrl.length > 0 &&
+    (/^https?:\/\//i.test(mediaUrl) || existsSync(mediaUrl))
+  );
+}
+
+function isManagedOutboundMedia(mediaUrl, sourcePath) {
+  if (typeof mediaUrl !== "string" || mediaUrl.length === 0) {
+    return false;
+  }
+  const normalizedMediaUrl = mediaUrl.replaceAll("\\", "/");
+  if (!normalizedMediaUrl.includes("/.openclaw/media/outbound/") || !existsSync(mediaUrl)) {
+    return false;
+  }
+  const sourceName = sourcePath.replaceAll("\\", "/").split("/").pop();
+  const outboundName = normalizedMediaUrl.split("/").pop();
+  if (!sourceName || !outboundName) {
+    return false;
+  }
+  const dotIndex = sourceName.lastIndexOf(".");
+  if (dotIndex <= 0) {
+    return outboundName === sourceName || outboundName.startsWith(`${sourceName}---`);
+  }
+  const stem = sourceName.slice(0, dotIndex);
+  const extension = sourceName.slice(dotIndex);
+  return outboundName === sourceName || (outboundName.startsWith(`${stem}---`) && outboundName.endsWith(extension));
+}
+
+function isSameExistingLocalMedia(record, sourcePath) {
+  return record?.mediaUrl === sourcePath && record.mediaPathExists === true;
+}
+
+function mediaFixturePaths(testCase) {
+  const fixtures = objectOrEmpty(testCase.fixtures);
+  const paths = [];
+  if (typeof fixtures.mediaPath === "string" && fixtures.mediaPath.length > 0) {
+    paths.push(fixtures.mediaPath);
+  }
+  if (Array.isArray(fixtures.mediaPaths)) {
+    for (const fixturePath of fixtures.mediaPaths) {
+      if (typeof fixturePath === "string" && fixturePath.length > 0 && !paths.includes(fixturePath)) {
+        paths.push(fixturePath);
+      }
+    }
+  }
+  return paths;
+}
+
+function writeMediaFixture(path) {
+  writeFileSync(path, Buffer.from(
+    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/p9sAAAAASUVORK5CYII=",
+    "base64"
+  ));
+}
+
+function removeMediaFixture(path) {
+  try {
+    unlinkSync(path);
+  } catch {
+    // Best-effort cleanup for temporary local media fixtures.
+  }
 }
 
 function textEquals(actual, expected) {
@@ -369,7 +508,17 @@ function requiredArg(parsed, key) {
 }
 
 function safeArtifactSegment(value) {
-  return String(value ?? "all").replace(/[^a-zA-Z0-9._-]+/g, "-");
+  const safe = String(value ?? "all").replace(/[^a-zA-Z0-9._-]+/g, "-");
+  return safe.length > 120 ? `${safe.slice(0, 100)}-${hashString(safe)}` : safe;
+}
+
+function hashString(value) {
+  let hash = 2166136261;
+  for (let index = 0; index < value.length; index += 1) {
+    hash ^= value.charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+  return (hash >>> 0).toString(16);
 }
 
 await main();
