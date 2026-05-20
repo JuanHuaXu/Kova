@@ -1983,7 +1983,9 @@ function checkAgentTurnThresholds(violations, turns, selected, thresholds, recor
     }
     checkTurnThreshold(violations, turn, "totalTurnMs", thresholds.agentTurnMs, `${turn.label} agent turn took ${turn.totalTurnMs}ms`);
     checkTurnThreshold(violations, turn, "preProviderMs", thresholds.preProviderMs, `${turn.label} agent spent ${turn.preProviderMs}ms before provider work`);
-    checkTurnThreshold(violations, turn, "providerFinalMs", thresholds.providerFinalMs, `${turn.label} provider work took ${turn.providerFinalMs}ms`);
+    if (turn.expectedFailure !== true) {
+      checkTurnThreshold(violations, turn, "providerFinalMs", thresholds.providerFinalMs, `${turn.label} provider work took ${turn.providerFinalMs}ms`);
+    }
     checkTurnThreshold(violations, turn, "cleanupMs", thresholds.agentCleanupMs, `${turn.label} agent cleanup took ${turn.cleanupMs}ms`);
     if (typeof thresholds.preProviderDominanceRatio === "number" &&
       typeof turn.preProviderDominance === "number" &&
@@ -2068,9 +2070,10 @@ function diagnoseAgentLatency({ coldAgentTurn, warmAgentTurn, providerTurn, thre
 
   const providerIssue = classifyProviderIssue([providerTurn]);
   if (providerIssue.kind !== "none") {
+    const expectedProviderFailure = providerTurn.expectedFailure === true || providerSimulation?.expected === true;
     return {
       kind: providerIssue.kind,
-      severity: expectedProviderMode === "normal" ? "fail" : "info",
+      severity: expectedProviderMode === "normal" && !expectedProviderFailure ? "fail" : "info",
       summary: providerSimulation?.observedIssueSummary ?? providerIssue.summary,
       likelyOwner: "provider"
     };

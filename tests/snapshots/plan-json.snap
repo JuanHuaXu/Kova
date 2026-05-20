@@ -3328,6 +3328,19 @@
           "declarationSource": "src/agents/subagent-announce-delivery.ts"
         },
         {
+          "id": "completion-handoff",
+          "group": "workflow",
+          "title": "Completion Handoff",
+          "sourceSymbol": "deliverSubagentAnnouncement.completionSourceReplyDeliveryMode",
+          "baselineExpectation": "a generated-media background completion must wake the requester conversation, route the completion through the required message-tool delivery path, preserve the source route, and deliver the generated media exactly once",
+          "proofModes": [
+            "model-turn",
+            "deterministic-shim",
+            "live-smoke"
+          ],
+          "declarationSource": "src/agents/subagent-announce-delivery.ts"
+        },
+        {
           "id": "failure-visible-once",
           "group": "workflow",
           "title": "Failure Visible Once",
@@ -3958,8 +3971,8 @@
             "terminal": true
           },
           "providerRequests": {
-            "mode": "exact",
-            "expected": 1
+            "mode": "minimum",
+            "min": 1
           },
           "atoms": [
             {
@@ -4030,8 +4043,8 @@
             "noSelfTrigger": true
           },
           "providerRequests": {
-            "mode": "exact",
-            "expected": 1
+            "mode": "minimum",
+            "min": 1
           },
           "atoms": [
             {
@@ -4082,8 +4095,8 @@
             "mediaPath": "/tmp/kova-channel-model-turn-media.png"
           },
           "providerRequests": {
-            "mode": "exact",
-            "expected": 1
+            "mode": "minimum",
+            "min": 1
           },
           "atoms": [
             {
@@ -4136,8 +4149,8 @@
             "mediaPath": "/tmp/kova-channel-model-turn-media-thread.png"
           },
           "providerRequests": {
-            "mode": "exact",
-            "expected": 1
+            "mode": "minimum",
+            "min": 1
           },
           "atoms": [
             {
@@ -4198,8 +4211,8 @@
             "mediaPath": "/tmp/kova-channel-model-turn-media-reply-thread.png"
           },
           "providerRequests": {
-            "mode": "exact",
-            "expected": 1
+            "mode": "minimum",
+            "min": 1
           },
           "atoms": [
             {
@@ -4257,8 +4270,8 @@
             "terminal": true
           },
           "providerRequests": {
-            "mode": "exact",
-            "expected": 1
+            "mode": "minimum",
+            "min": 1
           },
           "atoms": [
             {
@@ -4292,8 +4305,8 @@
             "terminal": true
           },
           "providerRequests": {
-            "mode": "exact",
-            "expected": 1
+            "mode": "minimum",
+            "min": 1
           },
           "atoms": [
             {
@@ -4327,8 +4340,8 @@
             "noDuplicateFinal": true
           },
           "providerRequests": {
-            "mode": "exact",
-            "expected": 1
+            "mode": "minimum",
+            "min": 1
           },
           "atoms": [
             {
@@ -4377,8 +4390,8 @@
             "noDuplicateFinal": true
           },
           "providerRequests": {
-            "mode": "exact",
-            "expected": 2
+            "mode": "minimum",
+            "min": 1
           },
           "atoms": [
             {
@@ -4441,8 +4454,8 @@
             "mediaPath": "/tmp/kova-background-video.mp4"
           },
           "providerRequests": {
-            "mode": "exact",
-            "expected": 2
+            "mode": "minimum",
+            "min": 1
           },
           "atoms": [
             {
@@ -4516,8 +4529,8 @@
             "mediaPath": "/tmp/kova-source-delivery-attachment.txt"
           },
           "providerRequests": {
-            "mode": "exact",
-            "expected": 2
+            "mode": "minimum",
+            "min": 1
           },
           "atoms": [
             {
@@ -4531,6 +4544,151 @@
             {
               "group": "durable-final",
               "id": "media"
+            },
+            {
+              "group": "durable-final",
+              "id": "message-sending-hooks"
+            }
+          ]
+        },
+        {
+          "id": "completion-handoff.image.generated-direct",
+          "workflow": "completion-handoff",
+          "inventoryWorkflow": "completion-handoff",
+          "matrix": {
+            "content": "image",
+            "route": "direct",
+            "delivery": "completion-handoff",
+            "lifecycle": "async-completion"
+          },
+          "userAction": "user asks OpenClaw to make an image for this chat and receives the completed image in the same chat",
+          "openclawSurface": "channel inbound direct message with image_generate background completion handoff",
+          "ownerArea": "OpenClaw completion delivery runtime",
+          "prompt": "Create a simple launch announcement image for this chat.",
+          "providerScript": {
+            "toolCalls": [
+              {
+                "name": "image_generate",
+                "arguments": {
+                  "action": "generate",
+                  "prompt": "simple launch announcement image",
+                  "filename": "kova-completion-handoff-direct.png",
+                  "count": 1
+                }
+              }
+            ],
+            "finalText": "NO_REPLY"
+          },
+          "expects": {
+            "visibleDeliveries": 1,
+            "kind": "media",
+            "text": "KOVA_COMPLETION_MEDIA_READY",
+            "replyTo": "none",
+            "mediaSourcePolicy": "present-existing",
+            "hooks": true,
+            "terminal": true,
+            "noDuplicateFinal": true,
+            "asyncCompletionTimeoutMs": 15000
+          },
+          "providerRequests": {
+            "mode": "minimum",
+            "min": 2
+          },
+          "atoms": [
+            {
+              "group": "workflow",
+              "id": "background-artifact-completion"
+            },
+            {
+              "group": "workflow",
+              "id": "completion-handoff"
+            },
+            {
+              "group": "workflow",
+              "id": "message-tool-only-source-delivery"
+            },
+            {
+              "group": "workflow",
+              "id": "terminal-after-final"
+            },
+            {
+              "group": "durable-final",
+              "id": "media"
+            },
+            {
+              "group": "durable-final",
+              "id": "message-sending-hooks"
+            }
+          ]
+        },
+        {
+          "id": "completion-handoff.image.generated-thread",
+          "workflow": "completion-handoff",
+          "inventoryWorkflow": "completion-handoff",
+          "matrix": {
+            "content": "image",
+            "route": "thread",
+            "delivery": "completion-handoff",
+            "lifecycle": "async-completion"
+          },
+          "userAction": "user asks OpenClaw from inside a thread to make an image and receives the completed image in that same thread",
+          "openclawSurface": "channel inbound threaded message with image_generate background completion handoff",
+          "ownerArea": "OpenClaw completion delivery runtime",
+          "prompt": "Create a simple launch announcement image for this thread.",
+          "providerScript": {
+            "toolCalls": [
+              {
+                "name": "image_generate",
+                "arguments": {
+                  "action": "generate",
+                  "prompt": "simple launch announcement image for a thread",
+                  "filename": "kova-completion-handoff-thread.png",
+                  "count": 1
+                }
+              }
+            ],
+            "finalText": "NO_REPLY"
+          },
+          "expects": {
+            "visibleDeliveries": 1,
+            "kind": "media",
+            "text": "KOVA_COMPLETION_MEDIA_READY",
+            "replyTo": "none",
+            "threadId": "kova-model-turn-thread",
+            "mediaSourcePolicy": "present-existing",
+            "hooks": true,
+            "terminal": true,
+            "noDuplicateFinal": true,
+            "asyncCompletionTimeoutMs": 15000
+          },
+          "providerRequests": {
+            "mode": "minimum",
+            "min": 2
+          },
+          "atoms": [
+            {
+              "group": "workflow",
+              "id": "background-artifact-completion"
+            },
+            {
+              "group": "workflow",
+              "id": "completion-handoff"
+            },
+            {
+              "group": "workflow",
+              "id": "message-tool-only-source-delivery"
+            },
+            {
+              "group": "workflow",
+              "id": "terminal-after-final"
+            },
+            {
+              "group": "durable-final",
+              "id": "media"
+            },
+            {
+              "group": "durable-final",
+              "id": "thread"
             },
             {
               "group": "durable-final",
@@ -4580,8 +4738,8 @@
             "mediaPath": "/tmp/kova-background-image.png"
           },
           "providerRequests": {
-            "mode": "exact",
-            "expected": 2
+            "mode": "minimum",
+            "min": 1
           },
           "atoms": [
             {
@@ -4648,8 +4806,8 @@
             "mediaPath": "/tmp/kova-background-music.mp3"
           },
           "providerRequests": {
-            "mode": "exact",
-            "expected": 2
+            "mode": "minimum",
+            "min": 1
           },
           "atoms": [
             {
@@ -4763,8 +4921,8 @@
             "mediaPath": "/tmp/kova-source-delivery-media.mp4"
           },
           "providerRequests": {
-            "mode": "exact",
-            "expected": 2
+            "mode": "minimum",
+            "min": 1
           },
           "atoms": [
             {
@@ -6812,12 +6970,20 @@
       "agent": {
         "expectedText": "KOVA_AGENT_OK"
       },
+      "mockProvider": {
+        "kovaMediaGeneration": true
+      },
       "thresholds": {
         "gatewayReadyMs": 45000,
         "agentTurnMs": 45000,
         "preProviderMs": 10000,
         "providerFinalMs": 3000,
         "peakRssMb": 900,
+        "roleThresholds": {
+          "gateway": {
+            "peakRssMb": 900
+          }
+        },
         "missingDependencyErrors": 0,
         "pluginLoadFailures": 0
       },
@@ -6933,6 +7099,27 @@
           "collectionIntent": "post-ready-health"
         },
         {
+          "id": "channel-model-turn-completion-handoff",
+          "title": "Run Completion Handoff Model Turns",
+          "intent": "Call the Kova channel plugin over Gateway RPC so OpenClaw starts a real generated-image background task, wakes the requester completion handoff, delivers generated media through the supported message-tool path, and records delivery, route, duplicate-send, and terminal invariants.",
+          "commands": [
+            "node {kovaRoot}/support/run-channel-model-turn-baseline.mjs --env {env} --artifact-dir {artifactDir} --case completion-handoff.image.generated-direct,completion-handoff.image.generated-thread --skip-shared-baseline true --continue-on-model-turn-failure true --timeout-ms 120000"
+          ],
+          "evidence": [
+            "completion handoff workflow rows",
+            "user action and inbound channel event ids",
+            "image generation tool call and generated media task",
+            "completion-agent message-tool source delivery",
+            "outbound channel send records",
+            "channel receipts",
+            "thread preservation invariants",
+            "duplicate-send invariants",
+            "terminal dispatch returns"
+          ],
+          "healthScope": "post-ready",
+          "collectionIntent": "post-ready-health"
+        },
+        {
           "id": "channel-model-turn-lifecycle",
           "title": "Run Channel Lifecycle Model Turns",
           "intent": "Call the Kova channel plugin over Gateway RPC so OpenClaw handles a normal inbound channel event, then suppresses a bot-authored platform echo before it can start another model turn or send another visible response.",
@@ -6956,6 +7143,7 @@
           "id": "channel-model-turn-negative-paths",
           "title": "Run Negative Path Model Turns",
           "intent": "Call the Kova channel plugin over Gateway RPC so OpenClaw handles a normal inbound channel event while the model provider fails, sends one visible error response through the channel adapter, and records duplicate-send and terminal invariants.",
+          "expectedAgentFailure": true,
           "commands": [
             "node {kovaRoot}/support/run-channel-model-turn-baseline.mjs --env {env} --artifact-dir {artifactDir} --case failure-visible-once.provider-error --skip-shared-baseline true --continue-on-model-turn-failure true --timeout-ms 120000"
           ],

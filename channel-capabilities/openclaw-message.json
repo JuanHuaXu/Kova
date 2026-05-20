@@ -320,6 +320,15 @@
       "declarationSource": "src/agents/subagent-announce-delivery.ts"
     },
     {
+      "id": "completion-handoff",
+      "group": "workflow",
+      "title": "Completion Handoff",
+      "sourceSymbol": "deliverSubagentAnnouncement.completionSourceReplyDeliveryMode",
+      "baselineExpectation": "a generated-media background completion must wake the requester conversation, route the completion through the required message-tool delivery path, preserve the source route, and deliver the generated media exactly once",
+      "proofModes": ["model-turn", "deterministic-shim", "live-smoke"],
+      "declarationSource": "src/agents/subagent-announce-delivery.ts"
+    },
+    {
       "id": "failure-visible-once",
       "group": "workflow",
       "title": "Failure Visible Once",

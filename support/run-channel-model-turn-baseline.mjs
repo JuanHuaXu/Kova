@@ -270,6 +270,9 @@ function normalizeWorkflowCase(entry) {
     sourceReplyDeliveryMode: typeof entry.sourceReplyDeliveryMode === "string" ? entry.sourceReplyDeliveryMode : null,
     finalDeliveries: normalizeVisibleDeliveries(id, expects.visibleDeliveries),
     providerRequests: normalizeCaseProviderRequests(id, entry.providerRequests),
+    asyncCompletionTimeoutMs: Number.isInteger(expects.asyncCompletionTimeoutMs)
+      ? expects.asyncCompletionTimeoutMs
+      : null,
     replyToId: expects.replyTo === "none" ? null : undefined,
     expectReplyToId: expects.replyTo === "inbound-message",
     expectNoReplyToId: expects.replyTo === "none",

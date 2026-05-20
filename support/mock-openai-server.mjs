@@ -315,8 +315,10 @@ const server = http.createServer(async (req, res) => {
       return;
     }
     const responseText = resolveResponseText(bodyText);
-    const responseToolCall = shouldEmitResponseToolCall(bodyText)
-      ? resolveResponseToolCall(bodyText)
+    const responseToolCall = shouldEmitCompletionMessageToolCall(body, bodyText)
+      ? resolveCompletionMessageToolCall(body)
+      : shouldEmitResponseToolCall(bodyText)
+        ? resolveResponseToolCall(bodyText)
       : null;
     if (responseToolCall) {
       markResponseToolCallEmitted(bodyText);
@@ -463,6 +465,49 @@ function resolveResponseToolCall(requestBodyText) {
   }
 }
 
+function resolveCompletionMessageToolCall(requestBody) {
+  const strings = collectBodyStrings(requestBody);
+  const media = extractCompletionMediaFromLatestInstruction(strings);
+  if (!media) {
+    return null;
+  }
+  return {
+    id: "fc_kova_completion_media",
+    callId: "call_kova_completion_media",
+    name: "message",
+    arguments: {
+      action: "send",
+      message: "KOVA_COMPLETION_MEDIA_READY",
+      attachments: [
+        {
+          type: media.type,
+          path: media.path,
+          mimeType: media.mimeType,
+          name: media.name
+        }
+      ]
+    }
+  };
+}
+
+const COMPLETION_MESSAGE_TOOL_REQUIRED = "This route requires message-tool delivery";
+const COMPLETION_ATTACHMENTS_REQUIRED = "attach every structured attachment from the internal event";
+
+function shouldEmitCompletionMessageToolCall(requestBody, requestBodyText) {
+  const strings = collectBodyStrings(requestBody);
+  const instruction = latestCompletionInstruction(strings);
+  if (!instruction) {
+    return false;
+  }
+  const text = String(requestBodyText ?? "");
+  const latestInstructionIndex = text.lastIndexOf(COMPLETION_MESSAGE_TOOL_REQUIRED);
+  const latestOutputIndex = latestFunctionCallOutputIndex(text);
+  if (latestOutputIndex > latestInstructionIndex) {
+    return false;
+  }
+  return Boolean(extractCompletionMedia([instruction]));
+}
+
 function shouldEmitResponseToolCall(requestBodyText) {
   const text = String(requestBodyText ?? "");
   if (!/KOVA_MOCK_TOOL_CALL_B64:/.test(text)) {
@@ -497,6 +542,85 @@ function markResponseToolCallEmitted(requestBodyText) {
   if (inboundEventId) {
     emittedToolCallInboundEventIds.add(inboundEventId);
   }
+}
+
+function collectBodyStrings(value, strings = []) {
+  if (typeof value === "string") {
+    strings.push(value);
+    return strings;
+  }
+  if (Array.isArray(value)) {
+    for (const item of value) {
+      collectBodyStrings(item, strings);
+    }
+    return strings;
+  }
+  if (value && typeof value === "object") {
+    for (const item of Object.values(value)) {
+      collectBodyStrings(item, strings);
+    }
+  }
+  return strings;
+}
+
+function latestCompletionInstruction(strings) {
+  return [...strings].reverse().find((entry) =>
+    entry.includes(COMPLETION_MESSAGE_TOOL_REQUIRED) &&
+    entry.includes(COMPLETION_ATTACHMENTS_REQUIRED)
+  ) ?? null;
+}
+
+function extractCompletionMediaFromLatestInstruction(strings) {
+  const instruction = latestCompletionInstruction(strings);
+  return instruction ? extractCompletionMedia([instruction]) : null;
+}
+
+function latestFunctionCallOutputIndex(text) {
+  const compactOutputIndex = text.lastIndexOf('"type":"function_call_output"');
+  const spacedOutputIndex = text.lastIndexOf('"type": "function_call_output"');
+  return Math.max(compactOutputIndex, spacedOutputIndex);
+}
+
+function extractCompletionMedia(strings) {
+  for (const text of strings) {
+    for (const match of text.matchAll(/\b(?:path|filePath|mediaUrl|url)="([^"]+)"/g)) {
+      const path = match[1]?.trim();
+      if (path) {
+        return completionMediaRecord(path);
+      }
+    }
+    for (const match of text.matchAll(/^MEDIA:\s*(\S+)/gm)) {
+      const path = match[1]?.trim();
+      if (path) {
+        return completionMediaRecord(path);
+      }
+    }
+  }
+  return null;
+}
+
+function completionMediaRecord(path) {
+  const name = path.split(/[\\/]/).pop() || "generated-media";
+  const lower = name.toLowerCase();
+  if (lower.endsWith(".png")) {
+    return { path, name, type: "image", mimeType: "image/png" };
+  }
+  if (lower.endsWith(".jpg") || lower.endsWith(".jpeg")) {
+    return { path, name, type: "image", mimeType: "image/jpeg" };
+  }
+  if (lower.endsWith(".webp")) {
+    return { path, name, type: "image", mimeType: "image/webp" };
+  }
+  if (lower.endsWith(".mp4") || lower.endsWith(".mov") || lower.endsWith(".webm")) {
+    return { path, name, type: "video", mimeType: "video/mp4" };
+  }
+  if (lower.endsWith(".mp3")) {
+    return { path, name, type: "audio", mimeType: "audio/mpeg" };
+  }
+  if (lower.endsWith(".wav")) {
+    return { path, name, type: "audio", mimeType: "audio/wav" };
+  }
+  return { path, name, type: "file", mimeType: "application/octet-stream" };
 }
 
 function extractKovaRequestMarkers(requestBodyText) {

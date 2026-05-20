@@ -26,6 +26,7 @@ try {
 }
 
 const modelRef = "openai/gpt-5.5";
+const kovaImageModelRef = "kova-channel-baseline/kova-image";
 const gatewayToken = "kova-mock-gateway-token";
 const cost = {
   input: 0,
@@ -86,7 +87,15 @@ config.agents = {
           openaiWsWarmup: false
         }
       }
-    }
+    },
+    ...(options.enableKovaMediaGeneration
+      ? {
+          imageGenerationModel: {
+            ...(config.agents?.defaults?.imageGenerationModel || {}),
+            primary: kovaImageModelRef
+          }
+        }
+      : {})
   }
 };
 
@@ -122,7 +131,8 @@ function parseArgs(args) {
     index += 1;
   }
   return {
-    portFile: parsed.portfile
+    portFile: parsed.portfile,
+    enableKovaMediaGeneration: parsed.enablekovamediageneration === "true"
   };
 }
 

@@ -1,5 +1,6 @@
 import { existsSync, unlinkSync, writeFileSync } from "node:fs";
 import { definePluginEntry } from "openclaw/plugin-sdk/core";
+import { resolveThreadSessionKeys } from "openclaw/plugin-sdk/routing";
 import {
   classifyDurableSendRecoveryState,
   createDurableMessageStateRecord,
@@ -20,6 +21,12 @@ const ACCOUNT_ID = "default";
 const TARGET_ID = "dm:kova-baseline-user";
 const TARGET_USER_ID = "kova-baseline-user";
 const TARGET_DISPLAY = "Kova Baseline User";
+const KOVA_IMAGE_PROVIDER_ID = "kova-channel-baseline";
+const KOVA_IMAGE_MODEL_ID = "kova-image";
+const KOVA_PNG_1X1 = Buffer.from(
+  "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/p9sAAAAASUVORK5CYII=",
+  "base64"
+);
 
 let activeRuntime = null;
 let outboundRecords = [];
@@ -116,16 +123,16 @@ const plugin = {
   },
   messaging: {
     normalizeTarget: normalizeKovaTarget,
-    inferTargetChatType: ({ to }) => normalizeKovaTarget(to) === TARGET_ID ? "direct" : undefined,
+    inferTargetChatType: ({ to }) => isKovaTarget(normalizeKovaTarget(to)) ? "direct" : undefined,
     targetResolver: {
       looksLikeId: (raw, normalized) =>
-        normalizeKovaTarget(normalized ?? raw) === TARGET_ID,
+        isKovaTarget(normalizeKovaTarget(normalized ?? raw)),
       hint: "dm:kova-baseline-user",
       resolveTarget: async ({ input, normalized }) => {
         const target = normalizeKovaTarget(normalized) ?? normalizeKovaTarget(input);
-        return target === TARGET_ID
+        return isKovaTarget(target)
           ? {
-              to: TARGET_ID,
+              to: target,
               kind: "user",
               display: TARGET_DISPLAY,
               source: "normalized"
@@ -133,6 +140,29 @@ const plugin = {
           : null;
       }
     }
+  },
+  threading: {
+    buildToolContext: ({ context, hasRepliedRef }) => {
+      const currentChannelId = normalizeKovaTarget(context.To) ?? normalizeKovaTarget(context.From) ?? context.To;
+      const currentThreadTs = normalizeKovaThreadId(context.MessageThreadId ?? context.TransportThreadId);
+      return {
+        currentChannelId,
+        currentThreadTs,
+        currentMessageId: context.CurrentMessageId,
+        replyToMode: currentThreadTs ? "all" : "first",
+        hasRepliedRef
+      };
+    },
+    resolveAutoThreadId: ({ to, toolContext }) => {
+      const threadId = normalizeKovaThreadId(toolContext?.currentThreadTs);
+      if (!threadId) {
+        return undefined;
+      }
+      const target = normalizeKovaTarget(to) ?? to;
+      const current = normalizeKovaTarget(toolContext?.currentChannelId) ?? toolContext?.currentChannelId;
+      return target && current && target === current ? threadId : undefined;
+    },
+    resolveCurrentChannelId: ({ to }) => normalizeKovaTarget(to) ?? to
   },
   gateway: {
     startAccount: async (ctx) => {
@@ -161,13 +191,29 @@ function normalizeKovaTarget(raw) {
   if (!value) {
     return undefined;
   }
-  if (value === TARGET_ID || value === TARGET_USER_ID) {
+  if (isKovaTarget(value)) {
+    return value;
+  }
+  if (value === TARGET_USER_ID) {
     return TARGET_ID;
   }
-  if (value === `${CHANNEL_ID}:${TARGET_ID}` || value === `${CHANNEL_ID}:${TARGET_USER_ID}`) {
-    return TARGET_ID;
+  const prefixed = value.startsWith(`${CHANNEL_ID}:`) ? value.slice(CHANNEL_ID.length + 1) : "";
+  if (isKovaTarget(prefixed)) {
+    return prefixed;
   }
-  return undefined;
+  return prefixed === TARGET_USER_ID ? TARGET_ID : undefined;
+}
+
+function isKovaTarget(value) {
+  return typeof value === "string" &&
+    (value === TARGET_ID || value.startsWith(`${TARGET_ID}-`));
+}
+
+function normalizeKovaThreadId(value) {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return String(value);
+  }
+  return typeof value === "string" && value.trim().length > 0 ? value.trim() : undefined;
 }
 
 export default definePluginEntry({
@@ -176,6 +222,9 @@ export default definePluginEntry({
   description: "OpenClaw channel capability baseline fixture used by Kova.",
   register(api) {
     api.registerChannel(plugin);
+    if (typeof api.registerImageGenerationProvider === "function") {
+      api.registerImageGenerationProvider(buildKovaImageGenerationProvider());
+    }
     api.registerGatewayMethod(
       "kova.channelBaseline.status",
       ({ respond }) => {
@@ -220,6 +269,54 @@ export default definePluginEntry({
     );
   }
 });
+
+function buildKovaImageGenerationProvider() {
+  return {
+    id: KOVA_IMAGE_PROVIDER_ID,
+    label: "Kova Channel Baseline Image Provider",
+    defaultModel: KOVA_IMAGE_MODEL_ID,
+    models: [KOVA_IMAGE_MODEL_ID],
+    capabilities: {
+      generate: {
+        maxCount: 4,
+        supportsSize: false,
+        supportsAspectRatio: false,
+        supportsResolution: false
+      },
+      edit: {
+        enabled: false,
+        maxCount: 0,
+        maxInputImages: 0,
+        supportsSize: false,
+        supportsAspectRatio: false,
+        supportsResolution: false
+      },
+      output: {
+        formats: ["png"]
+      }
+    },
+    isConfigured: () => true,
+    generateImage: async (req) => {
+      const count = Number.isInteger(req.count) && req.count > 0 ? Math.min(req.count, 4) : 1;
+      return {
+        images: Array.from({ length: count }, (_, index) => ({
+          buffer: KOVA_PNG_1X1,
+          mimeType: "image/png",
+          fileName: `kova-generated-image-${index + 1}.png`,
+          revisedPrompt: req.prompt,
+          metadata: {
+            kovaProvider: true,
+            prompt: req.prompt
+          }
+        })),
+        model: req.model || KOVA_IMAGE_MODEL_ID,
+        metadata: {
+          kovaProvider: true
+        }
+      };
+    }
+  };
+}
 
 async function runBaseline(params = {}) {
   if (!activeRuntime?.channelRuntime) {
@@ -403,8 +500,9 @@ async function runModelTurnCase(testCase) {
   const beforeDelivery = deliveryRecords.length;
   const beforeRecords = modelTurnRecords.length;
   const inboundEventId = `kova-model-turn-${testCase.id}-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+  const targetId = modelTurnTargetId(testCase.id);
   const botLoopProbe = testCase.expectNoSelfTrigger === true
-    ? createSelfTriggerProbe(testCase.id, inboundEventId)
+    ? createSelfTriggerProbe(testCase.id, inboundEventId, targetId)
     : null;
   let turn = null;
   let selfTriggerTurn = null;
@@ -418,6 +516,7 @@ async function runModelTurnCase(testCase) {
     turn = await runOpenClawModelTurn({
       message: modelTurnPrompt(testCase, inboundEventId),
       inboundEventId,
+      targetId,
       replyToId: testCase.replyToId === null ? null : inboundEventId,
       threadId: testCase.threadId,
       silent: testCase.silent === true,
@@ -432,6 +531,7 @@ async function runModelTurnCase(testCase) {
         selfTriggerTurn = await runOpenClawModelTurn({
           message: selfTriggerProbeMessage(testCase, botLoopProbe),
           inboundEventId: botLoopProbe.inboundEventId,
+          targetId,
           replyToId: botLoopProbe.inboundEventId,
           threadId: testCase.threadId,
           silent: false,
@@ -448,6 +548,7 @@ async function runModelTurnCase(testCase) {
       botLoopProbe.deliveryRecords = deliveryRecords.slice(beforeSelfTriggerDelivery);
       botLoopProbe.modelTurnRecords = modelTurnRecords.slice(beforeSelfTriggerRecords);
     }
+    await waitForAsyncWorkflowEvidence(testCase, beforeOutbound);
   } catch (caught) {
     error = caught instanceof Error ? caught : new Error(String(caught));
   } finally {
@@ -519,7 +620,8 @@ async function runModelTurnCase(testCase) {
       id: inboundEventId,
       authorId: "kova-baseline-user",
       sourceKind: "external-user",
-      targetId: TARGET_ID,
+      targetId,
+      caseTargetId: targetId,
       message: testCase.prompt
     },
     selfTriggerProbe: botLoopProbe ? {
@@ -527,7 +629,8 @@ async function runModelTurnCase(testCase) {
         id: botLoopProbe.inboundEventId,
         authorId: botLoopProbe.senderId,
         sourceKind: "bot-authored-echo",
-        targetId: TARGET_ID,
+        targetId,
+        caseTargetId: targetId,
         message: botLoopProbe.message
       },
       admission: selfTriggerTurn?.admission ?? null,
@@ -561,6 +664,15 @@ function compactMatrix(value) {
     delivery: typeof value.delivery === "string" ? value.delivery : null,
     lifecycle: typeof value.lifecycle === "string" ? value.lifecycle : null
   };
+}
+
+function modelTurnTargetId(caseId) {
+  const safe = String(caseId ?? "case")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 72) || "case";
+  return `dm:kova-baseline-user-${safe}`;
 }
 
 const baselineScenarios = [
@@ -1091,23 +1203,25 @@ async function runSyntheticTurn({
 async function runOpenClawModelTurn({
   message,
   inboundEventId,
+  targetId = TARGET_ID,
   replyToId,
   threadId,
   silent,
   sourceReplyDeliveryMode,
-  from = TARGET_ID,
+  from = targetId,
   senderId = TARGET_USER_ID,
   senderName = TARGET_DISPLAY,
   botLoopProtection
 }) {
   const runtime = activeRuntime.channelRuntime;
   const cfg = activeRuntime.cfg;
-  const route = runtime.routing.resolveAgentRoute({
+  const baseRoute = runtime.routing.resolveAgentRoute({
     cfg,
     channel: CHANNEL_ID,
     accountId: ACCOUNT_ID,
-    peer: { kind: "direct", id: TARGET_ID }
+    peer: { kind: "direct", id: targetId }
   });
+  const route = resolveThreadedRoute(baseRoute, threadId);
   const storePath = runtime.session.resolveStorePath(cfg.session?.store, { agentId: route.agentId });
   const ctxPayload = runtime.reply.finalizeInboundContext({
     Body: message,
@@ -1115,8 +1229,8 @@ async function runOpenClawModelTurn({
     RawBody: message,
     CommandBody: message,
     From: from,
-    To: TARGET_ID,
-    OriginatingTo: TARGET_ID,
+    To: targetId,
+    OriginatingTo: targetId,
     SessionKey: route.sessionKey,
     AccountId: ACCOUNT_ID,
     ChatType: "direct",
@@ -1152,7 +1266,7 @@ async function runOpenClawModelTurn({
         silent
       },
       deliver: async (delivered) => {
-        return await deliverFallbackPayload(delivered, { replyToId, threadId, silent });
+        return await deliverFallbackPayload(delivered, { targetId, replyToId, threadId, silent });
       },
       onDelivered: async (delivered, info, result) => {
         deliveryRecords.push({
@@ -1187,11 +1301,25 @@ async function runOpenClawModelTurn({
   });
 }
 
-function createSelfTriggerProbe(caseId, inboundEventId) {
+function resolveThreadedRoute(route, threadId) {
+  if (typeof threadId !== "string" || threadId.trim().length === 0) {
+    return route;
+  }
+  const threadKeys = resolveThreadSessionKeys({
+    baseSessionKey: route.sessionKey,
+    threadId
+  });
+  return {
+    ...route,
+    sessionKey: threadKeys.sessionKey
+  };
+}
+
+function createSelfTriggerProbe(caseId, inboundEventId, targetId = TARGET_ID) {
   const senderId = "kova-baseline-echo-bot";
   const receiverId = TARGET_USER_ID;
   const scopeId = `kova-self-trigger:${caseId}:${inboundEventId}`;
-  const conversationId = TARGET_ID;
+  const conversationId = targetId;
   const config = {
     maxEventsPerWindow: 1,
     windowSeconds: 60,
@@ -1361,6 +1489,12 @@ function isManagedOutboundMedia(mediaUrl, sourcePath) {
 
 function mediaSourceExpectation(testCase) {
   const sourcePath = testCase.expectedLocalMediaSource;
+  if (!sourcePath && testCase.expectedMediaSourcePolicy === "present-existing") {
+    return {
+      summary: `${testCase.id} delivered generated media to the channel send path`,
+      check: (record) => hasPresentMedia(record)
+    };
+  }
   if (!sourcePath) {
     return {
       summary: `${testCase.id} has no local media expectation`,
@@ -1479,6 +1613,54 @@ function ackScenario(capabilityId, policy, expectedStage) {
   };
 }
 
+async function waitForAsyncWorkflowEvidence(testCase, beforeOutbound) {
+  if (!requiresAsyncWorkflowWait(testCase)) {
+    return;
+  }
+  const timeoutMs = Number.isInteger(testCase.asyncCompletionTimeoutMs)
+    ? testCase.asyncCompletionTimeoutMs
+    : 15000;
+  const finalDeliveryPolicy = normalizeFinalDeliveries(testCase.finalDeliveries);
+  const mediaExpectation = mediaSourceExpectation(testCase);
+  const startedAt = performance.now();
+  while (performance.now() - startedAt < timeoutMs) {
+    const finalRecords = outboundRecords
+      .slice(beforeOutbound)
+      .filter((record) => isFinalOutboundRecord(record));
+    const hasExpectedCount = finalDeliveryPolicy.mode === "exact"
+      ? finalRecords.length >= finalDeliveryPolicy.expected
+      : finalDeliveryPolicy.mode === "minimum"
+        ? finalRecords.length >= finalDeliveryPolicy.min
+        : finalRecords.length > 0;
+    const hasExpectedMedia = testCase.expectedKind !== "media" || finalRecords.some((record) => mediaExpectation.check(record));
+    if (hasExpectedCount && hasExpectedMedia) {
+      return;
+    }
+    await sleep(100);
+  }
+}
+
+function requiresAsyncWorkflowWait(testCase) {
+  const matrix = testCase.matrix ?? {};
+  return matrix.lifecycle === "async-completion" ||
+    matrix.delivery === "background-completion" ||
+    matrix.delivery === "completion-handoff";
+}
+
+function hasPresentMedia(record) {
+  if (!record || typeof record.mediaUrl !== "string" || record.mediaUrl.length === 0) {
+    return false;
+  }
+  if (/^https?:\/\//i.test(record.mediaUrl)) {
+    return true;
+  }
+  return existsSync(record.mediaUrl);
+}
+
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 async function recordOutbound(kind, ctx) {
   const messageId = `kova-${kind}-${outboundRecords.length + 1}`;
   const receipt = createReceipt(messageId, kind, {
@@ -1504,7 +1686,7 @@ async function recordOutbound(kind, ctx) {
 async function deliverFallbackPayload(payload, options = {}) {
   const mediaUrl = firstMediaUrl(payload);
   const ctx = {
-    to: TARGET_ID,
+    to: options.targetId ?? TARGET_ID,
     text: payload?.text ?? "",
     isError: payload?.isError === true,
     replyToId: options.replyToId ?? undefined,

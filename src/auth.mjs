@@ -232,7 +232,7 @@ export function buildAuthSetupPhase(authPolicy, envName, artifactDir) {
       title: "Auth Setup",
       intent: "Configure the disposable OpenClaw env with Kova's mock provider auth.",
       collectionIntent: "service-only",
-      commands: [configureMockAuthCommand(envName, dir)],
+      commands: [configureMockAuthCommand(envName, dir, authPolicy.mockProvider)],
       evidence: ["OpenClaw config points to mock provider", "default agent model is openai/gpt-5.5"]
     };
   }
@@ -617,6 +617,9 @@ function mockProviderPolicy(scenario, state) {
       policy[key] = value;
     }
   }
+  if (raw.kovaMediaGeneration !== undefined) {
+    policy.kovaMediaGeneration = raw.kovaMediaGeneration === true;
+  }
   return policy;
 }
 
@@ -626,17 +629,22 @@ function mockProviderDisplay(policy) {
     delayMs: policy.delayMs ?? null,
     stallMs: policy.stallMs ?? null,
     errorStatus: policy.errorStatus ?? null,
-    concurrency: policy.concurrency ?? null
+    concurrency: policy.concurrency ?? null,
+    kovaMediaGeneration: policy.kovaMediaGeneration === true
   };
 }
 
-function configureMockAuthCommand(envName, dir) {
-  return ocmEnvExec(envName, [
+function configureMockAuthCommand(envName, dir, mockProvider = {}) {
+  const args = [
     "node",
     join(repoRoot, "support/configure-openclaw-mock-auth.mjs"),
     "--port-file",
     join(dir, "port")
-  ]);
+  ];
+  if (mockProvider.kovaMediaGeneration === true) {
+    args.push("--enable-kova-media-generation", "true");
+  }
+  return ocmEnvExec(envName, args);
 }
 
 function configureLiveAuthCommand(authPolicy, envName) {

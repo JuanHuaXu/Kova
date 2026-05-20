@@ -9,6 +9,9 @@
   "channels": [
     "kova-channel-baseline"
   ],
+  "contracts": {
+    "imageGenerationProviders": ["kova-channel-baseline"]
+  },
   "channelConfigs": {
     "kova-channel-baseline": {
       "label": "Kova Channel Baseline",

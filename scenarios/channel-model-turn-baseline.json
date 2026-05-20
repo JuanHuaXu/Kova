@@ -16,12 +16,20 @@
   "agent": {
     "expectedText": "KOVA_AGENT_OK"
   },
+  "mockProvider": {
+    "kovaMediaGeneration": true
+  },
   "thresholds": {
     "gatewayReadyMs": 45000,
     "agentTurnMs": 45000,
     "preProviderMs": 10000,
     "providerFinalMs": 3000,
     "peakRssMb": 900,
+    "roleThresholds": {
+      "gateway": {
+        "peakRssMb": 900
+      }
+    },
     "missingDependencyErrors": 0,
     "pluginLoadFailures": 0
   },
@@ -137,6 +145,27 @@
       "collectionIntent": "post-ready-health"
     },
     {
+      "id": "channel-model-turn-completion-handoff",
+      "title": "Run Completion Handoff Model Turns",
+      "intent": "Call the Kova channel plugin over Gateway RPC so OpenClaw starts a real generated-image background task, wakes the requester completion handoff, delivers generated media through the supported message-tool path, and records delivery, route, duplicate-send, and terminal invariants.",
+      "commands": [
+        "node {kovaRoot}/support/run-channel-model-turn-baseline.mjs --env {env} --artifact-dir {artifactDir} --case completion-handoff.image.generated-direct,completion-handoff.image.generated-thread --skip-shared-baseline true --continue-on-model-turn-failure true --timeout-ms 120000"
+      ],
+      "evidence": [
+        "completion handoff workflow rows",
+        "user action and inbound channel event ids",
+        "image generation tool call and generated media task",
+        "completion-agent message-tool source delivery",
+        "outbound channel send records",
+        "channel receipts",
+        "thread preservation invariants",
+        "duplicate-send invariants",
+        "terminal dispatch returns"
+      ],
+      "healthScope": "post-ready",
+      "collectionIntent": "post-ready-health"
+    },
+    {
       "id": "channel-model-turn-lifecycle",
       "title": "Run Channel Lifecycle Model Turns",
       "intent": "Call the Kova channel plugin over Gateway RPC so OpenClaw handles a normal inbound channel event, then suppresses a bot-authored platform echo before it can start another model turn or send another visible response.",
@@ -160,6 +189,7 @@
       "id": "channel-model-turn-negative-paths",
       "title": "Run Negative Path Model Turns",
       "intent": "Call the Kova channel plugin over Gateway RPC so OpenClaw handles a normal inbound channel event while the model provider fails, sends one visible error response through the channel adapter, and records duplicate-send and terminal invariants.",
+      "expectedAgentFailure": true,
       "commands": [
         "node {kovaRoot}/support/run-channel-model-turn-baseline.mjs --env {env} --artifact-dir {artifactDir} --case failure-visible-once.provider-error --skip-shared-baseline true --continue-on-model-turn-failure true --timeout-ms 120000"
       ],
