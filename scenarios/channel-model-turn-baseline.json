@@ -77,81 +77,21 @@
       "collectionIntent": "post-ready-health"
     },
     {
-      "id": "channel-model-turn-text-final",
-      "title": "Run Text Final Model Turn",
-      "intent": "Call the Kova channel plugin over Gateway RPC so OpenClaw handles one inbound text-final channel event, calls the mock provider, sends a final text response through the channel adapter, and records reply/hook/terminal invariants.",
+      "id": "channel-model-turn-final-delivery",
+      "title": "Run Final Delivery Model Turns",
+      "intent": "Call the Kova channel plugin over Gateway RPC so OpenClaw handles normal final text, media, reply, thread, and silent user-facing model turns through the shared channel adapter path.",
       "commands": [
-        "node {kovaRoot}/support/run-channel-model-turn-baseline.mjs --env {env} --artifact-dir {artifactDir} --case text-final --skip-shared-baseline true --continue-on-model-turn-failure true --timeout-ms 120000"
+        "node {kovaRoot}/support/run-channel-model-turn-baseline.mjs --env {env} --artifact-dir {artifactDir} --case text-final,media-final,media-thread-final,media-reply-thread-final,thread-final,silent-final --skip-shared-baseline true --continue-on-model-turn-failure true --timeout-ms 120000"
       ],
       "evidence": [
-        "text final model-turn capability rows",
+        "final delivery model-turn capability rows",
         "inbound channel event ids",
         "provider request policy and observed count",
-        "final assistant texts",
+        "final assistant text and media records",
         "outbound channel send records",
         "channel receipts",
-        "terminal dispatch returns",
+        "reply, thread, silent, hook, and terminal invariants",
         "duplicate-send invariants"
-      ],
-      "healthScope": "post-ready",
-      "collectionIntent": "post-ready-health"
-    },
-    {
-      "id": "channel-model-turn-media-final",
-      "title": "Run Media Final Model Turn",
-      "intent": "Call the Kova channel plugin over Gateway RPC so OpenClaw handles one inbound media-final channel event, calls the mock provider, stages local media for outbound delivery, sends it through the channel adapter, and records receipt, duplicate, and terminal invariants.",
-      "commands": [
-        "node {kovaRoot}/support/run-channel-model-turn-baseline.mjs --env {env} --artifact-dir {artifactDir} --case media-final --skip-shared-baseline true --continue-on-model-turn-failure true --timeout-ms 120000"
-      ],
-      "evidence": [
-        "media final model-turn capability rows",
-        "inbound channel event ids",
-        "provider request policy and observed count",
-        "final assistant media records",
-        "outbound channel send records",
-        "channel receipts",
-        "terminal dispatch returns",
-        "duplicate-send invariants"
-      ],
-      "healthScope": "post-ready",
-      "collectionIntent": "post-ready-health"
-    },
-    {
-      "id": "channel-model-turn-media-thread-final",
-      "title": "Run Media Thread Final Model Turn",
-      "intent": "Call the Kova channel plugin over Gateway RPC so OpenClaw handles one inbound threaded media request, calls the mock provider, sends media through the channel adapter in that thread, and records media/thread/receipt/terminal invariants.",
-      "commands": [
-        "node {kovaRoot}/support/run-channel-model-turn-baseline.mjs --env {env} --artifact-dir {artifactDir} --case media-thread-final --skip-shared-baseline true --continue-on-model-turn-failure true --timeout-ms 120000"
-      ],
-      "evidence": [
-        "media thread final model-turn capability rows",
-        "inbound channel event ids",
-        "provider request policy and observed count",
-        "final assistant media records",
-        "outbound channel send records",
-        "channel receipts",
-        "thread target invariants",
-        "terminal dispatch returns"
-      ],
-      "healthScope": "post-ready",
-      "collectionIntent": "post-ready-health"
-    },
-    {
-      "id": "channel-model-turn-media-reply-thread-final",
-      "title": "Run Media Reply Thread Final Model Turn",
-      "intent": "Call the Kova channel plugin over Gateway RPC so OpenClaw handles one inbound threaded reply media request, calls the mock provider, sends media through the channel adapter against the right reply and thread targets, and records media/reply/thread/receipt/terminal invariants.",
-      "commands": [
-        "node {kovaRoot}/support/run-channel-model-turn-baseline.mjs --env {env} --artifact-dir {artifactDir} --case media-reply-thread-final --skip-shared-baseline true --continue-on-model-turn-failure true --timeout-ms 120000"
-      ],
-      "evidence": [
-        "media reply thread final model-turn capability rows",
-        "inbound channel event ids",
-        "provider request policy and observed count",
-        "final assistant media records",
-        "outbound channel send records",
-        "channel receipts",
-        "reply and thread target invariants",
-        "terminal dispatch returns"
       ],
       "healthScope": "post-ready",
       "collectionIntent": "post-ready-health"
@@ -197,60 +137,20 @@
       "collectionIntent": "post-ready-health"
     },
     {
-      "id": "channel-model-turn-no-self-trigger",
-      "title": "Run No-Self-Trigger Model Turn",
+      "id": "channel-model-turn-lifecycle",
+      "title": "Run Channel Lifecycle Model Turns",
       "intent": "Call the Kova channel plugin over Gateway RPC so OpenClaw handles a normal inbound channel event, then suppresses a bot-authored platform echo before it can start another model turn or send another visible response.",
       "commands": [
         "node {kovaRoot}/support/run-channel-model-turn-baseline.mjs --env {env} --artifact-dir {artifactDir} --case no-self-trigger.bot-authored-echo --skip-shared-baseline true --continue-on-model-turn-failure true --timeout-ms 120000"
       ],
       "evidence": [
-        "no-self-trigger workflow rows",
+        "lifecycle workflow rows",
         "first inbound user event id",
         "bot-authored echo inbound event id",
         "bot-loop suppression admission",
         "provider request count",
         "outbound channel send records",
         "duplicate-send invariants",
-        "terminal dispatch returns"
-      ],
-      "healthScope": "post-ready",
-      "collectionIntent": "post-ready-health"
-    },
-    {
-      "id": "channel-model-turn-thread-final",
-      "title": "Run Thread Final Model Turn",
-      "intent": "Call the Kova channel plugin over Gateway RPC so OpenClaw handles one inbound threaded channel event, calls the mock provider, sends a final response through the channel adapter, and records thread preservation and terminal invariants.",
-      "commands": [
-        "node {kovaRoot}/support/run-channel-model-turn-baseline.mjs --env {env} --artifact-dir {artifactDir} --case thread-final --skip-shared-baseline true --continue-on-model-turn-failure true --timeout-ms 120000"
-      ],
-      "evidence": [
-        "thread final model-turn capability rows",
-        "inbound channel event ids",
-        "provider request policy and observed count",
-        "final assistant texts",
-        "outbound channel send records",
-        "channel receipts",
-        "thread target invariants",
-        "terminal dispatch returns"
-      ],
-      "healthScope": "post-ready",
-      "collectionIntent": "post-ready-health"
-    },
-    {
-      "id": "channel-model-turn-silent-final",
-      "title": "Run Silent Final Model Turn",
-      "intent": "Call the Kova channel plugin over Gateway RPC so OpenClaw handles one inbound silent-final channel event, calls the mock provider, sends a final response through the channel adapter, and records silent delivery and terminal invariants.",
-      "commands": [
-        "node {kovaRoot}/support/run-channel-model-turn-baseline.mjs --env {env} --artifact-dir {artifactDir} --case silent-final --skip-shared-baseline true --continue-on-model-turn-failure true --timeout-ms 120000"
-      ],
-      "evidence": [
-        "silent final model-turn capability rows",
-        "inbound channel event ids",
-        "provider request policy and observed count",
-        "final assistant texts",
-        "outbound channel send records",
-        "channel receipts",
-        "silent delivery invariants",
         "terminal dispatch returns"
       ],
       "healthScope": "post-ready",
