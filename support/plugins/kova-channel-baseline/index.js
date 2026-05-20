@@ -424,6 +424,10 @@ async function runModelTurnCase(testCase) {
   const caseOutboundRecords = outboundRecords.slice(beforeOutbound);
   const caseDeliveryRecords = deliveryRecords.slice(beforeDelivery);
   const caseModelTurnRecords = modelTurnRecords.slice(beforeRecords);
+  const modelRecordStarts = caseModelTurnRecords.filter((record) => record.stage === "record" && record.event === "start");
+  const modelRecordDones = caseModelTurnRecords.filter((record) => record.stage === "record" && record.event === "done");
+  const modelDispatchStarts = caseModelTurnRecords.filter((record) => record.stage === "dispatch" && record.event === "start");
+  const modelDispatchDones = caseModelTurnRecords.filter((record) => record.stage === "dispatch" && record.event === "done");
   const finalOutboundRecords = caseOutboundRecords.filter((record) => isFinalOutboundRecord(record));
   const finalDeliveryRecords = finalOutboundRecords.length > 0
     ? finalOutboundRecords
@@ -450,6 +454,9 @@ async function runModelTurnCase(testCase) {
     invariant(`${testCase.id}:media-url`, !testCase.expectedLocalMediaSource || mediaExpectation.check(firstFinal), mediaExpectation.summary),
     invariant(`${testCase.id}:after-send-success`, testCase.expectHooks !== true || caseOutboundRecords.some((record) => record.kind === "after-send-success"), `${testCase.id} ran after-send-success hook`),
     invariant(`${testCase.id}:after-commit`, testCase.expectHooks !== true || caseOutboundRecords.some((record) => record.kind === "after-commit"), `${testCase.id} ran after-commit hook`),
+    invariant(`${testCase.id}:single-inbound-turn`, modelDispatchStarts.length === 1, `${testCase.id} processed exactly one OpenClaw model turn for one inbound user event; observed ${modelDispatchStarts.length}`),
+    invariant(`${testCase.id}:model-turn-record-terminal`, modelRecordStarts.length === modelRecordDones.length, `${testCase.id} closed every recorded OpenClaw model turn; starts ${modelRecordStarts.length}, done ${modelRecordDones.length}`),
+    invariant(`${testCase.id}:model-turn-dispatch-terminal`, modelDispatchStarts.length === modelDispatchDones.length, `${testCase.id} closed every dispatched OpenClaw model turn; starts ${modelDispatchStarts.length}, done ${modelDispatchDones.length}`),
     invariant(`${testCase.id}:terminal-return`, !error, `${testCase.id} returned from OpenClaw dispatch`)
   ];
   const ok = invariants.every((item) => item.status === "passed");
