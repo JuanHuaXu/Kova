@@ -369,14 +369,17 @@ function evaluateCase(testCase, observation, injectResult) {
   const recovery = objectOrEmpty(observation?.recovery);
   const platformFailures = platformFailureRecords(observation);
   const recoveryRecords = channelRecoveryRecords(observation);
+  const unhandledDeliveries = unhandledDeliveryRecords(observation);
 
   return [
     invariant(`${testCase.id}:probe-injected`, injectResult?.ok === true && Boolean(observation), `${testCase.id} injected one inbound user event through the channel probe`),
     invariant(`${testCase.id}:no-probe-error`, !observation?.error, `${testCase.id} completed without probe or OpenClaw transport error`),
+    invariant(`${testCase.id}:durable-handled`, unhandledDeliveries.length === 0, `${testCase.id} had every final durable delivery handled by OpenClaw; unhandled ${unhandledDeliveries.length}`),
     invariant(`${testCase.id}:turn-dispatched`, observation?.dispatched === true || (recoveryExpectation.required && modelDispatchStarts.length > 0), `${testCase.id} dispatched through the OpenClaw runtime`),
     finalDeliveryInvariant(testCase.id, visibleDeliveryPolicy, finalRecords.length),
     invariant(`${testCase.id}:expected-kind`, !expects.kind || firstFinal?.kind === expects.kind, `${testCase.id} produced the expected visible delivery kind`),
     invariant(`${testCase.id}:expected-text`, !expectedText || finalTexts.some((text) => textEquals(text, expectedText)), `${testCase.id} produced the expected visible text`),
+    invariant(`${testCase.id}:channel-data`, !isJsonObject(expects.channelData) || jsonEqual(firstFinal?.payload?.channelData, expects.channelData), `${testCase.id} preserved structured channel payload data`),
     invariant(`${testCase.id}:error-final`, expects.errorFinal !== true || (firstFinal?.isError === true || finalTexts.some((text) => text.trim().length > 0)), `${testCase.id} delivered one user-visible error response`),
     invariant(`${testCase.id}:receipt`, visibleDeliveryPolicy.expected === 0 || visibleDeliveryPolicy.mode === "observe" || hasReceipt(finalRecords, observation), `${testCase.id} recorded a receipt for required visible delivery`),
     invariant(`${testCase.id}:reply-target`, expects.replyTo !== "inbound-message" || firstFinal?.replyToId === observation?.inboundEvent?.id, `${testCase.id} preserved the inbound reply target`),
@@ -463,6 +466,12 @@ function platformFailureRecords(observation) {
 
 function channelRecoveryRecords(observation) {
   return Array.isArray(observation?.recoveryRecords) ? observation.recoveryRecords : [];
+}
+
+function unhandledDeliveryRecords(observation) {
+  return Array.isArray(observation?.deliveryRecords)
+    ? observation.deliveryRecords.filter((record) => record?.path === "unhandled-channel-delivery")
+    : [];
 }
 
 function normalizeRecoveryExpectation(testCase) {
@@ -620,6 +629,14 @@ function textEquals(actual, expected) {
 
 function normalizeText(value) {
   return String(value ?? "").trim().replace(/\s+/g, " ");
+}
+
+function isJsonObject(value) {
+  return value && typeof value === "object" && !Array.isArray(value);
+}
+
+function jsonEqual(actual, expected) {
+  return JSON.stringify(actual) === JSON.stringify(expected);
 }
 
 function invariant(id, condition, summary) {

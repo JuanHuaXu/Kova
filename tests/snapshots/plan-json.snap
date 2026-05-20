@@ -4446,6 +4446,72 @@
           ]
         },
         {
+          "id": "source-visible-delivery.payload.message-tool-only",
+          "workflow": "source-visible-delivery",
+          "inventoryWorkflow": "source-visible-delivery",
+          "matrix": {
+            "content": "payload",
+            "route": "direct",
+            "delivery": "message-tool-only-source-delivery",
+            "lifecycle": "success"
+          },
+          "userAction": "user asks OpenClaw to send a structured channel response to the same chat",
+          "openclawSurface": "channel inbound direct message with message tool channelData payload delivery",
+          "ownerArea": "OpenClaw source delivery runtime",
+          "prompt": "Send a compact status card to this chat.",
+          "providerScript": {
+            "toolCalls": [
+              {
+                "name": "message",
+                "arguments": {
+                  "action": "send",
+                  "message": "KOVA_SOURCE_DELIVERY_PAYLOAD_OK",
+                  "channelData": {
+                    "kovaPayloadKind": "status-card",
+                    "severity": "info"
+                  }
+                }
+              }
+            ],
+            "finalText": "KOVA_SOURCE_DELIVERY_PRIVATE_DONE"
+          },
+          "sourceReplyDeliveryMode": "message_tool_only",
+          "expects": {
+            "visibleDeliveries": 1,
+            "kind": "payload",
+            "text": "KOVA_SOURCE_DELIVERY_PAYLOAD_OK",
+            "channelData": {
+              "kovaPayloadKind": "status-card",
+              "severity": "info"
+            },
+            "hooks": true,
+            "terminal": true,
+            "noDuplicateFinal": true
+          },
+          "providerRequests": {
+            "mode": "minimum",
+            "min": 1
+          },
+          "atoms": [
+            {
+              "group": "workflow",
+              "id": "source-visible-delivery"
+            },
+            {
+              "group": "workflow",
+              "id": "message-tool-only-source-delivery"
+            },
+            {
+              "group": "durable-final",
+              "id": "payload"
+            },
+            {
+              "group": "durable-final",
+              "id": "message-sending-hooks"
+            }
+          ]
+        },
+        {
           "id": "background-artifact-completion.video.message-tool-only",
           "workflow": "background-artifact-completion",
           "inventoryWorkflow": "background-artifact-completion",
@@ -7108,13 +7174,14 @@
           "title": "Run Source Delivery Model Turn",
           "intent": "Call the Kova channel plugin over Gateway RPC so OpenClaw handles one normal inbound user event, follows its supported source-delivery contract, sends visible source output through the message tool when required, and records payload, receipt, duplicate-send, and terminal invariants.",
           "commands": [
-            "node {kovaRoot}/support/run-channel-probe-turn.mjs --env {env} --artifact-dir {artifactDir} --case source-visible-delivery.text.automatic-final,source-visible-delivery.text.message-tool-only,source-visible-delivery.media.message-tool-only,source-visible-delivery.media-thread.message-tool-only,source-visible-delivery.attachment.message-tool-only --continue-on-failure true --timeout-ms 120000"
+            "node {kovaRoot}/support/run-channel-probe-turn.mjs --env {env} --artifact-dir {artifactDir} --case source-visible-delivery.text.automatic-final,source-visible-delivery.text.message-tool-only,source-visible-delivery.payload.message-tool-only,source-visible-delivery.media.message-tool-only,source-visible-delivery.media-thread.message-tool-only,source-visible-delivery.attachment.message-tool-only --continue-on-failure true --timeout-ms 120000"
           ],
           "evidence": [
             "source delivery model-turn capability rows",
             "user action and inbound channel event ids",
             "provider request policy and observed count",
             "message-tool source delivery",
+            "structured channel payload delivery",
             "outbound channel send records",
             "channel receipts",
             "duplicate-send invariants",

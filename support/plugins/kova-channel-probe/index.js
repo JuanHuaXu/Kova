@@ -644,7 +644,7 @@ async function runOpenClawModelTurn({
         ...(requiredCapabilities ? { requiredCapabilities } : {})
       },
       deliver: async (delivered) => {
-        return rejectUnhandledDeliveryPayload(delivered, { targetId, replyToId, threadId, silent });
+        return recordUnhandledDeliveryPayload(delivered, { targetId, replyToId, threadId, silent });
       },
       onDelivered: async (delivered, info, result) => {
         deliveryRecords.push({
@@ -731,7 +731,7 @@ async function recordOutbound(kind, ctx) {
   return { messageId, receipt };
 }
 
-function rejectUnhandledDeliveryPayload(payload, options = {}) {
+function recordUnhandledDeliveryPayload(payload, options = {}) {
   const mediaUrl = firstMediaUrl(payload);
   deliveryRecords.push({
     path: "unhandled-channel-delivery",
@@ -747,9 +747,10 @@ function rejectUnhandledDeliveryPayload(payload, options = {}) {
     visibleReplySent: false,
     messageIds: []
   });
-  throw new Error(
-    `OpenClaw channel durable delivery did not handle final ${mediaUrl ? "media" : payload?.channelData ? "payload" : "text"} payload`
-  );
+  return {
+    visibleReplySent: false,
+    messageIds: []
+  };
 }
 
 function firstMediaUrl(payload) {

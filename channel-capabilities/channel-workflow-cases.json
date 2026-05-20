@@ -404,6 +404,60 @@
       ]
     },
     {
+      "id": "source-visible-delivery.payload.message-tool-only",
+      "workflow": "source-visible-delivery",
+      "inventoryWorkflow": "source-visible-delivery",
+      "matrix": {
+        "content": "payload",
+        "route": "direct",
+        "delivery": "message-tool-only-source-delivery",
+        "lifecycle": "success"
+      },
+      "userAction": "user asks OpenClaw to send a structured channel response to the same chat",
+      "openclawSurface": "channel inbound direct message with message tool channelData payload delivery",
+      "ownerArea": "OpenClaw source delivery runtime",
+      "prompt": "Send a compact status card to this chat.",
+      "providerScript": {
+        "toolCalls": [
+          {
+            "name": "message",
+            "arguments": {
+              "action": "send",
+              "message": "KOVA_SOURCE_DELIVERY_PAYLOAD_OK",
+              "channelData": {
+                "kovaPayloadKind": "status-card",
+                "severity": "info"
+              }
+            }
+          }
+        ],
+        "finalText": "KOVA_SOURCE_DELIVERY_PRIVATE_DONE"
+      },
+      "sourceReplyDeliveryMode": "message_tool_only",
+      "expects": {
+        "visibleDeliveries": 1,
+        "kind": "payload",
+        "text": "KOVA_SOURCE_DELIVERY_PAYLOAD_OK",
+        "channelData": {
+          "kovaPayloadKind": "status-card",
+          "severity": "info"
+        },
+        "hooks": true,
+        "terminal": true,
+        "noDuplicateFinal": true
+      },
+      "providerRequests": {
+        "mode": "minimum",
+        "min": 1
+      },
+      "atoms": [
+        { "group": "workflow", "id": "source-visible-delivery" },
+        { "group": "workflow", "id": "message-tool-only-source-delivery" },
+        { "group": "durable-final", "id": "payload" },
+        { "group": "durable-final", "id": "message-sending-hooks" }
+      ]
+    },
+    {
       "id": "background-artifact-completion.video.message-tool-only",
       "workflow": "background-artifact-completion",
       "inventoryWorkflow": "background-artifact-completion",
