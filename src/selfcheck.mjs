@@ -1171,8 +1171,8 @@ function statusFoundationCheck() {
         message: "gateway peak RSS 881 MB exceeded threshold 700 MB"
       }, {
         kind: "channel",
-        metric: "channelModelTurn.case.generated-media-message-tool",
-        message: "channel model turn case generated-media-message-tool failed: observed duplicate final delivery"
+        metric: "channelModelTurn.case.source-visible-delivery.media.message-tool-only",
+        message: "channel model turn case source-visible-delivery.media.message-tool-only failed: observed duplicate final delivery"
       }]
     };
     const behaviorFailSummary = buildReportSummary({
@@ -1184,7 +1184,7 @@ function statusFoundationCheck() {
     });
     assertEqual(
       behaviorFailSummary.decision.reason,
-      "channel model turn case generated-media-message-tool failed: observed duplicate final delivery",
+      "channel model turn case source-visible-delivery.media.message-tool-only failed: observed duplicate final delivery",
       "behavior failure is report headline before resource finding"
     );
 

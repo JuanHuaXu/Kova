@@ -449,6 +449,8 @@ async function runModelTurnCase(testCase) {
     status: ok ? "passed" : "failed",
     reason: ok ? null : (error?.message ?? invariants.find((item) => item.status !== "passed")?.reason ?? "model turn case failed"),
     capabilities: testCase.capabilities,
+    workflow: testCase.workflow ?? null,
+    userAction: testCase.userAction ?? null,
     inboundEvent: {
       id: inboundEventId,
       authorId: "kova-baseline-user",
@@ -533,27 +535,30 @@ const modelTurnCaseDefinitions = [
     ]
   },
   {
-    id: "generated-media-message-tool",
-    prompt: "Deliver generated media back to the source conversation through the message tool.",
-    responseText: "KOVA_AGENT_GENERATED_MEDIA_PRIVATE_DONE",
+    id: "source-visible-delivery.media.message-tool-only",
+    workflow: "source-visible-delivery",
+    userAction: "user asks OpenClaw to produce a media result and send it back to the same chat",
+    prompt: "Create a short product launch video showing our new desktop app turning a messy inbox into a clean task list, with upbeat music and a clear final frame.",
+    responseText: "KOVA_SOURCE_DELIVERY_PRIVATE_DONE",
     toolCall: {
       name: "message",
       arguments: {
         action: "send",
-        message: "KOVA_GENERATED_MEDIA_READY",
-        media: "/tmp/kova-channel-generated-media.mp4"
+        message: "KOVA_SOURCE_DELIVERY_MEDIA_OK",
+        media: "/tmp/kova-source-delivery-media.mp4"
       }
     },
-    expectedText: "KOVA_GENERATED_MEDIA_READY",
+    expectedText: "KOVA_SOURCE_DELIVERY_MEDIA_OK",
     expectedKind: "media",
-    expectedLocalMediaSource: "/tmp/kova-channel-generated-media.mp4",
+    expectedLocalMediaSource: "/tmp/kova-source-delivery-media.mp4",
     expectedMediaSourcePolicy: "sendable-local-or-managed",
-    mediaFixturePath: "/tmp/kova-channel-generated-media.mp4",
+    mediaFixturePath: "/tmp/kova-source-delivery-media.mp4",
     sourceReplyDeliveryMode: "message_tool_only",
     finalDeliveries: { mode: "exact", expected: 1 },
     providerRequests: { mode: "exact", expected: 2 },
     capabilities: [
-      { group: "workflow", id: "generated-media-message-tool" },
+      { group: "workflow", id: "source-visible-delivery" },
+      { group: "workflow", id: "message-tool-only-source-delivery" },
       { group: "durable-final", id: "media" },
       { group: "durable-final", id: "message-sending-hooks" }
     ]

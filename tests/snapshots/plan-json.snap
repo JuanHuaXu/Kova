@@ -3220,11 +3220,24 @@
           "declarationSource": "src/channels/message/runtime-workflows"
         },
         {
-          "id": "generated-media-message-tool",
+          "id": "source-visible-delivery",
           "group": "workflow",
-          "title": "Generated Media Message Tool Delivery",
+          "title": "Source Visible Delivery",
+          "sourceSymbol": "SourceDeliveryOutcome.visibleDeliveries",
+          "baselineExpectation": "a user-visible source conversation response must be delivered through the supported OpenClaw source delivery path exactly once",
+          "proofModes": [
+            "model-turn",
+            "deterministic-shim",
+            "live-smoke"
+          ],
+          "declarationSource": "src/infra/outbound/source-delivery-plan.ts"
+        },
+        {
+          "id": "message-tool-only-source-delivery",
+          "group": "workflow",
+          "title": "Message Tool Only Source Delivery",
           "sourceSymbol": "SourceReplyDeliveryMode.message_tool_only",
-          "baselineExpectation": "a generated media completion must use the source conversation message-tool delivery path, preserve media evidence, and produce one visible final channel delivery",
+          "baselineExpectation": "when OpenClaw requires message-tool-only source delivery, visible source output must be sent through the message tool while normal final text remains private",
           "proofModes": [
             "model-turn",
             "deterministic-shim",
@@ -5038,17 +5051,17 @@
           "collectionIntent": "post-ready-health"
         },
         {
-          "id": "channel-model-turn-generated-media-message-tool",
-          "title": "Run Generated Media Message-Tool Turn",
-          "intent": "Call the Kova channel plugin over Gateway RPC so OpenClaw handles one inbound channel event, receives a mock-provider message-tool call with generated media, delivers it through the source channel path, and records media, receipt, duplicate-send, and terminal invariants.",
+          "id": "channel-model-turn-source-delivery",
+          "title": "Run Source Delivery Model Turn",
+          "intent": "Call the Kova channel plugin over Gateway RPC so OpenClaw handles one normal inbound user event, follows its supported source-delivery contract, sends visible source output through the message tool when required, and records payload, receipt, duplicate-send, and terminal invariants.",
           "commands": [
-            "node {kovaRoot}/support/run-channel-model-turn-baseline.mjs --env {env} --artifact-dir {artifactDir} --case generated-media-message-tool --skip-shared-baseline true --continue-on-model-turn-failure true --timeout-ms 120000"
+            "node {kovaRoot}/support/run-channel-model-turn-baseline.mjs --env {env} --artifact-dir {artifactDir} --case source-visible-delivery.media.message-tool-only --skip-shared-baseline true --continue-on-model-turn-failure true --timeout-ms 120000"
           ],
           "evidence": [
-            "generated media message-tool model-turn capability rows",
-            "inbound channel event ids",
+            "source delivery model-turn capability rows",
+            "user action and inbound channel event ids",
             "provider request policy and observed count",
-            "message-tool generated media delivery",
+            "message-tool source delivery",
             "outbound channel send records",
             "channel receipts",
             "duplicate-send invariants",
