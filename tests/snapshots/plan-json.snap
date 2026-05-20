@@ -2795,7 +2795,8 @@
       "declarationSources": [
         "src/channels/message/types.ts",
         "src/channels/message/contracts.ts",
-        "src/channels/message/contracts.test.ts"
+        "src/channels/message/contracts.test.ts",
+        "src/channels/message/runtime-workflows"
       ],
       "capabilities": [
         {
@@ -3151,6 +3152,71 @@
             "live-smoke"
           ],
           "declarationSource": "src/channels/message/types.ts"
+        },
+        {
+          "id": "media-thread-final",
+          "group": "workflow",
+          "title": "Media Final In Thread",
+          "sourceSymbol": "channelRuntimeWorkflows.mediaThreadFinal",
+          "baselineExpectation": "a final media response can be rendered, sent, receipted, and committed while preserving a thread target through the shared channel runtime",
+          "proofModes": [
+            "baseline",
+            "deterministic-shim",
+            "live-smoke"
+          ],
+          "declarationSource": "src/channels/message/runtime-workflows"
+        },
+        {
+          "id": "media-reply-thread-final",
+          "group": "workflow",
+          "title": "Media Final Reply In Thread",
+          "sourceSymbol": "channelRuntimeWorkflows.mediaReplyThreadFinal",
+          "baselineExpectation": "a final media response can preserve reply target and thread target together without losing delivery receipt evidence",
+          "proofModes": [
+            "baseline",
+            "deterministic-shim",
+            "live-smoke"
+          ],
+          "declarationSource": "src/channels/message/runtime-workflows"
+        },
+        {
+          "id": "single-inbound-single-final",
+          "group": "workflow",
+          "title": "Single Inbound Single Final",
+          "sourceSymbol": "channelRuntimeWorkflows.singleInboundSingleFinal",
+          "baselineExpectation": "one inbound channel event should produce one intended final durable delivery and should not duplicate visible final sends",
+          "proofModes": [
+            "baseline",
+            "deterministic-shim",
+            "live-smoke"
+          ],
+          "declarationSource": "src/channels/message/runtime-workflows"
+        },
+        {
+          "id": "final-delivery-receipt-required",
+          "group": "workflow",
+          "title": "Final Delivery Receipt Required",
+          "sourceSymbol": "channelRuntimeWorkflows.finalDeliveryReceiptRequired",
+          "baselineExpectation": "a visible final durable delivery must produce receipt evidence that OpenClaw can attach to the completed channel turn",
+          "proofModes": [
+            "baseline",
+            "deterministic-shim",
+            "live-smoke"
+          ],
+          "declarationSource": "src/channels/message/runtime-workflows"
+        },
+        {
+          "id": "terminal-after-final",
+          "group": "workflow",
+          "title": "Terminal After Final",
+          "sourceSymbol": "channelRuntimeWorkflows.terminalAfterFinal",
+          "baselineExpectation": "the shared channel turn must return cleanly after final delivery so completed work does not remain active",
+          "proofModes": [
+            "baseline",
+            "deterministic-shim",
+            "live-smoke"
+          ],
+          "declarationSource": "src/channels/message/runtime-workflows"
         }
       ]
     }
@@ -4754,6 +4820,24 @@
             "OpenClaw gateway RPC",
             "receive ack state transitions",
             "ack capability proof rows"
+          ],
+          "healthScope": "post-ready",
+          "collectionIntent": "post-ready-health"
+        },
+        {
+          "id": "channel-capability-workflow",
+          "title": "Run Channel Workflow Capability Baseline",
+          "intent": "Call the baseline plugin over Gateway RPC so OpenClaw exercises composed channel workflows across media, thread, reply, receipt, duplicate-send, and terminal-return behavior instead of only isolated capability atoms.",
+          "commands": [
+            "node {kovaRoot}/support/run-channel-capability-baseline.mjs --env {env} --artifact-dir {artifactDir} --group workflow --continue-on-failed-capabilities true --timeout-ms 120000"
+          ],
+          "evidence": [
+            "OpenClaw gateway RPC",
+            "composed channel workflow proof rows",
+            "media plus thread delivery records",
+            "reply plus thread delivery records",
+            "single-final-send invariants",
+            "terminal dispatch returns"
           ],
           "healthScope": "post-ready",
           "collectionIntent": "post-ready-health"

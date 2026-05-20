@@ -292,6 +292,9 @@ function rowReason(capability, groupResult, probeError) {
 function groupCatalogCapabilities(catalogValue) {
   const groups = new Map();
   for (const capability of catalogValue.capabilities ?? []) {
+    if (!(capability.proofModes ?? []).includes("preflight")) {
+      continue;
+    }
     const values = groups.get(capability.group) ?? [];
     values.push(capability);
     groups.set(capability.group, values);

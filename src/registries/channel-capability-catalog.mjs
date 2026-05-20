@@ -11,6 +11,7 @@ export const channelCapabilityGroups = [
   "receipt",
   "live-preview",
   "live-finalizer",
+  "workflow",
   "native-platform",
   "failure-recovery"
 ];

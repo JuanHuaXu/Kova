@@ -133,6 +133,24 @@
       ],
       "healthScope": "post-ready",
       "collectionIntent": "post-ready-health"
+    },
+    {
+      "id": "channel-capability-workflow",
+      "title": "Run Channel Workflow Capability Baseline",
+      "intent": "Call the baseline plugin over Gateway RPC so OpenClaw exercises composed channel workflows across media, thread, reply, receipt, duplicate-send, and terminal-return behavior instead of only isolated capability atoms.",
+      "commands": [
+        "node {kovaRoot}/support/run-channel-capability-baseline.mjs --env {env} --artifact-dir {artifactDir} --group workflow --continue-on-failed-capabilities true --timeout-ms 120000"
+      ],
+      "evidence": [
+        "OpenClaw gateway RPC",
+        "composed channel workflow proof rows",
+        "media plus thread delivery records",
+        "reply plus thread delivery records",
+        "single-final-send invariants",
+        "terminal dispatch returns"
+      ],
+      "healthScope": "post-ready",
+      "collectionIntent": "post-ready-health"
     }
   ],
   "proves": [

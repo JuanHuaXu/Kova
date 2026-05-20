@@ -766,7 +766,38 @@ const baselineScenarios = [
   ackScenario("after-receive-record", "after_receive_record", "receive_record"),
   ackScenario("after-agent-dispatch", "after_agent_dispatch", "agent_dispatch"),
   ackScenario("after-durable-send", "after_durable_send", "durable_send"),
-  ackScenario("manual", "manual", null)
+  ackScenario("manual", "manual", null),
+  workflowTurnScenario("media-thread-final", {
+    payload: { text: "workflow media thread", mediaUrls: ["https://example.com/kova-workflow-thread.png"] },
+    expectedKind: "media",
+    threadId: "workflow-thread-1",
+    expectedMediaUrl: "https://example.com/kova-workflow-thread.png"
+  }),
+  workflowTurnScenario("media-reply-thread-final", {
+    payload: { text: "workflow media reply thread", mediaUrls: ["https://example.com/kova-workflow-reply-thread.png"] },
+    expectedKind: "media",
+    replyToId: "workflow-reply-1",
+    threadId: "workflow-thread-2",
+    expectedMediaUrl: "https://example.com/kova-workflow-reply-thread.png"
+  }),
+  workflowTurnScenario("single-inbound-single-final", {
+    payload: { text: "workflow single final" },
+    expectedKind: "text",
+    expectedText: "workflow single final",
+    expectedFinalSends: 1
+  }),
+  workflowTurnScenario("final-delivery-receipt-required", {
+    payload: { text: "workflow receipt", mediaUrls: ["https://example.com/kova-workflow-receipt.png"] },
+    expectedKind: "media",
+    expectedMediaUrl: "https://example.com/kova-workflow-receipt.png",
+    requireReceipt: true
+  }),
+  workflowTurnScenario("terminal-after-final", {
+    payload: { text: "workflow terminal" },
+    expectedKind: "text",
+    expectedText: "workflow terminal",
+    requireTerminalReturn: true
+  })
 ];
 
 function durableTurnScenario(capabilityId, replyPayload, options) {
@@ -828,6 +859,73 @@ function durableTurnScenario(capabilityId, replyPayload, options) {
         deliveryResults: newDeliveries.length,
         firstKind: first.kind,
         firstMessageId: first.messageId
+      };
+    }
+  };
+}
+
+function workflowTurnScenario(capabilityId, options) {
+  return {
+    group: "workflow",
+    capabilityId,
+    run: async () => {
+      const beforeOutbound = outboundRecords.length;
+      const beforeDelivery = deliveryRecords.length;
+      const turn = await runSyntheticTurn({
+        payload: options.payload,
+        replyToId: options.replyToId,
+        threadId: options.threadId,
+        requiredCapabilities: {
+          text: true,
+          media: options.expectedKind === "media",
+          replyTo: Boolean(options.replyToId),
+          thread: Boolean(options.threadId),
+          messageSendingHooks: true
+        }
+      });
+      assert(turn?.dispatched === true, "workflow turn did not dispatch through OpenClaw channel runtime");
+
+      const caseOutbound = outboundRecords.slice(beforeOutbound).filter((record) =>
+        ["text", "media", "payload"].includes(record.kind)
+      );
+      const caseDeliveries = deliveryRecords.slice(beforeDelivery);
+      const visibleDeliveries = caseDeliveries.filter((record) => record.fallback === false);
+      const firstOutbound = caseOutbound[0] ?? null;
+      const firstDelivery = visibleDeliveries[0] ?? null;
+      const expectedFinalSends = options.expectedFinalSends ?? 1;
+
+      assert(caseOutbound.length === expectedFinalSends, `${capabilityId} expected ${expectedFinalSends} final send(s), observed ${caseOutbound.length}`);
+      assert(firstOutbound?.kind === options.expectedKind, `${capabilityId} expected ${options.expectedKind} outbound kind, got ${firstOutbound?.kind ?? "none"}`);
+      if (options.expectedText) {
+        assert(firstOutbound?.text === options.expectedText, `${capabilityId} did not preserve final text`);
+      }
+      if (options.expectedMediaUrl) {
+        assert(firstOutbound?.mediaUrl === options.expectedMediaUrl, `${capabilityId} did not preserve final media URL`);
+      }
+      if (options.replyToId) {
+        assert(firstOutbound?.replyToId === options.replyToId, `${capabilityId} did not preserve reply target`);
+        assert(firstDelivery?.replyToId === options.replyToId, `${capabilityId} delivery record did not preserve reply target`);
+      }
+      if (options.threadId) {
+        assert(firstOutbound?.threadId === options.threadId, `${capabilityId} did not preserve thread target`);
+        assert(firstDelivery?.threadId === options.threadId, `${capabilityId} delivery record did not preserve thread target`);
+      }
+      if (options.requireReceipt) {
+        assert(Array.isArray(firstDelivery?.messageIds) && firstDelivery.messageIds.length > 0, `${capabilityId} did not record final delivery receipt ids`);
+      }
+      if (options.requireTerminalReturn) {
+        assert(turn?.dispatched === true, `${capabilityId} did not return from channel dispatch after final delivery`);
+      }
+
+      return {
+        turnDispatched: true,
+        finalSendCount: caseOutbound.length,
+        visibleDeliveryCount: visibleDeliveries.length,
+        firstKind: firstOutbound?.kind ?? null,
+        firstMessageId: firstOutbound?.messageId ?? null,
+        receiptIds: firstDelivery?.messageIds ?? [],
+        threadId: firstOutbound?.threadId ?? null,
+        replyToId: firstOutbound?.replyToId ?? null
       };
     }
   };
