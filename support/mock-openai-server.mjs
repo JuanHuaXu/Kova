@@ -110,6 +110,44 @@ function responseEvents(text) {
   ];
 }
 
+function responseToolCallEvents(toolCall) {
+  const usage = mockUsage();
+  const args = JSON.stringify(toolCall.arguments ?? {});
+  return [
+    {
+      type: "response.output_item.added",
+      item: {
+        type: "function_call",
+        id: toolCall.id,
+        call_id: toolCall.callId,
+        name: toolCall.name,
+        arguments: ""
+      }
+    },
+    {
+      type: "response.function_call_arguments.delta",
+      delta: args
+    },
+    {
+      type: "response.output_item.done",
+      item: {
+        type: "function_call",
+        id: toolCall.id,
+        call_id: toolCall.callId,
+        name: toolCall.name,
+        arguments: args
+      }
+    },
+    {
+      type: "response.completed",
+      response: {
+        status: "completed",
+        usage
+      }
+    }
+  ];
+}
+
 function mockUsage() {
   return {
     input_tokens: 9,
@@ -272,6 +310,33 @@ const server = http.createServer(async (req, res) => {
       return;
     }
     const responseText = resolveResponseText(bodyText);
+    const responseToolCall = requestHasFunctionCallOutput(bodyText)
+      ? null
+      : resolveResponseToolCall(bodyText);
+    if (responseToolCall) {
+      if (body.stream === false) {
+        usage = mockUsage();
+        writeJson(res, 200, {
+          id: "resp_kova",
+          object: "response",
+          status: "completed",
+          output: [
+            {
+              type: "function_call",
+              id: responseToolCall.id,
+              call_id: responseToolCall.callId,
+              name: responseToolCall.name,
+              arguments: JSON.stringify(responseToolCall.arguments ?? {})
+            }
+          ],
+          usage
+        });
+        return;
+      }
+      usage = mockUsage();
+      writeSse(res, responseToolCallEvents(responseToolCall));
+      return;
+    }
     if (body.stream === false) {
       usage = mockUsage();
       writeJson(res, 200, {
@@ -343,11 +408,49 @@ function resolveResponseText(requestBodyText) {
   }
 }
 
+function resolveResponseToolCall(requestBodyText) {
+  const matches = [...String(requestBodyText ?? "").matchAll(/KOVA_MOCK_TOOL_CALL_B64:([A-Za-z0-9+/_=-]+)/g)];
+  const latest = matches.at(-1);
+  if (!latest) {
+    return null;
+  }
+  try {
+    const decoded = JSON.parse(
+      Buffer.from(latest[1].replaceAll("-", "+").replaceAll("_", "/"), "base64").toString("utf8")
+    );
+    const name = typeof decoded.name === "string" && decoded.name.trim()
+      ? decoded.name.trim()
+      : null;
+    if (!name) {
+      return null;
+    }
+    return {
+      id: typeof decoded.id === "string" && decoded.id.trim() ? decoded.id.trim() : "fc_kova_1",
+      callId: typeof decoded.callId === "string" && decoded.callId.trim()
+        ? decoded.callId.trim()
+        : "call_kova_1",
+      name,
+      arguments: decoded.arguments && typeof decoded.arguments === "object" && !Array.isArray(decoded.arguments)
+        ? decoded.arguments
+        : {}
+    };
+  } catch {
+    return null;
+  }
+}
+
+function requestHasFunctionCallOutput(requestBodyText) {
+  const text = String(requestBodyText ?? "");
+  return text.includes('"type":"function_call_output"') ||
+    text.includes('"type": "function_call_output"');
+}
+
 function extractKovaRequestMarkers(requestBodyText) {
   const text = String(requestBodyText ?? "");
   return {
     modelTurnCases: uniqueMatches(text, /KOVA_MODEL_TURN_CASE:([A-Za-z0-9._-]+)/g),
-    inboundEventIds: uniqueMatches(text, /KOVA_INBOUND_EVENT_ID:([A-Za-z0-9._:-]+)/g)
+    inboundEventIds: uniqueMatches(text, /KOVA_INBOUND_EVENT_ID:([A-Za-z0-9._:-]+)/g),
+    toolCallFixtures: uniqueMatches(text, /KOVA_MOCK_TOOL_CALL_B64:([A-Za-z0-9+/_=-]+)/g).length
   };
 }
 
