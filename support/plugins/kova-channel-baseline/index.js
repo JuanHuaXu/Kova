@@ -336,6 +336,11 @@ async function runModelTurn(params = {}) {
       status: testCase.status,
       proofMode: "model-turn",
       caseId: testCase.id,
+      workflow: testCase.workflow,
+      inventoryWorkflow: testCase.inventoryWorkflow,
+      matrix: testCase.matrix,
+      userAction: testCase.userAction,
+      ownerArea: testCase.ownerArea,
       reason: testCase.reason
     })))
   ];
@@ -505,7 +510,11 @@ async function runModelTurnCase(testCase) {
     reason: ok ? null : (error?.message ?? invariants.find((item) => item.status !== "passed")?.reason ?? "model turn case failed"),
     capabilities: testCase.capabilities,
     workflow: testCase.workflow ?? null,
+    inventoryWorkflow: testCase.inventoryWorkflow ?? null,
+    matrix: compactMatrix(testCase.matrix),
     userAction: testCase.userAction ?? null,
+    openclawSurface: testCase.openclawSurface ?? null,
+    ownerArea: testCase.ownerArea ?? null,
     inboundEvent: {
       id: inboundEventId,
       authorId: "kova-baseline-user",
@@ -539,6 +548,18 @@ async function runModelTurnCase(testCase) {
     outboundRecords: caseOutboundRecords,
     deliveryRecords: caseDeliveryRecords,
     modelTurnRecords: caseModelTurnRecords
+  };
+}
+
+function compactMatrix(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return null;
+  }
+  return {
+    content: typeof value.content === "string" ? value.content : null,
+    route: typeof value.route === "string" ? value.route : null,
+    delivery: typeof value.delivery === "string" ? value.delivery : null,
+    lifecycle: typeof value.lifecycle === "string" ? value.lifecycle : null
   };
 }
 

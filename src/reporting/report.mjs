@@ -302,9 +302,18 @@ function pushAgentTurnDetails(lines, record) {
           .filter(Boolean)
           .join(", ") || "unknown";
         const invariant = failedCase.failedInvariants?.[0]?.id ?? "unknown";
-        lines.push(`      - ${failedCase.id ?? "unknown"}${failedCase.workflow ? ` (${failedCase.workflow})` : ""}: ${failedCase.reason ?? "failed"}; invariant ${invariant}; atoms ${atomCoverage}`);
+        const matrix = formatChannelWorkflowMatrix(failedCase.matrix);
+        const workflowLabel = [
+          failedCase.workflow,
+          failedCase.inventoryWorkflow ? `inventory ${failedCase.inventoryWorkflow}` : null,
+          matrix ? `matrix ${matrix}` : null
+        ].filter(Boolean).join("; ");
+        lines.push(`      - ${failedCase.id ?? "unknown"}${workflowLabel ? ` (${workflowLabel})` : ""}: ${failedCase.reason ?? "failed"}; invariant ${invariant}; atoms ${atomCoverage}`);
         if (failedCase.userAction) {
           lines.push(`        - user action: ${failedCase.userAction}`);
+        }
+        if (failedCase.ownerArea) {
+          lines.push(`        - owner area: ${failedCase.ownerArea}`);
         }
       }
     }
@@ -316,6 +325,18 @@ function pushAgentTurnDetails(lines, record) {
       lines.push(`    - breakdown: ${breakdown}`);
     }
   }
+}
+
+function formatChannelWorkflowMatrix(matrix) {
+  if (!matrix || typeof matrix !== "object" || Array.isArray(matrix)) {
+    return null;
+  }
+  return [
+    matrix.content,
+    matrix.route,
+    matrix.delivery,
+    matrix.lifecycle
+  ].filter((item) => typeof item === "string" && item.length > 0).join("/");
 }
 
 function formatArtifactSection(artifacts = []) {

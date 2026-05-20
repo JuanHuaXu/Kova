@@ -1182,8 +1182,18 @@ function checkChannelModelTurnCases(violations, agentTurns) {
       const workflow = typeof failedCase.workflow === "string" && failedCase.workflow.length > 0
         ? failedCase.workflow
         : null;
+      const inventoryWorkflow = typeof failedCase.inventoryWorkflow === "string" && failedCase.inventoryWorkflow.length > 0
+        ? failedCase.inventoryWorkflow
+        : null;
+      const matrix = compactChannelWorkflowMatrix(failedCase.matrix);
+      const matrixDetail = formatChannelWorkflowMatrix(matrix);
+      const ownerArea = typeof failedCase.ownerArea === "string" && failedCase.ownerArea.length > 0
+        ? failedCase.ownerArea
+        : "OpenClaw";
       const detail = [
         workflow ? `workflow ${workflow}` : null,
+        inventoryWorkflow ? `inventory ${inventoryWorkflow}` : null,
+        matrixDetail ? `matrix ${matrixDetail}` : null,
         failedInvariant ? `invariant ${failedInvariant}` : null,
         atomCoverage ? `atoms ${atomCoverage}` : null
       ].filter(Boolean).join("; ");
@@ -1192,10 +1202,12 @@ function checkChannelModelTurnCases(violations, agentTurns) {
         metric: `channelModelTurn.case.${caseId}`,
         phaseId: turn.phaseId,
         workflow,
+        inventoryWorkflow,
+        matrix,
         failedInvariant,
         atomCoverage,
         userAction: typeof failedCase.userAction === "string" ? failedCase.userAction : null,
-        ownerArea: "OpenClaw",
+        ownerArea,
         expected: "passed",
         actual: "failed",
         message: `channel model turn case ${caseId} failed${failedCase?.reason ? `: ${failedCase.reason}` : ""}${detail ? ` (${detail})` : ""}`
@@ -1300,7 +1312,10 @@ function compactFailedModelTurnCase(value) {
   return {
     id: typeof value.id === "string" ? value.id : null,
     workflow: typeof value.workflow === "string" ? value.workflow : null,
+    inventoryWorkflow: typeof value.inventoryWorkflow === "string" ? value.inventoryWorkflow : null,
+    matrix: compactChannelWorkflowMatrix(value.matrix),
     userAction: typeof value.userAction === "string" ? value.userAction : null,
+    ownerArea: typeof value.ownerArea === "string" ? value.ownerArea : null,
     capabilities: Array.isArray(value.capabilities)
       ? value.capabilities.map((capability) => ({
           group: typeof capability?.group === "string" ? capability.group : null,
@@ -1315,6 +1330,31 @@ function compactFailedModelTurnCase(value) {
         }))
       : []
   };
+}
+
+function compactChannelWorkflowMatrix(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return null;
+  }
+  const matrix = {
+    content: typeof value.content === "string" ? value.content : null,
+    route: typeof value.route === "string" ? value.route : null,
+    delivery: typeof value.delivery === "string" ? value.delivery : null,
+    lifecycle: typeof value.lifecycle === "string" ? value.lifecycle : null
+  };
+  return Object.values(matrix).some(Boolean) ? matrix : null;
+}
+
+function formatChannelWorkflowMatrix(matrix) {
+  if (!matrix) {
+    return null;
+  }
+  return [
+    matrix.content,
+    matrix.route,
+    matrix.delivery,
+    matrix.lifecycle
+  ].filter(Boolean).join("/");
 }
 
 function resultForActiveTurnWindow(result, gatewaySession) {

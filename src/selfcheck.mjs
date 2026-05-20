@@ -1188,11 +1188,18 @@ function statusFoundationCheck() {
         kind: "channel",
         metric: "channelModelTurn.case.source-visible-delivery.media.message-tool-only",
         workflow: "source-visible-delivery",
+        inventoryWorkflow: "source-visible-delivery",
+        matrix: {
+          content: "media",
+          route: "direct",
+          delivery: "message-tool-only-source-delivery",
+          lifecycle: "success"
+        },
         failedInvariant: "source-visible-delivery.media.message-tool-only:no-success-plus-extra-visible",
         atomCoverage: "workflow/source-visible-delivery, durable-final/media",
         userAction: "user asks OpenClaw to produce a media result and receives that result in the same chat",
         ownerArea: "OpenClaw",
-        message: "channel model turn case source-visible-delivery.media.message-tool-only failed: observed duplicate final delivery (workflow source-visible-delivery; invariant source-visible-delivery.media.message-tool-only:no-success-plus-extra-visible; atoms workflow/source-visible-delivery, durable-final/media)"
+        message: "channel model turn case source-visible-delivery.media.message-tool-only failed: observed duplicate final delivery (workflow source-visible-delivery; inventory source-visible-delivery; matrix media/direct/message-tool-only-source-delivery/success; invariant source-visible-delivery.media.message-tool-only:no-success-plus-extra-visible; atoms workflow/source-visible-delivery, durable-final/media)"
       }]
     };
     const behaviorFailSummary = buildReportSummary({
@@ -1204,18 +1211,19 @@ function statusFoundationCheck() {
     });
     assertEqual(
       behaviorFailSummary.decision.reason,
-      "channel model turn case source-visible-delivery.media.message-tool-only failed: observed duplicate final delivery (workflow source-visible-delivery; invariant source-visible-delivery.media.message-tool-only:no-success-plus-extra-visible; atoms workflow/source-visible-delivery, durable-final/media)",
-      "behavior failure is report headline before resource finding"
+      "channel model turn case source-visible-delivery.media.message-tool-only failed: observed duplicate final delivery (workflow source-visible-delivery; inventory source-visible-delivery; matrix media/direct/message-tool-only-source-delivery/success; invariant source-visible-delivery.media.message-tool-only:no-success-plus-extra-visible; atoms workflow/source-visible-delivery, durable-final/media)",
+      "behavior failure is report headline before resource finding with workflow matrix context"
     );
     assertEqual(
       behaviorFailSummary.findings?.some((finding) =>
         finding.metric === "channelModelTurn.case.source-visible-delivery.media.message-tool-only" &&
         finding.ownerArea === "OpenClaw" &&
         finding.summary.includes("workflow source-visible-delivery") &&
+        finding.summary.includes("matrix media/direct/message-tool-only-source-delivery/success") &&
         finding.summary.includes("durable-final/media")
       ),
       true,
-      "channel model turn finding includes workflow and atom context"
+      "channel model turn finding includes workflow matrix and atom context"
     );
 
     const gate = evaluateGate(report, {

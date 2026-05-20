@@ -164,8 +164,12 @@ function buildResult({
       workflowCaseIds: selectedWorkflowCases.map((testCase) => testCase.id),
       workflowCaseMessages: selectedWorkflowCases.map((testCase) => ({
         id: testCase.id,
+        workflow: testCase.workflow,
+        inventoryWorkflow: testCase.inventoryWorkflow,
+        matrix: testCase.matrix,
         prompt: testCase.prompt,
-        userAction: testCase.userAction
+        userAction: testCase.userAction,
+        ownerArea: testCase.ownerArea
       })),
       runtimeContext: compactRuntimeContext(runtimeContext),
       timeoutMs: commandTimeoutMs,
@@ -246,6 +250,8 @@ function normalizeWorkflowCase(entry) {
   return {
     id,
     workflow: requiredString(entry, "workflow"),
+    inventoryWorkflow: requiredString(entry, "inventoryWorkflow"),
+    matrix: normalizeMatrix(id, entry.matrix),
     userAction: requiredString(entry, "userAction"),
     openclawSurface: typeof entry.openclawSurface === "string" ? entry.openclawSurface : null,
     ownerArea: typeof entry.ownerArea === "string" ? entry.ownerArea : null,
@@ -433,7 +439,10 @@ function summarizeFailedModelTurnCases(cases) {
     .map((testCase) => ({
       id: testCase.id ?? null,
       workflow: testCase.workflow ?? null,
+      inventoryWorkflow: testCase.inventoryWorkflow ?? null,
+      matrix: compactMatrix(testCase.matrix),
       userAction: testCase.userAction ?? null,
+      ownerArea: testCase.ownerArea ?? null,
       capabilities: Array.isArray(testCase.capabilities)
         ? testCase.capabilities.map((capability) => ({
             group: capability.group ?? null,
@@ -450,6 +459,30 @@ function summarizeFailedModelTurnCases(cases) {
             }))
         : []
     }));
+}
+
+function normalizeMatrix(caseId, value) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    throw new Error(`channel workflow case ${caseId} must declare matrix dimensions`);
+  }
+  return {
+    content: requiredString(value, "content"),
+    route: requiredString(value, "route"),
+    delivery: requiredString(value, "delivery"),
+    lifecycle: requiredString(value, "lifecycle")
+  };
+}
+
+function compactMatrix(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return null;
+  }
+  return {
+    content: typeof value.content === "string" ? value.content : null,
+    route: typeof value.route === "string" ? value.route : null,
+    delivery: typeof value.delivery === "string" ? value.delivery : null,
+    lifecycle: typeof value.lifecycle === "string" ? value.lifecycle : null
+  };
 }
 
 async function countJsonl(path) {
