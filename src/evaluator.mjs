@@ -1032,7 +1032,7 @@ function collectAgentTurns(record, providerEvidence, scenario, timelineSummary, 
       const expectedFailure = phase.expectedAgentFailure === true || scenario.agent?.expectedFailure === true;
       const gatewaySession = extractGatewaySessionTurn(result);
       const channelModelTurn = gatewaySession ? null : extractChannelModelTurn(result);
-      const expectedText = channelModelTurn?.expectedText ?? scenarioExpectedText;
+      const expectedText = channelModelTurn ? channelModelTurn.expectedText : scenarioExpectedText;
       const timingResult = gatewaySession
         ? resultForActiveTurnWindow(result, gatewaySession)
         : (channelModelTurn ? resultForChannelModelTurnWindow(result, channelModelTurn) : result);
@@ -1621,7 +1621,7 @@ function checkAgentTurnCorrectness(violations, turns, expectedText) {
         message: `${turn.label} agent turn did not produce the expected assistant response`
       });
     }
-    const turnExpectedText = turn.expectedText ?? expectedText;
+    const turnExpectedText = turn.channelModelTurn ? turn.expectedText : (turn.expectedText ?? expectedText);
     if (typeof turnExpectedText === "string" && turnExpectedText.length > 0 && turn.expectedTextPresent !== true) {
       violations.push({
         kind: "agent",

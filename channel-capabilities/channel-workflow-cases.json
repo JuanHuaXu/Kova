@@ -117,6 +117,71 @@
       ]
     },
     {
+      "id": "source-visible-delivery.text.automatic-final",
+      "workflow": "source-visible-delivery",
+      "userAction": "user asks OpenClaw a normal question and receives the final answer in the same chat",
+      "openclawSurface": "channel inbound direct message with automatic source delivery",
+      "ownerArea": "OpenClaw source delivery runtime",
+      "prompt": "Summarize the launch checklist in one sentence.",
+      "providerScript": {
+        "finalText": "KOVA_SOURCE_DELIVERY_TEXT_AUTO_OK"
+      },
+      "expects": {
+        "visibleDeliveries": 1,
+        "kind": "text",
+        "text": "KOVA_SOURCE_DELIVERY_TEXT_AUTO_OK",
+        "terminal": true,
+        "noDuplicateFinal": true
+      },
+      "providerRequests": {
+        "mode": "exact",
+        "expected": 1
+      },
+      "atoms": [
+        { "group": "workflow", "id": "source-visible-delivery" },
+        { "group": "durable-final", "id": "text" }
+      ]
+    },
+    {
+      "id": "source-visible-delivery.text.message-tool-only",
+      "workflow": "source-visible-delivery",
+      "userAction": "user asks OpenClaw for an update that must be delivered through the source chat message path",
+      "openclawSurface": "channel inbound direct message with source conversation delivery",
+      "ownerArea": "OpenClaw source delivery runtime",
+      "prompt": "Post a short product launch update for this chat.",
+      "providerScript": {
+        "toolCalls": [
+          {
+            "name": "message",
+            "arguments": {
+              "action": "send",
+              "message": "KOVA_SOURCE_DELIVERY_TEXT_TOOL_OK"
+            }
+          }
+        ],
+        "finalText": "KOVA_SOURCE_DELIVERY_PRIVATE_DONE"
+      },
+      "sourceReplyDeliveryMode": "message_tool_only",
+      "expects": {
+        "visibleDeliveries": 1,
+        "kind": "text",
+        "text": "KOVA_SOURCE_DELIVERY_TEXT_TOOL_OK",
+        "hooks": true,
+        "terminal": true,
+        "noDuplicateFinal": true
+      },
+      "providerRequests": {
+        "mode": "exact",
+        "expected": 2
+      },
+      "atoms": [
+        { "group": "workflow", "id": "source-visible-delivery" },
+        { "group": "workflow", "id": "message-tool-only-source-delivery" },
+        { "group": "durable-final", "id": "text" },
+        { "group": "durable-final", "id": "message-sending-hooks" }
+      ]
+    },
+    {
       "id": "source-visible-delivery.media.message-tool-only",
       "workflow": "source-visible-delivery",
       "userAction": "user asks OpenClaw to produce a media result and receives that result in the same chat",

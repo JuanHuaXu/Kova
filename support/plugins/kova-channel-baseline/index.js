@@ -293,7 +293,7 @@ async function runModelTurn(params = {}) {
   const selectedCases = selectModelTurnCases(params.cases);
   const expectedText = typeof params.expectedText === "string" && params.expectedText.length > 0
     ? params.expectedText
-    : (selectedCases.length === 1 ? selectedCases[0].expectedText : "KOVA_AGENT_OK");
+    : (selectedCases.length === 1 ? selectedCases[0].expectedText : null);
   const includeSharedBaseline = params.includeSharedBaseline !== false;
 
   const capabilityBaseline = includeSharedBaseline
@@ -317,7 +317,9 @@ async function runModelTurn(params = {}) {
   const finalTexts = modelTurnCases
     .map((testCase) => testCase.finalText)
     .filter((text) => typeof text === "string" && text.length > 0);
-  const matchedText = finalTexts.find((text) => textEquals(text, expectedText)) ?? null;
+  const matchedText = typeof expectedText === "string"
+    ? (finalTexts.find((text) => textEquals(text, expectedText)) ?? null)
+    : null;
   const failedCases = modelTurnCases.filter((testCase) => testCase.status !== "passed");
   const capabilityRows = [
     ...(capabilityBaseline.proofs ?? []).map((proof) => ({
@@ -343,7 +345,7 @@ async function runModelTurn(params = {}) {
       : []),
     invariant("model-turn-case-count", modelTurnCases.length === selectedCases.length, "all requested channel model-turn cases ran"),
     invariant("model-turn-cases-passed", failedCases.length === 0, "all channel model-turn cases passed"),
-    invariant("expected-final-text", Boolean(matchedText), `at least one model-turn final channel send equals ${expectedText}`),
+    invariant("expected-final-text", expectedText === null || Boolean(matchedText), expectedText === null ? "model-turn final channel text is checked per case" : `at least one model-turn final channel send equals ${expectedText}`),
     invariant("terminal-return", modelTurnCases.every((testCase) => testCase.dispatched === true), "all channel model turns returned from OpenClaw dispatch")
   ];
   const ok = invariants.every((item) => item.status === "passed");
