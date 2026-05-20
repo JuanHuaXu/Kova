@@ -10042,7 +10042,7 @@
       "title": "Exhaustive Matrix",
       "objective": "Maximum local OpenClaw coverage across install, upgrade, plugins, providers, config corruption, filesystem pressure, service recovery, and performance scenarios.",
       "purpose": "regression",
-      "entryCount": 53,
+      "entryCount": 58,
       "targetKinds": null,
       "diagnostics": null,
       "calibration": null,
@@ -10094,7 +10094,7 @@
       "title": "Release Matrix",
       "objective": "Broad OpenClaw release confidence across install, upgrade, bundled plugins, model/provider, UI, failure, soak, and platform smoke scenarios.",
       "purpose": "release",
-      "entryCount": 44,
+      "entryCount": 46,
       "targetKinds": null,
       "diagnostics": null,
       "calibration": {
@@ -10103,7 +10103,7 @@
       },
       "gate": {
         "id": "openclaw-release",
-        "blockingCount": 28,
+        "blockingCount": 30,
         "warningCount": 16
       }
     },
@@ -10869,13 +10869,18 @@
       },
       {
         "id": "exhaustive",
-        "entryCount": 53,
+        "entryCount": 58,
         "surfaces": [
           "agent-cli-local-turn",
           "agent-gateway-rpc-turn",
           "browser-automation",
           "bundled-plugin-startup",
           "bundled-runtime-deps",
+          "channel-capability-baseline",
+          "channel-capability-preflight",
+          "channel-discord-capability-conformance",
+          "channel-model-turn-baseline",
+          "channel-telegram-capability-conformance",
           "cross-platform-smoke",
           "dashboard",
           "failure-containment",
@@ -10942,6 +10947,11 @@
           "browser-automation-smoke",
           "bundled-plugin-startup",
           "bundled-runtime-deps",
+          "channel-capability-baseline",
+          "channel-capability-preflight",
+          "channel-discord-capability-conformance",
+          "channel-model-turn-baseline",
+          "channel-telegram-capability-conformance",
           "cross-platform-smoke",
           "dashboard-readiness",
           "failure-injection",
@@ -10972,6 +10982,11 @@
           "browser-automation:baseline",
           "bundled-plugin-startup:baseline",
           "bundled-runtime-deps:baseline",
+          "channel-capability-baseline:baseline",
+          "channel-capability-preflight:preflight",
+          "channel-discord-capability-conformance:discord-conformance",
+          "channel-model-turn-baseline:baseline",
+          "channel-telegram-capability-conformance:telegram-conformance",
           "cross-platform-smoke:baseline",
           "dashboard:baseline",
           "failure-containment:baseline",
@@ -11005,6 +11020,11 @@
           "bundled-plugin-startup:fresh",
           "bundled-runtime-deps:missing-plugin-index",
           "bundled-runtime-deps:stale-runtime-deps",
+          "channel-capability-baseline:fresh",
+          "channel-capability-preflight:fresh",
+          "channel-discord-capability-conformance:fresh",
+          "channel-model-turn-baseline:mock-openai-provider",
+          "channel-telegram-capability-conformance:fresh",
           "cross-platform-smoke:release-configured",
           "cross-platform-smoke:slow-filesystem",
           "dashboard:fresh",
@@ -11210,6 +11230,21 @@
             "missing-plugin-index",
             "stale-runtime-deps"
           ],
+          "channel-capability-baseline": [
+            "fresh"
+          ],
+          "channel-capability-preflight": [
+            "fresh"
+          ],
+          "channel-discord-capability-conformance": [
+            "fresh"
+          ],
+          "channel-model-turn-baseline": [
+            "mock-openai-provider"
+          ],
+          "channel-telegram-capability-conformance": [
+            "fresh"
+          ],
           "cross-platform-smoke": [
             "release-configured",
             "slow-filesystem"
@@ -11302,6 +11337,7 @@
           "agent-state": [
             "agent-cli-local-turn",
             "agent-gateway-rpc-turn",
+            "channel-model-turn-baseline",
             "gateway-session-send-turn",
             "openai-compatible-turn",
             "tui-message-turn"
@@ -11309,6 +11345,10 @@
           "baseline": [
             "browser-automation",
             "bundled-plugin-startup",
+            "channel-capability-baseline",
+            "channel-capability-preflight",
+            "channel-discord-capability-conformance",
+            "channel-telegram-capability-conformance",
             "dashboard",
             "fresh-install",
             "mcp-runtime",
@@ -11357,6 +11397,10 @@
           "fresh-user": [
             "browser-automation",
             "bundled-plugin-startup",
+            "channel-capability-baseline",
+            "channel-capability-preflight",
+            "channel-discord-capability-conformance",
+            "channel-telegram-capability-conformance",
             "dashboard",
             "fresh-install",
             "mcp-runtime",
@@ -11388,6 +11432,7 @@
           "mock-provider": [
             "agent-cli-local-turn",
             "agent-gateway-rpc-turn",
+            "channel-model-turn-baseline",
             "gateway-session-send-turn",
             "openai-compatible-turn",
             "tui-message-turn"
@@ -11423,6 +11468,7 @@
           "provider-pressure": [
             "agent-cli-local-turn",
             "agent-gateway-rpc-turn",
+            "channel-model-turn-baseline",
             "gateway-performance",
             "gateway-session-send-turn",
             "openai-compatible-turn",
@@ -11704,7 +11750,7 @@
       },
       {
         "id": "release",
-        "entryCount": 44,
+        "entryCount": 46,
         "surfaces": [
           "agent-cli-local-turn",
           "agent-gateway-rpc-turn",
@@ -11713,7 +11759,9 @@
           "bundled-runtime-deps",
           "channel-capability-baseline",
           "channel-capability-preflight",
+          "channel-discord-capability-conformance",
           "channel-model-turn-baseline",
+          "channel-telegram-capability-conformance",
           "cross-platform-smoke",
           "dashboard",
           "failure-containment",
@@ -11774,7 +11822,9 @@
           "bundled-runtime-deps",
           "channel-capability-baseline",
           "channel-capability-preflight",
+          "channel-discord-capability-conformance",
           "channel-model-turn-baseline",
+          "channel-telegram-capability-conformance",
           "cross-platform-smoke",
           "dashboard-readiness",
           "failure-injection",
@@ -11809,7 +11859,9 @@
           "bundled-runtime-deps:baseline",
           "channel-capability-baseline:baseline",
           "channel-capability-preflight:preflight",
+          "channel-discord-capability-conformance:discord-conformance",
           "channel-model-turn-baseline:baseline",
+          "channel-telegram-capability-conformance:telegram-conformance",
           "cross-platform-smoke:baseline",
           "dashboard:baseline",
           "failure-containment:baseline",
@@ -11844,7 +11896,9 @@
           "bundled-runtime-deps:missing-plugin-index",
           "channel-capability-baseline:fresh",
           "channel-capability-preflight:fresh",
+          "channel-discord-capability-conformance:fresh",
           "channel-model-turn-baseline:mock-openai-provider",
+          "channel-telegram-capability-conformance:fresh",
           "cross-platform-smoke:slow-filesystem",
           "dashboard:fresh",
           "failure-containment:broken-plugin-deps",
@@ -11883,7 +11937,9 @@
             "bundled-runtime-deps",
             "channel-capability-baseline",
             "channel-capability-preflight",
+            "channel-discord-capability-conformance",
             "channel-model-turn-baseline",
+            "channel-telegram-capability-conformance",
             "cross-platform-smoke",
             "dashboard",
             "failure-containment",
@@ -11926,7 +11982,9 @@
             "bundled-runtime-deps",
             "channel-capability-baseline",
             "channel-capability-preflight",
+            "channel-discord-capability-conformance",
             "channel-model-turn-baseline",
+            "channel-telegram-capability-conformance",
             "cross-platform-smoke",
             "dashboard-readiness",
             "failure-injection",
@@ -12007,7 +12065,9 @@
             "bundled-runtime-deps:baseline",
             "channel-capability-baseline:baseline",
             "channel-capability-preflight:preflight",
+            "channel-discord-capability-conformance:discord-conformance",
             "channel-model-turn-baseline:baseline",
+            "channel-telegram-capability-conformance:telegram-conformance",
             "cross-platform-smoke:baseline",
             "dashboard:baseline",
             "failure-containment:baseline",
@@ -12042,7 +12102,9 @@
             "bundled-runtime-deps:missing-plugin-index",
             "channel-capability-baseline:fresh",
             "channel-capability-preflight:fresh",
+            "channel-discord-capability-conformance:fresh",
             "channel-model-turn-baseline:mock-openai-provider",
+            "channel-telegram-capability-conformance:fresh",
             "cross-platform-smoke:slow-filesystem",
             "dashboard:fresh",
             "failure-containment:broken-plugin-deps",
@@ -12207,8 +12269,14 @@
           "channel-capability-preflight": [
             "fresh"
           ],
+          "channel-discord-capability-conformance": [
+            "fresh"
+          ],
           "channel-model-turn-baseline": [
             "mock-openai-provider"
+          ],
+          "channel-telegram-capability-conformance": [
+            "fresh"
           ],
           "cross-platform-smoke": [
             "slow-filesystem"
@@ -12301,6 +12369,8 @@
             "bundled-plugin-startup",
             "channel-capability-baseline",
             "channel-capability-preflight",
+            "channel-discord-capability-conformance",
+            "channel-telegram-capability-conformance",
             "dashboard",
             "fresh-install",
             "mcp-runtime",
@@ -12341,6 +12411,8 @@
             "bundled-plugin-startup",
             "channel-capability-baseline",
             "channel-capability-preflight",
+            "channel-discord-capability-conformance",
+            "channel-telegram-capability-conformance",
             "dashboard",
             "fresh-install",
             "mcp-runtime",

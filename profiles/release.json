@@ -235,6 +235,8 @@
           "channel-capability-preflight:preflight",
           "channel-capability-baseline:baseline",
           "channel-model-turn-baseline:baseline",
+          "channel-telegram-capability-conformance:telegram-conformance",
+          "channel-discord-capability-conformance:discord-conformance",
           "release-runtime-startup:baseline",
           "fresh-install:baseline",
           "upgrade-existing-user:baseline",
@@ -282,6 +284,14 @@
         "scenario": "channel-model-turn-baseline",
         "state": "mock-openai-provider",
         "timeoutMs": 300000
+      },
+      {
+        "scenario": "channel-telegram-capability-conformance",
+        "state": "fresh"
+      },
+      {
+        "scenario": "channel-discord-capability-conformance",
+        "state": "fresh"
       },
       {
         "scenario": "release-runtime-startup",
@@ -467,6 +477,14 @@
       "scenario": "channel-model-turn-baseline",
       "state": "mock-openai-provider",
       "timeoutMs": 300000
+    },
+    {
+      "scenario": "channel-telegram-capability-conformance",
+      "state": "fresh"
+    },
+    {
+      "scenario": "channel-discord-capability-conformance",
+      "state": "fresh"
     },
     {
       "scenario": "release-runtime-startup",

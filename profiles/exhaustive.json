@@ -36,6 +36,28 @@
       "state": "fresh"
     },
     {
+      "scenario": "channel-capability-preflight",
+      "state": "fresh"
+    },
+    {
+      "scenario": "channel-capability-baseline",
+      "state": "fresh",
+      "timeoutMs": 300000
+    },
+    {
+      "scenario": "channel-model-turn-baseline",
+      "state": "mock-openai-provider",
+      "timeoutMs": 300000
+    },
+    {
+      "scenario": "channel-telegram-capability-conformance",
+      "state": "fresh"
+    },
+    {
+      "scenario": "channel-discord-capability-conformance",
+      "state": "fresh"
+    },
+    {
       "scenario": "upgrade-existing-user",
       "state": "old-release-user",
       "timeoutMs": 180000
