@@ -1,0 +1,33 @@
+{
+  "id": "channel-telegram-capability-conformance",
+  "title": "Telegram Channel Capability Conformance",
+  "ownerArea": "OpenClaw Telegram adapter",
+  "description": "Validate Telegram's packaged message adapter against shared OpenClaw channel capability atoms and workflow cases using a deterministic platform shim.",
+  "processRoles": [
+    "command-tree"
+  ],
+  "thresholds": {},
+  "diagnostics": {
+    "timelineRequiredForSourceBuild": false,
+    "expectedSpans": []
+  },
+  "purposes": [
+    "regression",
+    "release"
+  ],
+  "requirements": [
+    {
+      "id": "telegram-conformance",
+      "states": [
+        "fresh"
+      ],
+      "targetKinds": [
+        "npm",
+        "release",
+        "runtime",
+        "local-build"
+      ],
+      "metrics": []
+    }
+  ]
+}

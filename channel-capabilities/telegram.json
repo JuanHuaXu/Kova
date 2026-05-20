@@ -18,6 +18,11 @@
     "source-visible-delivery.media.message-tool-only",
     "background-artifact-completion.video.message-tool-only"
   ],
+  "deterministicShim": {
+    "conversationId": "12345",
+    "threadId": "12",
+    "replyToId": "900"
+  },
   "capabilities": [
     {
       "id": "text",

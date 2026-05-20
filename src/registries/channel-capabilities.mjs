@@ -47,6 +47,7 @@ export function validateChannelCapabilityShape(channel, sourceName = "channel ca
   validateKnownValue(channel?.supportStatus, channelSupportStatuses, "supportStatus", errors);
   validateStringArray(channel?.declarationSources, "declarationSources", errors, { nonEmpty: true });
   validateStringArray(channel?.workflowCaseIds, "workflowCaseIds", errors, { optional: true });
+  validateDeterministicShim(channel?.deterministicShim, "deterministicShim", errors);
   requireArray(channel, "capabilities", errors);
   validateCapabilities(channel, errors);
   assertNoShapeErrors(errors, sourceName);
@@ -105,6 +106,21 @@ export function validateChannelCapabilityWorkflowReferences(channels, workflowCa
   }
 
   assertNoShapeErrors(errors, "channel capability workflow references");
+}
+
+function validateDeterministicShim(value, prefix, errors) {
+  if (value === undefined) {
+    return;
+  }
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    errors.push(`${prefix} must be an object when set`);
+    return;
+  }
+  for (const key of ["conversationId", "threadId", "replyToId"]) {
+    if (value[key] !== undefined && (typeof value[key] !== "string" || value[key].length === 0)) {
+      errors.push(`${prefix}.${key} must be a non-empty string when set`);
+    }
+  }
 }
 
 function validateCapabilities(channel, errors) {
