@@ -263,6 +263,7 @@ function normalizeWorkflowCase(entry) {
     expectReplyToId: expects.replyTo === "inbound-message",
     expectNoReplyToId: expects.replyTo === "none",
     expectHooks: expects.hooks === true,
+    expectNoExtraVisibleFinal: expects.noExtraVisibleFinal === true || expects.noDuplicateFinal === true,
     threadId: typeof expects.threadId === "string" ? expects.threadId : null,
     silent: expects.silent === true,
     capabilities: normalizeAtoms(id, entry.atoms)

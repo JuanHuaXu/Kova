@@ -441,6 +441,7 @@ async function runModelTurnCase(testCase) {
   const mediaExpectation = mediaSourceExpectation(testCase);
   const invariants = [
     invariant(`${testCase.id}:turn-dispatched`, !error && turn?.dispatched === true, `${testCase.id} dispatched through OpenClaw runtime`),
+    successPlusExtraVisibleInvariant(testCase, finalDeliveryPolicy, finalOutboundRecords),
     finalDeliveryInvariant(testCase.id, finalDeliveryPolicy, finalDeliveryRecords.length),
     invariant(`${testCase.id}:expected-final-kind`, !testCase.expectedKind || firstFinal?.kind === testCase.expectedKind, `${testCase.id} used expected channel send kind`),
     invariant(`${testCase.id}:expected-final-text`, !testCase.expectedText || Boolean(matchedText), `${testCase.id} final channel send equals expected text`),
@@ -992,6 +993,7 @@ async function runSyntheticTurn({
           text: delivered?.text ?? null,
           mediaUrl: delivered?.mediaUrl ?? delivered?.mediaUrls?.[0] ?? null,
           mediaUrls: Array.isArray(delivered?.mediaUrls) ? delivered.mediaUrls : [],
+          isError: delivered?.isError === true,
           replyToId,
           threadId,
           silent: silent === true,
@@ -1080,6 +1082,7 @@ async function runOpenClawModelTurn({
           text: delivered?.text ?? null,
           mediaUrl: delivered?.mediaUrl ?? delivered?.mediaUrls?.[0] ?? null,
           mediaUrls: Array.isArray(delivered?.mediaUrls) ? delivered.mediaUrls : [],
+          isError: delivered?.isError === true,
           replyToId,
           threadId,
           silent: silent === true,
@@ -1161,6 +1164,39 @@ function finalDeliveryInvariant(caseId, policy, observed) {
     true,
     `${caseId} final channel delivery count observed without gating; observed ${observed}`
   );
+}
+
+function successPlusExtraVisibleInvariant(testCase, finalDeliveryPolicy, finalOutboundRecords) {
+  if (testCase.expectNoExtraVisibleFinal !== true || finalDeliveryPolicy.mode !== "exact") {
+    return invariant(
+      `${testCase.id}:no-success-plus-extra-visible-observed`,
+      true,
+      `${testCase.id} does not declare extra visible final gating`
+    );
+  }
+  const hasExpectedSuccess = finalOutboundRecords.some((record) => outboundMatchesExpected(record, testCase));
+  const hasExtraVisibleFinal = finalOutboundRecords.length > finalDeliveryPolicy.expected;
+  return invariant(
+    `${testCase.id}:no-success-plus-extra-visible`,
+    !(hasExpectedSuccess && hasExtraVisibleFinal),
+    `${testCase.id} did not deliver the expected success plus an extra visible final response`
+  );
+}
+
+function outboundMatchesExpected(record, testCase) {
+  if (!record || !isFinalOutboundRecord(record)) {
+    return false;
+  }
+  if (testCase.expectedKind && record.kind !== testCase.expectedKind) {
+    return false;
+  }
+  if (testCase.expectedText && !textEquals(record.text ?? "", testCase.expectedText)) {
+    return false;
+  }
+  if (testCase.expectedLocalMediaSource) {
+    return mediaSourceExpectation(testCase).check(record);
+  }
+  return true;
 }
 
 function isFinalOutboundRecord(record) {
@@ -1326,6 +1362,7 @@ async function recordOutbound(kind, ctx) {
     mediaUrl: ctx.mediaUrl ?? null,
     mediaPathExists: typeof ctx.mediaUrl === "string" && existsSync(ctx.mediaUrl),
     payload: ctx.payload ?? null,
+    isError: ctx.payload?.isError === true || ctx.isError === true,
     silent: ctx.silent ?? false,
     threadId: ctx.threadId ?? null,
     replyToId: ctx.replyToId ?? null
@@ -1338,6 +1375,7 @@ async function deliverFallbackPayload(payload, options = {}) {
   const ctx = {
     to: TARGET_ID,
     text: payload?.text ?? "",
+    isError: payload?.isError === true,
     replyToId: options.replyToId ?? undefined,
     threadId: options.threadId ?? undefined,
     silent: options.silent === true
@@ -1354,6 +1392,7 @@ async function deliverFallbackPayload(payload, options = {}) {
     text: payload?.text ?? null,
     mediaUrl: mediaUrl ?? null,
     mediaUrls: Array.isArray(payload?.mediaUrls) ? payload.mediaUrls : mediaUrl ? [mediaUrl] : [],
+    isError: payload?.isError === true,
     replyToId: options.replyToId ?? null,
     threadId: options.threadId ?? null,
     silent: options.silent === true,
