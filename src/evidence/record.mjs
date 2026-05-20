@@ -5,15 +5,16 @@ export function attachCleanupEvidence(record) {
   if (record.status === "DRY-RUN" || record.status === "SKIPPED") {
     return record;
   }
-  const retainedByRequest = record.cleanup === "retained" && record.retainedReason === "keep-env";
+  const retainedByRequest = record.cleanup === "retained" && ["keep-env", "failure"].includes(record.retainedReason);
   if (retainedByRequest) {
+    const reason = record.retainedReason === "keep-env" ? "keep-env" : "retain-on-failure";
     record.cleanupEvidence = [{
       id: "env-cleanup",
       required: false,
       status: "skipped",
       phaseId: "env-cleanup",
-      summary: "disposable Kova env cleanup was explicitly skipped by keep-env",
-      reason: "keep-env requested"
+      summary: `disposable Kova env cleanup was explicitly skipped by ${reason}`,
+      reason: `${reason} requested`
     }];
     return record;
   }

@@ -5,6 +5,7 @@ import { join } from "node:path";
 import { quoteShell, runCommand } from "./commands.mjs";
 import { runCleanupCommand } from "./cleanup.mjs";
 import { applyEvidenceLedgerGating, attachEvidenceLedger } from "./evidence-ledger.mjs";
+import { attachCleanupEvidence } from "./evidence/record.mjs";
 import { appendChannelCapabilityEvidence, channelCapabilityEvidenceFromResult } from "./run/channel-capability-results.mjs";
 import { summarizeCpuProfiles } from "./collectors/node-profiles.mjs";
 import { summarizeHeapProfiles } from "./collectors/heap.mjs";
@@ -1362,6 +1363,21 @@ function evidenceLedgerGatingCheck() {
     attachEvidenceLedger(missingCleanupRecord);
     applyEvidenceLedgerGating(missingCleanupRecord);
     assertEqual(missingCleanupRecord.status, "INCOMPLETE", "missing required cleanup proof gates pass as incomplete");
+
+    const retainedFailureCleanupRecord = {
+      ...record,
+      status: "PASS",
+      incompleteReason: undefined,
+      incompleteEvidence: undefined,
+      phases: [],
+      cleanup: "retained",
+      retainedReason: "failure"
+    };
+    attachCleanupEvidence(retainedFailureCleanupRecord);
+    attachEvidenceLedger(retainedFailureCleanupRecord);
+    applyEvidenceLedgerGating(retainedFailureCleanupRecord);
+    assertEqual(retainedFailureCleanupRecord.status, "PASS", "retain-on-failure cleanup proof is accounted for");
+    assertEqual(retainedFailureCleanupRecord.cleanupEvidence?.[0]?.required, false, "retain-on-failure cleanup evidence is optional");
 
     const failedInvariantRecord = {
       ...record,
