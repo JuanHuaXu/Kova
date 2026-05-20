@@ -1177,16 +1177,41 @@ function checkChannelModelTurnCases(violations, agentTurns) {
       const caseId = typeof failedCase?.id === "string" && failedCase.id.length > 0
         ? failedCase.id
         : "unknown";
+      const failedInvariant = failedCase.failedInvariants?.[0]?.id ?? null;
+      const atomCoverage = formatChannelAtomCoverage(failedCase.capabilities);
+      const workflow = typeof failedCase.workflow === "string" && failedCase.workflow.length > 0
+        ? failedCase.workflow
+        : null;
+      const detail = [
+        workflow ? `workflow ${workflow}` : null,
+        failedInvariant ? `invariant ${failedInvariant}` : null,
+        atomCoverage ? `atoms ${atomCoverage}` : null
+      ].filter(Boolean).join("; ");
       violations.push({
         kind: "channel",
         metric: `channelModelTurn.case.${caseId}`,
         phaseId: turn.phaseId,
+        workflow,
+        failedInvariant,
+        atomCoverage,
+        userAction: typeof failedCase.userAction === "string" ? failedCase.userAction : null,
+        ownerArea: "OpenClaw",
         expected: "passed",
         actual: "failed",
-        message: `channel model turn case ${caseId} failed${failedCase?.reason ? `: ${failedCase.reason}` : ""}`
+        message: `channel model turn case ${caseId} failed${failedCase?.reason ? `: ${failedCase.reason}` : ""}${detail ? ` (${detail})` : ""}`
       });
     }
   }
+}
+
+function formatChannelAtomCoverage(capabilities) {
+  if (!Array.isArray(capabilities) || capabilities.length === 0) {
+    return null;
+  }
+  const atoms = capabilities
+    .map((capability) => [capability?.group, capability?.id].filter(Boolean).join("/"))
+    .filter(Boolean);
+  return atoms.length > 0 ? atoms.join(", ") : null;
 }
 
 function extractGatewaySessionTurn(result) {

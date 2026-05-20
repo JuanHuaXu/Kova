@@ -613,12 +613,18 @@ function buildFindings(report) {
         scenario: record.scenario ?? null,
         state,
         sampleIndex: record.repeat?.index ?? index + 1,
-        ownerArea: record.likelyOwner ?? null,
+        ownerArea: violation.ownerArea ?? record.likelyOwner ?? null,
         metric: violation.metric ?? null,
         summary: violation.message ?? "scenario violation",
         expected: violation.threshold ?? null,
         actual: violation.actual ?? null,
-        evidence: briefEvidence(record.measurements ?? {}, [violation.message].filter(Boolean))
+        evidence: briefEvidence(record.measurements ?? {}, [
+          violation.userAction ? `user action: ${violation.userAction}` : null,
+          violation.workflow ? `workflow: ${violation.workflow}` : null,
+          violation.failedInvariant ? `invariant: ${violation.failedInvariant}` : null,
+          violation.atomCoverage ? `atoms: ${violation.atomCoverage}` : null,
+          violation.message
+        ].filter(Boolean))
       });
     }
     const missingSpanCount = record.measurements?.openclawMissingRequiredSpanCount ?? 0;
