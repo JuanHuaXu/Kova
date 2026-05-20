@@ -338,6 +338,98 @@
       ]
     },
     {
+      "id": "background-artifact-completion.image.message-tool-only",
+      "workflow": "background-artifact-completion",
+      "userAction": "user asks OpenClaw to create an image and receives the completed image in the same chat",
+      "openclawSurface": "channel inbound direct message with background media-generation completion",
+      "ownerArea": "OpenClaw completion delivery runtime",
+      "prompt": "Create a launch announcement image with the app logo and a simple success caption.",
+      "providerScript": {
+        "toolCalls": [
+          {
+            "name": "message",
+            "arguments": {
+              "action": "send",
+              "message": "KOVA_BACKGROUND_IMAGE_READY",
+              "media": "/tmp/kova-background-image.png"
+            }
+          }
+        ],
+        "finalText": "KOVA_BACKGROUND_COMPLETION_PRIVATE_DONE"
+      },
+      "sourceReplyDeliveryMode": "message_tool_only",
+      "expects": {
+        "visibleDeliveries": 1,
+        "kind": "media",
+        "text": "KOVA_BACKGROUND_IMAGE_READY",
+        "mediaSource": "/tmp/kova-background-image.png",
+        "mediaSourcePolicy": "sendable-local-or-managed",
+        "hooks": true,
+        "terminal": true,
+        "noDuplicateFinal": true
+      },
+      "fixtures": {
+        "mediaPath": "/tmp/kova-background-image.png"
+      },
+      "providerRequests": {
+        "mode": "exact",
+        "expected": 2
+      },
+      "atoms": [
+        { "group": "workflow", "id": "background-artifact-completion" },
+        { "group": "workflow", "id": "source-visible-delivery" },
+        { "group": "workflow", "id": "message-tool-only-source-delivery" },
+        { "group": "durable-final", "id": "media" },
+        { "group": "durable-final", "id": "message-sending-hooks" }
+      ]
+    },
+    {
+      "id": "background-artifact-completion.music.message-tool-only",
+      "workflow": "background-artifact-completion",
+      "userAction": "user asks OpenClaw to create music and receives the completed audio in the same chat",
+      "openclawSurface": "channel inbound direct message with background media-generation completion",
+      "ownerArea": "OpenClaw completion delivery runtime",
+      "prompt": "Create a short upbeat launch jingle and send the finished audio here.",
+      "providerScript": {
+        "toolCalls": [
+          {
+            "name": "message",
+            "arguments": {
+              "action": "send",
+              "message": "KOVA_BACKGROUND_MUSIC_READY",
+              "media": "/tmp/kova-background-music.mp3"
+            }
+          }
+        ],
+        "finalText": "KOVA_BACKGROUND_COMPLETION_PRIVATE_DONE"
+      },
+      "sourceReplyDeliveryMode": "message_tool_only",
+      "expects": {
+        "visibleDeliveries": 1,
+        "kind": "media",
+        "text": "KOVA_BACKGROUND_MUSIC_READY",
+        "mediaSource": "/tmp/kova-background-music.mp3",
+        "mediaSourcePolicy": "sendable-local-or-managed",
+        "hooks": true,
+        "terminal": true,
+        "noDuplicateFinal": true
+      },
+      "fixtures": {
+        "mediaPath": "/tmp/kova-background-music.mp3"
+      },
+      "providerRequests": {
+        "mode": "exact",
+        "expected": 2
+      },
+      "atoms": [
+        { "group": "workflow", "id": "background-artifact-completion" },
+        { "group": "workflow", "id": "source-visible-delivery" },
+        { "group": "workflow", "id": "message-tool-only-source-delivery" },
+        { "group": "durable-final", "id": "media" },
+        { "group": "durable-final", "id": "message-sending-hooks" }
+      ]
+    },
+    {
       "id": "failure-visible-once.provider-error",
       "workflow": "failure-visible-once",
       "userAction": "user sends a normal channel message while the configured model provider is failing and receives one clear error response",
