@@ -1,0 +1,31 @@
+{
+  "id": "kova-channel-probe",
+  "name": "Kova Channel Probe",
+  "description": "Deterministic Kova channel used to drive OpenClaw channel workflow probes.",
+  "kind": "channel",
+  "activation": {
+    "onStartup": true
+  },
+  "channels": [
+    "kova-channel-probe"
+  ],
+  "contracts": {
+    "imageGenerationProviders": ["kova-channel-probe"]
+  },
+  "channelConfigs": {
+    "kova-channel-probe": {
+      "label": "Kova Channel Probe",
+      "description": "Deterministic Kova channel used to drive OpenClaw channel workflow probes.",
+      "schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {}
+      }
+    }
+  },
+  "configSchema": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {}
+  }
+}

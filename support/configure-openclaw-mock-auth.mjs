@@ -26,7 +26,7 @@ try {
 }
 
 const modelRef = "openai/gpt-5.5";
-const kovaImageModelRef = "kova-channel-baseline/kova-image";
+const kovaImageModelRef = "kova-channel-probe/kova-image";
 const gatewayToken = "kova-mock-gateway-token";
 const cost = {
   input: 0,

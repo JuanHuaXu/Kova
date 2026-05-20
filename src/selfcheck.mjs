@@ -1666,7 +1666,7 @@ function channelModelTurnMultiInvariantEvaluationCheck() {
             expectedText: "KOVA_AGENT_MEDIA_BATCH_OK",
             finalText: "KOVA_AGENT_MEDIA_BATCH_OK",
             inboundEventId: "kova-inbound-1",
-            routeSessionKey: "agent:main:kova-channel-baseline:dm",
+            routeSessionKey: "agent:main:kova-channel-probe:dm",
             modelTurnCaseCount: 1,
             failedModelTurnCases: [{
               id: failedCaseId,

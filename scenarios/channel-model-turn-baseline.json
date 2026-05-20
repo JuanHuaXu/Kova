@@ -54,11 +54,11 @@
       "collectionIntent": "service-only"
     },
     {
-      "id": "install-channel-baseline",
-      "title": "Install Kova Channel Plugin",
+      "id": "install-channel-probe",
+      "title": "Install Kova Channel Probe Plugin",
       "intent": "Install the deterministic Kova channel plugin through the user-visible plugin install path before gateway startup.",
       "commands": [
-        "ocm @{env} -- plugins install {kovaRoot}/support/plugins/kova-channel-baseline --force",
+        "ocm @{env} -- plugins install {kovaRoot}/support/plugins/kova-channel-probe --force",
         "ocm @{env} -- plugins list"
       ],
       "evidence": [

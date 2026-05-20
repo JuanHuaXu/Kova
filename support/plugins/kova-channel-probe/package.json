@@ -1,7 +1,7 @@
 {
-  "name": "kova-channel-baseline-plugin",
+  "name": "kova-channel-probe-plugin",
   "version": "1.0.0",
-  "description": "Kova channel capability baseline fixture",
+  "description": "Kova channel probe fixture",
   "type": "module",
   "exports": {
     ".": "./index.js"

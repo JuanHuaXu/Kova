@@ -3,12 +3,12 @@ import { definePluginEntry } from "openclaw/plugin-sdk/core";
 import { resolveThreadSessionKeys } from "openclaw/plugin-sdk/routing";
 import { defineChannelMessageAdapter } from "openclaw/plugin-sdk/channel-message";
 
-const CHANNEL_ID = "kova-channel-baseline";
+const CHANNEL_ID = "kova-channel-probe";
 const ACCOUNT_ID = "default";
 const TARGET_ID = "dm:kova-baseline-user";
 const TARGET_USER_ID = "kova-baseline-user";
 const TARGET_DISPLAY = "Kova Baseline User";
-const KOVA_IMAGE_PROVIDER_ID = "kova-channel-baseline";
+const KOVA_IMAGE_PROVIDER_ID = "kova-channel-probe";
 const KOVA_IMAGE_MODEL_ID = "kova-image";
 const KOVA_PNG_1X1 = Buffer.from(
   "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/p9sAAAAASUVORK5CYII=",
@@ -94,7 +94,7 @@ const plugin = {
   id: CHANNEL_ID,
   meta: {
     id: CHANNEL_ID,
-    label: "Kova Channel Baseline",
+    label: "Kova Channel Probe",
     description: "Deterministic Kova channel used to prove OpenClaw channel capability behavior."
   },
   capabilities: {
@@ -208,9 +208,9 @@ function normalizeKovaThreadId(value) {
 }
 
 export default definePluginEntry({
-  id: "kova-channel-baseline",
-  name: "Kova Channel Baseline",
-  description: "OpenClaw channel capability baseline fixture used by Kova.",
+  id: "kova-channel-probe",
+  name: "Kova Channel Probe",
+  description: "OpenClaw channel probe fixture used by Kova.",
   register(api) {
     api.registerChannel(plugin);
     if (typeof api.registerImageGenerationProvider === "function") {
@@ -286,7 +286,7 @@ function resetProbeState() {
 
 async function injectProbeInbound(params = {}) {
   if (!activeRuntime?.channelRuntime) {
-    throw new Error("kova channel baseline runtime is not started");
+    throw new Error("kova channel probe runtime is not started");
   }
   const message = requiredProbeString(params.message, "message");
   const inboundEventId = optionalProbeString(params.inboundEventId) ??
@@ -531,7 +531,7 @@ async function drainProbePendingDeliveries({ targetId, inboundEventId, startedAt
 function buildKovaImageGenerationProvider() {
   return {
     id: KOVA_IMAGE_PROVIDER_ID,
-    label: "Kova Channel Baseline Image Provider",
+    label: "Kova Channel Probe Image Provider",
     defaultModel: KOVA_IMAGE_MODEL_ID,
     models: [KOVA_IMAGE_MODEL_ID],
     capabilities: {
