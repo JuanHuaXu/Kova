@@ -4078,7 +4078,9 @@
         "source-visible-delivery.text.automatic-final",
         "source-visible-delivery.text.message-tool-only",
         "source-visible-delivery.media.message-tool-only",
-        "background-artifact-completion.video.message-tool-only"
+        "background-artifact-completion.image.message-tool-only",
+        "background-artifact-completion.video.message-tool-only",
+        "background-artifact-completion.music.message-tool-only"
       ],
       "workflowOverrides": {
         "source-visible-delivery.media.message-tool-only": {
@@ -4287,7 +4289,9 @@
         "source-visible-delivery.text.automatic-final",
         "source-visible-delivery.text.message-tool-only",
         "source-visible-delivery.media.message-tool-only",
-        "background-artifact-completion.video.message-tool-only"
+        "background-artifact-completion.image.message-tool-only",
+        "background-artifact-completion.video.message-tool-only",
+        "background-artifact-completion.music.message-tool-only"
       ],
       "deterministicShim": {
         "conversationId": "12345",
