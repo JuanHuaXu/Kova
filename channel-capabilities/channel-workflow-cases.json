@@ -338,6 +338,58 @@
       ]
     },
     {
+      "id": "source-visible-delivery.attachment.message-tool-only",
+      "workflow": "source-visible-delivery",
+      "userAction": "user asks OpenClaw to send a generated file attachment back to the same chat",
+      "openclawSurface": "channel inbound direct message with source conversation delivery",
+      "ownerArea": "OpenClaw source delivery runtime",
+      "prompt": "Prepare a launch notes attachment and send it here.",
+      "providerScript": {
+        "toolCalls": [
+          {
+            "name": "message",
+            "arguments": {
+              "action": "send",
+              "message": "KOVA_SOURCE_DELIVERY_ATTACHMENT_OK",
+              "attachments": [
+                {
+                  "type": "file",
+                  "path": "/tmp/kova-source-delivery-attachment.txt",
+                  "name": "launch-notes.txt",
+                  "mimeType": "text/plain"
+                }
+              ]
+            }
+          }
+        ],
+        "finalText": "KOVA_SOURCE_DELIVERY_PRIVATE_DONE"
+      },
+      "sourceReplyDeliveryMode": "message_tool_only",
+      "expects": {
+        "visibleDeliveries": 1,
+        "kind": "media",
+        "text": "KOVA_SOURCE_DELIVERY_ATTACHMENT_OK",
+        "mediaSource": "/tmp/kova-source-delivery-attachment.txt",
+        "mediaSourcePolicy": "sendable-local-or-managed",
+        "hooks": true,
+        "terminal": true,
+        "noDuplicateFinal": true
+      },
+      "fixtures": {
+        "mediaPath": "/tmp/kova-source-delivery-attachment.txt"
+      },
+      "providerRequests": {
+        "mode": "exact",
+        "expected": 2
+      },
+      "atoms": [
+        { "group": "workflow", "id": "source-visible-delivery" },
+        { "group": "workflow", "id": "message-tool-only-source-delivery" },
+        { "group": "durable-final", "id": "media" },
+        { "group": "durable-final", "id": "message-sending-hooks" }
+      ]
+    },
+    {
       "id": "background-artifact-completion.image.message-tool-only",
       "workflow": "background-artifact-completion",
       "userAction": "user asks OpenClaw to create an image and receives the completed image in the same chat",
