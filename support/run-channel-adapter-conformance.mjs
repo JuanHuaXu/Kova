@@ -230,11 +230,12 @@ async function runWorkflowProofs(adapter, channel, catalog) {
 async function runWorkflowCase(adapter, testCase) {
   assert(testCase, "workflow case declaration is missing");
   const expected = testCase.expects ?? {};
+  const mediaUrl = resolveWorkflowMediaUrl(testCase);
   const sendInput = {
     kind: expected.kind,
     text: expected.text,
-    mediaUrl: expected.mediaSource,
-    payload: expected.kind === "payload" ? { text: expected.text, mediaUrl: expected.mediaSource } : null,
+    mediaUrl,
+    payload: expected.kind === "payload" ? { text: expected.text, mediaUrl } : null,
     replyToId: expected.replyTo === "inbound-message" ? shimReplyToId() : null,
     threadId: expected.threadId ? shimThreadId() : null,
     silent: expected.silent === true,
@@ -321,13 +322,38 @@ function workflowInvariants(testCase, proof) {
     invariant(`${testCase.id}:visible-delivery-count`, proof.platformCalls.length === expectedDeliveries, `${testCase.id} produced ${expectedDeliveries} visible adapter delivery; observed ${proof.platformCalls.length}`),
     invariant(`${testCase.id}:delivery-kind`, !expected.kind || proof.send.kind === expected.kind, `${testCase.id} used expected adapter send kind`),
     invariant(`${testCase.id}:text`, !expected.text || textCall?.text === expected.text, `${testCase.id} preserved expected text/caption`),
-    invariant(`${testCase.id}:media`, expected.kind !== "media" || mediaCall?.options?.mediaUrl === expected.mediaSource, `${testCase.id} preserved expected media source`),
+    invariant(`${testCase.id}:media`, mediaExpectationMatches(expected, mediaCall), `${testCase.id} preserved expected media source`),
     invariant(`${testCase.id}:reply-to`, expected.replyTo !== "inbound-message" || platformReplyTargetMatches(targetCall), `${testCase.id} preserved reply target`),
     invariant(`${testCase.id}:no-reply-to`, expected.replyTo !== "none" || platformReplyTargetIsEmpty(targetCall), `${testCase.id} did not attach a reply target`),
     invariant(`${testCase.id}:thread`, !expected.threadId || platformThreadTargetMatches(targetCall), `${testCase.id} preserved thread target`),
     invariant(`${testCase.id}:silent`, expected.silent !== true || targetCall?.options?.silent === true, `${testCase.id} preserved silent delivery intent`),
     invariant(`${testCase.id}:terminal`, expected.terminal !== true || proof.result.platformMessageIds.length > 0, `${testCase.id} returned terminal adapter receipt`)
   ];
+}
+
+function resolveWorkflowMediaUrl(testCase) {
+  const expected = testCase?.expects ?? {};
+  if (typeof expected.mediaSource === "string" && expected.mediaSource.length > 0) {
+    return expected.mediaSource;
+  }
+  if (expected.kind === "media" && expected.mediaSourcePolicy === "present-existing") {
+    return `https://example.com/kova-${safeArtifactSegment(testCase.id)}.png`;
+  }
+  return undefined;
+}
+
+function mediaExpectationMatches(expected, call) {
+  if (expected.kind !== "media") {
+    return true;
+  }
+  const observed = call?.options?.mediaUrl;
+  if (typeof expected.mediaSource === "string" && expected.mediaSource.length > 0) {
+    return observed === expected.mediaSource;
+  }
+  if (expected.mediaSourcePolicy === "present-existing") {
+    return typeof observed === "string" && observed.length > 0;
+  }
+  return observed == null;
 }
 
 function capabilityRows(results, runError) {
