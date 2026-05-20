@@ -265,8 +265,14 @@ function normalizeWorkflowCase(entry) {
     expectErrorFinal,
     expectedKind: typeof expects.kind === "string" ? expects.kind : null,
     expectedLocalMediaSource: typeof expects.mediaSource === "string" ? expects.mediaSource : null,
+    expectedLocalMediaSources: Array.isArray(expects.mediaSources)
+      ? expects.mediaSources.filter((item) => typeof item === "string" && item.length > 0)
+      : [],
     expectedMediaSourcePolicy: typeof expects.mediaSourcePolicy === "string" ? expects.mediaSourcePolicy : null,
     mediaFixturePath: typeof fixtures.mediaPath === "string" ? fixtures.mediaPath : null,
+    mediaFixturePaths: Array.isArray(fixtures.mediaPaths)
+      ? fixtures.mediaPaths.filter((item) => typeof item === "string" && item.length > 0)
+      : [],
     sourceReplyDeliveryMode: typeof entry.sourceReplyDeliveryMode === "string" ? entry.sourceReplyDeliveryMode : null,
     finalDeliveries: normalizeVisibleDeliveries(id, expects.visibleDeliveries),
     providerRequests: normalizeCaseProviderRequests(id, entry.providerRequests),
@@ -278,6 +284,7 @@ function normalizeWorkflowCase(entry) {
     expectNoReplyToId: expects.replyTo === "none",
     expectHooks: expects.hooks === true,
     expectNoExtraVisibleFinal: expects.noExtraVisibleFinal === true || expects.noDuplicateFinal === true,
+    allowMultipleFinalSends: expects.allowMultipleFinalSends === true,
     expectNoSelfTrigger: expects.noSelfTrigger === true,
     threadId: typeof expects.threadId === "string" ? expects.threadId : null,
     silent: expects.silent === true,

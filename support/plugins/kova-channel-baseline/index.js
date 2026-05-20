@@ -510,8 +510,8 @@ async function runModelTurnCase(testCase) {
   let error = null;
 
   try {
-    if (testCase.mediaFixturePath) {
-      writeMediaFixture(testCase.mediaFixturePath);
+    for (const fixturePath of mediaFixturePaths(testCase)) {
+      writeMediaFixture(fixturePath);
     }
     turn = await runOpenClawModelTurn({
       message: modelTurnPrompt(testCase, inboundEventId),
@@ -552,8 +552,8 @@ async function runModelTurnCase(testCase) {
   } catch (caught) {
     error = caught instanceof Error ? caught : new Error(String(caught));
   } finally {
-    if (testCase.mediaFixturePath) {
-      removeMediaFixture(testCase.mediaFixturePath);
+    for (const fixturePath of mediaFixturePaths(testCase)) {
+      removeMediaFixture(fixturePath);
     }
   }
 
@@ -594,7 +594,8 @@ async function runModelTurnCase(testCase) {
     invariant(`${testCase.id}:no-reply-to`, testCase.expectNoReplyToId !== true || firstFinal?.replyToId == null, `${testCase.id} did not attach a reply target`),
     invariant(`${testCase.id}:thread`, !testCase.threadId || firstFinal?.threadId === testCase.threadId, `${testCase.id} preserved thread target`),
     invariant(`${testCase.id}:silent`, testCase.silent !== true || firstFinal?.silent === true, `${testCase.id} preserved silent delivery intent`),
-    invariant(`${testCase.id}:media-url`, !testCase.expectedLocalMediaSource || mediaExpectation.check(firstFinal), mediaExpectation.summary),
+    invariant(`${testCase.id}:media-url`, mediaExpectation.check(finalDeliveryRecords), mediaExpectation.summary),
+    invariant(`${testCase.id}:unique-final-media`, !hasMediaExpectation(testCase) || hasUniqueFinalMedia(finalDeliveryRecords), `${testCase.id} did not deliver the same media item more than once`),
     invariant(`${testCase.id}:after-send-success`, testCase.expectHooks !== true || caseOutboundRecords.some((record) => record.kind === "after-send-success"), `${testCase.id} ran after-send-success hook`),
     invariant(`${testCase.id}:after-commit`, testCase.expectHooks !== true || caseOutboundRecords.some((record) => record.kind === "after-commit"), `${testCase.id} ran after-commit hook`),
     invariant(`${testCase.id}:single-inbound-turn`, modelDispatchStarts.length === 1, `${testCase.id} processed exactly one OpenClaw model turn for one inbound user event; observed ${modelDispatchStarts.length}`),
@@ -1452,8 +1453,8 @@ function outboundMatchesExpected(record, testCase) {
   if (testCase.expectedText && !textEquals(record.text ?? "", testCase.expectedText)) {
     return false;
   }
-  if (testCase.expectedLocalMediaSource) {
-    return mediaSourceExpectation(testCase).check(record);
+  if (hasMediaExpectation(testCase)) {
+    return mediaSourceExpectation(testCase).matchesRecord(record);
   }
   return true;
 }
@@ -1488,30 +1489,84 @@ function isManagedOutboundMedia(mediaUrl, sourcePath) {
 }
 
 function mediaSourceExpectation(testCase) {
-  const sourcePath = testCase.expectedLocalMediaSource;
+  const sourcePaths = expectedMediaSources(testCase);
+  const sourcePath = sourcePaths[0] ?? null;
   if (!sourcePath && testCase.expectedMediaSourcePolicy === "present-existing") {
     return {
       summary: `${testCase.id} delivered generated media to the channel send path`,
-      check: (record) => hasPresentMedia(record)
+      check: (records) => asRecordArray(records).some((record) => hasPresentMedia(record)),
+      matchesRecord: (record) => hasPresentMedia(record)
     };
   }
   if (!sourcePath) {
     return {
       summary: `${testCase.id} has no local media expectation`,
-      check: () => true
+      check: () => true,
+      matchesRecord: () => true
     };
   }
   if (testCase.expectedMediaSourcePolicy === "sendable-local-or-managed") {
     return {
       summary: `${testCase.id} provided deliverable local media to the channel send path`,
-      check: (record) =>
-        isManagedOutboundMedia(record?.mediaUrl, sourcePath) || isSameExistingLocalMedia(record, sourcePath)
+      check: (records) => sourcePaths.every((expectedSource) =>
+        asRecordArray(records).some((record) =>
+          isManagedOutboundMedia(record?.mediaUrl, expectedSource) || isSameExistingLocalMedia(record, expectedSource)
+        )
+      ),
+      matchesRecord: (record) => sourcePaths.some((expectedSource) =>
+        isManagedOutboundMedia(record?.mediaUrl, expectedSource) || isSameExistingLocalMedia(record, expectedSource)
+      )
     };
   }
   return {
-    summary: `${testCase.id} staged local media for outbound delivery`,
-    check: (record) => isManagedOutboundMedia(record?.mediaUrl, sourcePath)
+    summary: sourcePaths.length === 1
+      ? `${testCase.id} staged local media for outbound delivery`
+      : `${testCase.id} staged every local media item for outbound delivery`,
+    check: (records) => sourcePaths.every((expectedSource) =>
+      asRecordArray(records).some((record) => isManagedOutboundMedia(record?.mediaUrl, expectedSource))
+    ),
+    matchesRecord: (record) => sourcePaths.some((expectedSource) =>
+      isManagedOutboundMedia(record?.mediaUrl, expectedSource)
+    )
   };
+}
+
+function hasMediaExpectation(testCase) {
+  return expectedMediaSources(testCase).length > 0 ||
+    testCase.expectedMediaSourcePolicy === "present-existing";
+}
+
+function hasUniqueFinalMedia(records) {
+  const seen = new Set();
+  for (const record of asRecordArray(records)) {
+    if (record?.kind !== "media" || typeof record.mediaUrl !== "string" || record.mediaUrl.length === 0) {
+      continue;
+    }
+    if (seen.has(record.mediaUrl)) {
+      return false;
+    }
+    seen.add(record.mediaUrl);
+  }
+  return true;
+}
+
+function expectedMediaSources(testCase) {
+  const sources = [];
+  if (typeof testCase.expectedLocalMediaSource === "string" && testCase.expectedLocalMediaSource.length > 0) {
+    sources.push(testCase.expectedLocalMediaSource);
+  }
+  if (Array.isArray(testCase.expectedLocalMediaSources)) {
+    for (const source of testCase.expectedLocalMediaSources) {
+      if (typeof source === "string" && source.length > 0 && !sources.includes(source)) {
+        sources.push(source);
+      }
+    }
+  }
+  return sources;
+}
+
+function asRecordArray(records) {
+  return Array.isArray(records) ? records : [records].filter(Boolean);
 }
 
 function isSameExistingLocalMedia(record, sourcePath) {
@@ -1523,6 +1578,21 @@ function writeMediaFixture(path) {
     "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/p9sAAAAASUVORK5CYII=",
     "base64"
   ));
+}
+
+function mediaFixturePaths(testCase) {
+  const paths = [];
+  if (typeof testCase.mediaFixturePath === "string" && testCase.mediaFixturePath.length > 0) {
+    paths.push(testCase.mediaFixturePath);
+  }
+  if (Array.isArray(testCase.mediaFixturePaths)) {
+    for (const fixturePath of testCase.mediaFixturePaths) {
+      if (typeof fixturePath === "string" && fixturePath.length > 0 && !paths.includes(fixturePath)) {
+        paths.push(fixturePath);
+      }
+    }
+  }
+  return paths;
 }
 
 function removeMediaFixture(path) {

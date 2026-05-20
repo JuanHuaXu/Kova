@@ -212,6 +212,55 @@
       ]
     },
     {
+      "id": "media-batch-final",
+      "workflow": "final-media-batch",
+      "inventoryWorkflow": "final-delivery",
+      "matrix": {
+        "content": "batch",
+        "route": "reply",
+        "delivery": "final",
+        "lifecycle": "success"
+      },
+      "userAction": "user asks OpenClaw for multiple media results and receives every media item in the same conversation",
+      "openclawSurface": "channel inbound direct message with durable batched media final reply",
+      "ownerArea": "OpenClaw channel runtime",
+      "prompt": "Create two simple launch images with a short caption.",
+      "providerScript": {
+        "finalText": "MEDIA:/tmp/kova-channel-model-turn-batch-a.png\nMEDIA:/tmp/kova-channel-model-turn-batch-b.png\nKOVA_AGENT_MEDIA_BATCH_OK"
+      },
+      "expects": {
+        "visibleDeliveries": 2,
+        "kind": "media",
+        "text": "KOVA_AGENT_MEDIA_BATCH_OK",
+        "replyTo": "inbound-message",
+        "mediaSources": [
+          "/tmp/kova-channel-model-turn-batch-a.png",
+          "/tmp/kova-channel-model-turn-batch-b.png"
+        ],
+        "mediaSourcePolicy": "exact",
+        "terminal": true,
+        "allowMultipleFinalSends": true
+      },
+      "fixtures": {
+        "mediaPaths": [
+          "/tmp/kova-channel-model-turn-batch-a.png",
+          "/tmp/kova-channel-model-turn-batch-b.png"
+        ]
+      },
+      "providerRequests": {
+        "mode": "minimum",
+        "min": 1
+      },
+      "atoms": [
+        { "group": "durable-final", "id": "media" },
+        { "group": "durable-final", "id": "batch" },
+        { "group": "durable-final", "id": "reply-to" },
+        { "group": "workflow", "id": "single-inbound-single-final" },
+        { "group": "workflow", "id": "final-delivery-receipt-required" },
+        { "group": "workflow", "id": "terminal-after-final" }
+      ]
+    },
+    {
       "id": "thread-final",
       "workflow": "final-text-thread",
       "inventoryWorkflow": "final-delivery",

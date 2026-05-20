@@ -4246,6 +4246,73 @@
           ]
         },
         {
+          "id": "media-batch-final",
+          "workflow": "final-media-batch",
+          "inventoryWorkflow": "final-delivery",
+          "matrix": {
+            "content": "batch",
+            "route": "reply",
+            "delivery": "final",
+            "lifecycle": "success"
+          },
+          "userAction": "user asks OpenClaw for multiple media results and receives every media item in the same conversation",
+          "openclawSurface": "channel inbound direct message with durable batched media final reply",
+          "ownerArea": "OpenClaw channel runtime",
+          "prompt": "Create two simple launch images with a short caption.",
+          "providerScript": {
+            "finalText": "MEDIA:/tmp/kova-channel-model-turn-batch-a.png\nMEDIA:/tmp/kova-channel-model-turn-batch-b.png\nKOVA_AGENT_MEDIA_BATCH_OK"
+          },
+          "expects": {
+            "visibleDeliveries": 2,
+            "kind": "media",
+            "text": "KOVA_AGENT_MEDIA_BATCH_OK",
+            "replyTo": "inbound-message",
+            "mediaSources": [
+              "/tmp/kova-channel-model-turn-batch-a.png",
+              "/tmp/kova-channel-model-turn-batch-b.png"
+            ],
+            "mediaSourcePolicy": "exact",
+            "terminal": true,
+            "allowMultipleFinalSends": true
+          },
+          "fixtures": {
+            "mediaPaths": [
+              "/tmp/kova-channel-model-turn-batch-a.png",
+              "/tmp/kova-channel-model-turn-batch-b.png"
+            ]
+          },
+          "providerRequests": {
+            "mode": "minimum",
+            "min": 1
+          },
+          "atoms": [
+            {
+              "group": "durable-final",
+              "id": "media"
+            },
+            {
+              "group": "durable-final",
+              "id": "batch"
+            },
+            {
+              "group": "durable-final",
+              "id": "reply-to"
+            },
+            {
+              "group": "workflow",
+              "id": "single-inbound-single-final"
+            },
+            {
+              "group": "workflow",
+              "id": "final-delivery-receipt-required"
+            },
+            {
+              "group": "workflow",
+              "id": "terminal-after-final"
+            }
+          ]
+        },
+        {
           "id": "thread-final",
           "workflow": "final-text-thread",
           "inventoryWorkflow": "final-delivery",
@@ -7047,7 +7114,7 @@
           "title": "Run Final Delivery Model Turns",
           "intent": "Call the Kova channel plugin over Gateway RPC so OpenClaw handles normal final text, media, reply, thread, and silent user-facing model turns through the shared channel adapter path.",
           "commands": [
-            "node {kovaRoot}/support/run-channel-model-turn-baseline.mjs --env {env} --artifact-dir {artifactDir} --case text-final,media-final,media-thread-final,media-reply-thread-final,thread-final,silent-final --skip-shared-baseline true --continue-on-model-turn-failure true --timeout-ms 120000"
+            "node {kovaRoot}/support/run-channel-model-turn-baseline.mjs --env {env} --artifact-dir {artifactDir} --case text-final,media-final,media-thread-final,media-reply-thread-final,media-batch-final,thread-final,silent-final --skip-shared-baseline true --continue-on-model-turn-failure true --timeout-ms 120000"
           ],
           "evidence": [
             "final delivery model-turn capability rows",

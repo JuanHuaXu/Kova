@@ -89,7 +89,7 @@
       "title": "Run Final Delivery Model Turns",
       "intent": "Call the Kova channel plugin over Gateway RPC so OpenClaw handles normal final text, media, reply, thread, and silent user-facing model turns through the shared channel adapter path.",
       "commands": [
-        "node {kovaRoot}/support/run-channel-model-turn-baseline.mjs --env {env} --artifact-dir {artifactDir} --case text-final,media-final,media-thread-final,media-reply-thread-final,thread-final,silent-final --skip-shared-baseline true --continue-on-model-turn-failure true --timeout-ms 120000"
+        "node {kovaRoot}/support/run-channel-model-turn-baseline.mjs --env {env} --artifact-dir {artifactDir} --case text-final,media-final,media-thread-final,media-reply-thread-final,media-batch-final,thread-final,silent-final --skip-shared-baseline true --continue-on-model-turn-failure true --timeout-ms 120000"
       ],
       "evidence": [
         "final delivery model-turn capability rows",
