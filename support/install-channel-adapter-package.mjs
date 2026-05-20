@@ -35,35 +35,47 @@ try {
   const registryRefresh = install.status === 0
     ? await runStep(`registry-refresh:${channelId}`, "ocm", [`@${envName}`, "--", "plugins", "registry", "--refresh", "--json"], { timeoutMs: 60000 })
     : skippedStep(`registry-refresh:${channelId}`, "install failed");
-  const ok = install.status === 0 && list.status === 0 && registryRefresh.status === 0;
+  const commandOk = install.status === 0 && list.status === 0 && registryRefresh.status === 0;
+  const diagnostics = extractAdapterInstallDiagnostics([install, list, registryRefresh]);
+  const ok = commandOk && diagnostics.pluginLoadFailures.length === 0;
   const artifactPath = join(artifactDir, `channel-adapter-install-${safeArtifactSegment(channelId)}.json`);
+  const capabilities = buildCapabilityRows({
+    channelId,
+    commandOk,
+    diagnostics,
+    artifactPath,
+    commands: [install, list, registryRefresh]
+  });
   const artifact = {
     schemaVersion: "kova.channelAdapterInstall.v1",
     ok,
+    commandOk,
     envName,
     channelId,
     adapterId: registry.adapterId,
     distribution,
     installSpec,
+    diagnostics,
     startedAtEpochMs,
     finishedAtEpochMs: Date.now(),
     durationMs: Date.now() - startedAtEpochMs,
+    capabilities,
     commands: [...preparationCommands, install, list, registryRefresh].map(compactStep)
   };
 
   await mkdir(artifactDir, { recursive: true });
   await writeFile(artifactPath, `${JSON.stringify(artifact, null, 2)}\n`, "utf8");
   process.stdout.write(`${JSON.stringify({
-    schemaVersion: "kova.channelAdapterInstall.v1",
-    ok,
+    schemaVersion: "kova.channelCapabilityRun.v1",
+    proofMode: "deterministic-shim",
     artifactPath,
+    ownerArea: `${channelId} adapter install/setup`,
     envName,
     channelId,
     adapterId: registry.adapterId,
-    installSpec,
-    commands: artifact.commands
+    capabilities
   }, null, 2)}\n`);
-  process.exit(ok ? 0 : 1);
+  process.exit(commandOk ? 0 : 1);
 } catch (error) {
   const summary = {
     schemaVersion: "kova.channelAdapterInstall.v1",
@@ -218,6 +230,63 @@ function compactStep(step) {
     stdoutTail: step.stdoutTail,
     stderrTail: step.stderrTail
   };
+}
+
+function buildCapabilityRows({ channelId, commandOk, diagnostics, artifactPath, commands }) {
+  const failedCommands = commands.filter((step) => step.status !== 0);
+  const installReason = failedCommands.length > 0
+    ? failedCommands.map((step) => `${step.id} exited ${step.status ?? "unknown"}`).join("; ")
+    : null;
+  const pluginLoadReason = diagnostics.pluginLoadFailures.length > 0
+    ? `${diagnostics.pluginLoadFailures.length} adapter setup diagnostic${diagnostics.pluginLoadFailures.length === 1 ? "" : "s"}; see artifact diagnostics`
+    : null;
+  return [{
+    channelId,
+    group: "adapter-install",
+    capabilityId: "package-install",
+    required: true,
+    status: commandOk ? "passed" : "failed",
+    proofMode: "deterministic-shim",
+    summary: `${channelId} adapter package installs through OpenClaw plugin command path`,
+    reason: installReason,
+    artifactPath,
+    ownerArea: `${channelId} adapter install/setup`
+  }, {
+    channelId,
+    group: "adapter-install",
+    capabilityId: "setup-entry",
+    required: true,
+    status: commandOk && diagnostics.pluginLoadFailures.length === 0 ? "passed" : "failed",
+    proofMode: "deterministic-shim",
+    summary: `${channelId} adapter setup entry loads cleanly during OpenClaw plugin setup`,
+    reason: commandOk ? pluginLoadReason : "package install failed before setup entry could be validated",
+    artifactPath,
+    ownerArea: `${channelId} adapter install/setup`
+  }];
+}
+
+function extractAdapterInstallDiagnostics(steps) {
+  const pluginLoadFailures = [];
+  for (const step of steps) {
+    const text = `${step.stdoutTail ?? ""}\n${step.stderrTail ?? ""}`;
+    for (const line of text.split(/\r?\n/u)) {
+      const trimmed = line.trim();
+      if (!trimmed) {
+        continue;
+      }
+      if (isPluginLoadFailure(trimmed)) {
+        pluginLoadFailures.push({
+          commandId: step.id,
+          message: trimmed
+        });
+      }
+    }
+  }
+  return { pluginLoadFailures };
+}
+
+function isPluginLoadFailure(line) {
+  return /\[plugins\].*failed to load|plugin.*failed to load|\[plugins\].*plugin service failed|plugin service failed/i.test(line);
 }
 
 function assertSafeKovaEnv(value) {
