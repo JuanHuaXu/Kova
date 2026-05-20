@@ -11,6 +11,7 @@ const stallMs = options.stallMs ?? 65000;
 const errorStatus = options.errorStatus ?? 503;
 let nextRequestId = 1;
 let providerPostCount = 0;
+const emittedToolCallInboundEventIds = new Set();
 
 const supportedModes = new Set(["normal", "slow", "timeout", "malformed", "streaming-stall", "error-then-recover", "concurrent-pressure"]);
 if (!supportedModes.has(providerMode)) {
@@ -310,10 +311,11 @@ const server = http.createServer(async (req, res) => {
       return;
     }
     const responseText = resolveResponseText(bodyText);
-    const responseToolCall = requestHasFunctionCallOutput(bodyText)
-      ? null
-      : resolveResponseToolCall(bodyText);
+    const responseToolCall = shouldEmitResponseToolCall(bodyText)
+      ? resolveResponseToolCall(bodyText)
+      : null;
     if (responseToolCall) {
+      markResponseToolCallEmitted(bodyText);
       if (body.stream === false) {
         usage = mockUsage();
         writeJson(res, 200, {
@@ -439,10 +441,40 @@ function resolveResponseToolCall(requestBodyText) {
   }
 }
 
-function requestHasFunctionCallOutput(requestBodyText) {
+function shouldEmitResponseToolCall(requestBodyText) {
   const text = String(requestBodyText ?? "");
-  return text.includes('"type":"function_call_output"') ||
-    text.includes('"type": "function_call_output"');
+  if (!/KOVA_MOCK_TOOL_CALL_B64:/.test(text)) {
+    return false;
+  }
+  const latestToolFixtureIndex = text.lastIndexOf("KOVA_MOCK_TOOL_CALL_B64:");
+  const inboundEventId = latestMatch(text, /KOVA_INBOUND_EVENT_ID:([A-Za-z0-9._:-]+)/g);
+  if (inboundEventId) {
+    const latestInboundEventIndex = latestMatchIndex(text, /KOVA_INBOUND_EVENT_ID:([A-Za-z0-9._:-]+)/g);
+    if (latestToolFixtureIndex < latestInboundEventIndex) {
+      return false;
+    }
+    return !emittedToolCallInboundEventIds.has(inboundEventId);
+  }
+  const compactOutputIndex = text.lastIndexOf('"type":"function_call_output"');
+  const spacedOutputIndex = text.lastIndexOf('"type": "function_call_output"');
+  const latestFunctionOutputIndex = Math.max(compactOutputIndex, spacedOutputIndex);
+  if (latestFunctionOutputIndex < 0) {
+    return true;
+  }
+  if (latestToolFixtureIndex < 0) {
+    return false;
+  }
+  return latestFunctionOutputIndex < latestToolFixtureIndex;
+}
+
+function markResponseToolCallEmitted(requestBodyText) {
+  const inboundEventId = latestMatch(
+    String(requestBodyText ?? ""),
+    /KOVA_INBOUND_EVENT_ID:([A-Za-z0-9._:-]+)/g
+  );
+  if (inboundEventId) {
+    emittedToolCallInboundEventIds.add(inboundEventId);
+  }
 }
 
 function extractKovaRequestMarkers(requestBodyText) {
@@ -452,6 +484,22 @@ function extractKovaRequestMarkers(requestBodyText) {
     inboundEventIds: uniqueMatches(text, /KOVA_INBOUND_EVENT_ID:([A-Za-z0-9._:-]+)/g),
     toolCallFixtures: uniqueMatches(text, /KOVA_MOCK_TOOL_CALL_B64:([A-Za-z0-9+/_=-]+)/g).length
   };
+}
+
+function latestMatch(text, pattern) {
+  let latest = null;
+  for (const match of text.matchAll(pattern)) {
+    latest = match[1];
+  }
+  return latest;
+}
+
+function latestMatchIndex(text, pattern) {
+  let latest = -1;
+  for (const match of text.matchAll(pattern)) {
+    latest = match.index ?? latest;
+  }
+  return latest;
 }
 
 function uniqueMatches(text, pattern) {

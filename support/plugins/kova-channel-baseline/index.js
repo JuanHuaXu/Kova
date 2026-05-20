@@ -983,7 +983,7 @@ async function runSyntheticTurn({
       },
       preparePayload: (prepared) => durablePayload ?? prepared,
       deliver: async (delivered) => {
-        deliveryRecords.push({ fallback: true, payload: delivered });
+        return await deliverFallbackPayload(delivered, { replyToId, threadId, silent });
       },
       onDelivered: async (delivered, info, result) => {
         deliveryRecords.push({
@@ -1071,7 +1071,7 @@ async function runOpenClawModelTurn({
         silent
       },
       deliver: async (delivered) => {
-        deliveryRecords.push({ fallback: true, payload: delivered });
+        return await deliverFallbackPayload(delivered, { replyToId, threadId, silent });
       },
       onDelivered: async (delivered, info, result) => {
         deliveryRecords.push({
@@ -1331,6 +1331,49 @@ async function recordOutbound(kind, ctx) {
     replyToId: ctx.replyToId ?? null
   });
   return { messageId, receipt };
+}
+
+async function deliverFallbackPayload(payload, options = {}) {
+  const mediaUrl = firstMediaUrl(payload);
+  const ctx = {
+    to: TARGET_ID,
+    text: payload?.text ?? "",
+    replyToId: options.replyToId ?? undefined,
+    threadId: options.threadId ?? undefined,
+    silent: options.silent === true
+  };
+  const result = mediaUrl
+    ? await messageAdapter.send.media({ ...ctx, mediaUrl })
+    : payload?.channelData
+      ? await messageAdapter.send.payload({ ...ctx, payload })
+      : await messageAdapter.send.text(ctx);
+  const messageIds = result?.receipt?.platformMessageIds ?? [];
+  deliveryRecords.push({
+    fallback: true,
+    kind: mediaUrl ? "media" : payload?.channelData ? "payload" : "text",
+    text: payload?.text ?? null,
+    mediaUrl: mediaUrl ?? null,
+    mediaUrls: Array.isArray(payload?.mediaUrls) ? payload.mediaUrls : mediaUrl ? [mediaUrl] : [],
+    replyToId: options.replyToId ?? null,
+    threadId: options.threadId ?? null,
+    silent: options.silent === true,
+    visibleReplySent: messageIds.length > 0,
+    messageIds
+  });
+  return {
+    messageIds,
+    visibleReplySent: messageIds.length > 0
+  };
+}
+
+function firstMediaUrl(payload) {
+  if (typeof payload?.mediaUrl === "string" && payload.mediaUrl.length > 0) {
+    return payload.mediaUrl;
+  }
+  if (Array.isArray(payload?.mediaUrls)) {
+    return payload.mediaUrls.find((url) => typeof url === "string" && url.length > 0) ?? null;
+  }
+  return null;
 }
 
 function createReceipt(id, kind = "text", options = {}) {
