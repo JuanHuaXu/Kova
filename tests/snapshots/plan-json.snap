@@ -449,6 +449,39 @@
       ]
     },
     {
+      "id": "channel-discord-capability-conformance",
+      "title": "Discord Channel Capability Conformance",
+      "ownerArea": "OpenClaw Discord adapter",
+      "description": "Validate Discord's packaged message adapter against shared OpenClaw channel capability atoms and workflow cases using a deterministic platform shim.",
+      "processRoles": [
+        "command-tree"
+      ],
+      "thresholds": {},
+      "diagnostics": {
+        "timelineRequiredForSourceBuild": false,
+        "expectedSpans": []
+      },
+      "purposes": [
+        "regression",
+        "release"
+      ],
+      "requirements": [
+        {
+          "id": "discord-conformance",
+          "states": [
+            "fresh"
+          ],
+          "targetKinds": [
+            "npm",
+            "release",
+            "runtime",
+            "local-build"
+          ],
+          "metrics": []
+        }
+      ]
+    },
+    {
       "id": "channel-model-turn-baseline",
       "title": "Channel Model Turn Baseline",
       "ownerArea": "OpenClaw",
@@ -3651,10 +3684,213 @@
   "channelCapabilities": [
     {
       "schemaVersion": "kova.channelCapability.v1",
+      "id": "discord",
+      "title": "Discord Channel",
+      "adapterId": "discord",
+      "supportStatus": "supported",
+      "adapterDistribution": {
+        "kind": "external",
+        "packageName": "@openclaw/discord",
+        "pluginId": "discord",
+        "localBuildPath": "dist/extensions/discord",
+        "modulePath": "channel-plugin-api.js",
+        "exportName": "discordPlugin"
+      },
+      "declarationSources": [
+        "src/channels/message/types.ts",
+        "extensions/discord/src/channel.ts",
+        "extensions/discord/src/outbound-adapter.ts"
+      ],
+      "workflowCaseIds": [
+        "media-final",
+        "thread-final",
+        "silent-final",
+        "source-visible-delivery.text.automatic-final",
+        "source-visible-delivery.text.message-tool-only",
+        "source-visible-delivery.media.message-tool-only",
+        "background-artifact-completion.video.message-tool-only"
+      ],
+      "deterministicShim": {
+        "conversationId": "channel:123456",
+        "threadId": "thread-1",
+        "replyToId": "reply-1",
+        "accountId": "default",
+        "platform": {
+          "replyOptionField": "replyTo",
+          "replyOptionValue": "reply-1",
+          "threadTarget": "channel:thread-1"
+        }
+      },
+      "capabilities": [
+        {
+          "id": "text",
+          "group": "durable-final",
+          "catalogId": "durable-final:text",
+          "title": "Final Text Delivery",
+          "requiredLevel": "blocking",
+          "proofModes": [
+            "deterministic-shim",
+            "live-smoke"
+          ],
+          "declarationSource": "extensions/discord/src/outbound-adapter.ts"
+        },
+        {
+          "id": "media",
+          "group": "durable-final",
+          "catalogId": "durable-final:media",
+          "title": "Final Media Delivery",
+          "requiredLevel": "blocking",
+          "proofModes": [
+            "deterministic-shim",
+            "live-smoke"
+          ],
+          "declarationSource": "extensions/discord/src/outbound-adapter.ts"
+        },
+        {
+          "id": "payload",
+          "group": "durable-final",
+          "catalogId": "durable-final:payload",
+          "title": "Final Payload Delivery",
+          "requiredLevel": "blocking",
+          "proofModes": [
+            "deterministic-shim"
+          ],
+          "declarationSource": "extensions/discord/src/outbound-adapter.ts"
+        },
+        {
+          "id": "silent",
+          "group": "durable-final",
+          "catalogId": "durable-final:silent",
+          "title": "Silent Final Delivery",
+          "requiredLevel": "warning",
+          "proofModes": [
+            "deterministic-shim"
+          ],
+          "declarationSource": "extensions/discord/src/outbound-adapter.ts"
+        },
+        {
+          "id": "reply-to",
+          "group": "durable-final",
+          "catalogId": "durable-final:reply-to",
+          "title": "Reply Target Mapping",
+          "requiredLevel": "blocking",
+          "proofModes": [
+            "deterministic-shim"
+          ],
+          "declarationSource": "extensions/discord/src/outbound-adapter.ts"
+        },
+        {
+          "id": "thread",
+          "group": "durable-final",
+          "catalogId": "durable-final:thread",
+          "title": "Thread Target Mapping",
+          "requiredLevel": "blocking",
+          "proofModes": [
+            "deterministic-shim"
+          ],
+          "declarationSource": "extensions/discord/src/outbound-adapter.ts"
+        },
+        {
+          "id": "message-sending-hooks",
+          "group": "durable-final",
+          "catalogId": "durable-final:message-sending-hooks",
+          "title": "Message Sending Hooks",
+          "requiredLevel": "warning",
+          "proofModes": [
+            "deterministic-shim"
+          ],
+          "declarationSource": "extensions/discord/src/outbound-adapter.ts"
+        },
+        {
+          "id": "manual",
+          "group": "ack",
+          "catalogId": "ack:manual",
+          "title": "Manual Ack",
+          "requiredLevel": "warning",
+          "proofModes": [
+            "deterministic-shim"
+          ],
+          "declarationSource": "extensions/discord/src/channel.ts"
+        },
+        {
+          "id": "draft-preview",
+          "group": "live-preview",
+          "catalogId": "live-preview:draft-preview",
+          "title": "Draft Preview",
+          "requiredLevel": "warning",
+          "proofModes": [
+            "deterministic-shim"
+          ],
+          "declarationSource": "extensions/discord/src/channel.ts"
+        },
+        {
+          "id": "preview-finalization",
+          "group": "live-preview",
+          "catalogId": "live-preview:preview-finalization",
+          "title": "Preview Finalization",
+          "requiredLevel": "warning",
+          "proofModes": [
+            "deterministic-shim"
+          ],
+          "declarationSource": "extensions/discord/src/channel.ts"
+        },
+        {
+          "id": "progress-updates",
+          "group": "live-preview",
+          "catalogId": "live-preview:progress-updates",
+          "title": "Progress Updates",
+          "requiredLevel": "warning",
+          "proofModes": [
+            "deterministic-shim"
+          ],
+          "declarationSource": "extensions/discord/src/channel.ts"
+        },
+        {
+          "id": "final-edit",
+          "group": "live-finalizer",
+          "catalogId": "live-finalizer:final-edit",
+          "title": "Final Edit",
+          "requiredLevel": "warning",
+          "proofModes": [
+            "deterministic-shim"
+          ],
+          "declarationSource": "extensions/discord/src/channel.ts"
+        },
+        {
+          "id": "normal-fallback",
+          "group": "live-finalizer",
+          "catalogId": "live-finalizer:normal-fallback",
+          "title": "Normal Finalization Fallback",
+          "requiredLevel": "warning",
+          "proofModes": [
+            "deterministic-shim"
+          ],
+          "declarationSource": "extensions/discord/src/channel.ts"
+        },
+        {
+          "id": "discard-pending",
+          "group": "live-finalizer",
+          "catalogId": "live-finalizer:discard-pending",
+          "title": "Discard Pending Preview",
+          "requiredLevel": "warning",
+          "proofModes": [
+            "deterministic-shim"
+          ],
+          "declarationSource": "extensions/discord/src/channel.ts"
+        }
+      ]
+    },
+    {
+      "schemaVersion": "kova.channelCapability.v1",
       "id": "telegram",
       "title": "Telegram Channel",
       "adapterId": "telegram",
       "supportStatus": "supported",
+      "adapterDistribution": {
+        "kind": "bundled",
+        "modulePath": "dist/extensions/telegram/channel-plugin-api.js",
+        "exportName": "telegramPlugin"
+      },
       "declarationSources": [
         "src/channels/message/types.ts",
         "extensions/telegram/src/channel.ts",
@@ -3672,7 +3908,13 @@
       "deterministicShim": {
         "conversationId": "12345",
         "threadId": "12",
-        "replyToId": "900"
+        "replyToId": "900",
+        "platform": {
+          "replyOptionField": "replyToMessageId",
+          "replyOptionValue": 900,
+          "threadOptionField": "messageThreadId",
+          "threadOptionValue": 12
+        }
       },
       "capabilities": [
         {
@@ -5344,6 +5586,83 @@
       ],
       "proves": [
         "preflight"
+      ]
+    },
+    {
+      "id": "channel-discord-capability-conformance",
+      "surface": "channel-discord-capability-conformance",
+      "title": "Discord Channel Capability Conformance",
+      "objective": "Install the Discord channel package through OpenClaw's plugin command path, import the installed message adapter, drive it through a deterministic platform shim, and prove Discord's declared channel atoms plus shared workflow cases without live Discord credentials.",
+      "tags": [
+        "channel",
+        "discord",
+        "capability",
+        "adapter",
+        "shim"
+      ],
+      "targetKinds": [
+        "npm",
+        "release",
+        "runtime",
+        "local-build"
+      ],
+      "timeoutMs": 180000,
+      "auth": {
+        "mode": "skip"
+      },
+      "thresholds": {},
+      "phases": [
+        {
+          "id": "provision",
+          "title": "Provision Runtime Env",
+          "intent": "Create a disposable OpenClaw environment with the selected target runtime so Kova can install Discord the way users install an external channel package.",
+          "commands": [
+            "ocm start {env} {startSelector} --json"
+          ],
+          "evidence": [
+            "OCM start JSON",
+            "env name",
+            "runtime binding"
+          ],
+          "healthScope": "readiness",
+          "collectionIntent": "service-only"
+        },
+        {
+          "id": "install-discord-channel-package",
+          "title": "Install Discord Channel Package",
+          "intent": "Install Discord through OpenClaw's plugin install path before adapter conformance. Local-build targets use the built external package from the checkout; release targets use the declared package name.",
+          "commands": [
+            "node {kovaRoot}/support/install-channel-adapter-package.mjs --env {env} --artifact-dir {artifactDir} --channel discord --target-repo {targetRepo} --timeout-ms 120000"
+          ],
+          "evidence": [
+            "OpenClaw plugin install command",
+            "installed Discord plugin record",
+            "plugin registry refresh"
+          ],
+          "healthScope": "readiness",
+          "collectionIntent": "service-only"
+        },
+        {
+          "id": "channel-discord-deterministic-shim",
+          "title": "Run Discord Deterministic Shim Conformance",
+          "intent": "Import Discord's installed message adapter, execute declared atom proofs and shared workflow cases through its adapter send methods, and record adapter/platform-mapping evidence without live Discord credentials.",
+          "commands": [
+            "node {kovaRoot}/support/run-channel-adapter-conformance.mjs --env {env} --artifact-dir {artifactDir} --channel discord --continue-on-failure true --timeout-ms 120000"
+          ],
+          "evidence": [
+            "installed Discord message adapter import",
+            "declared Discord capability proof rows",
+            "shared workflow case ids",
+            "deterministic platform send calls",
+            "adapter receipts",
+            "generic workflow invariants"
+          ],
+          "healthScope": "none",
+          "collectionIntent": "skip-env"
+        }
+      ],
+      "proves": [
+        "discord-conformance"
       ]
     },
     {
@@ -9544,6 +9863,15 @@
         ]
       },
       {
+        "id": "channel-discord-capability-conformance",
+        "title": "Discord Channel Capability Conformance",
+        "ownerArea": "OpenClaw Discord adapter",
+        "scenarioCount": 1,
+        "scenarios": [
+          "channel-discord-capability-conformance"
+        ]
+      },
+      {
         "id": "channel-model-turn-baseline",
         "title": "Channel Model Turn Baseline",
         "ownerArea": "OpenClaw",
@@ -9848,6 +10176,10 @@
       {
         "scenario": "channel-capability-preflight",
         "surface": "channel-capability-preflight"
+      },
+      {
+        "scenario": "channel-discord-capability-conformance",
+        "surface": "channel-discord-capability-conformance"
       },
       {
         "scenario": "channel-model-turn-baseline",

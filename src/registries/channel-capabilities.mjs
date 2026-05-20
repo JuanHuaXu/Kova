@@ -45,6 +45,7 @@ export function validateChannelCapabilityShape(channel, sourceName = "channel ca
   requireString(channel, "adapterId", errors);
   requireString(channel, "supportStatus", errors);
   validateKnownValue(channel?.supportStatus, channelSupportStatuses, "supportStatus", errors);
+  validateAdapterDistribution(channel?.adapterDistribution, "adapterDistribution", errors);
   validateStringArray(channel?.declarationSources, "declarationSources", errors, { nonEmpty: true });
   validateStringArray(channel?.workflowCaseIds, "workflowCaseIds", errors, { optional: true });
   validateDeterministicShim(channel?.deterministicShim, "deterministicShim", errors);
@@ -119,6 +120,45 @@ function validateDeterministicShim(value, prefix, errors) {
   for (const key of ["conversationId", "threadId", "replyToId"]) {
     if (value[key] !== undefined && (typeof value[key] !== "string" || value[key].length === 0)) {
       errors.push(`${prefix}.${key} must be a non-empty string when set`);
+    }
+  }
+  if (value.accountId !== undefined && (typeof value.accountId !== "string" || value.accountId.length === 0)) {
+    errors.push(`${prefix}.accountId must be a non-empty string when set`);
+  }
+  if (value.platform !== undefined) {
+    validateDeterministicShimPlatform(value.platform, `${prefix}.platform`, errors);
+  }
+}
+
+function validateAdapterDistribution(value, prefix, errors) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    errors.push(`${prefix} must be an object`);
+    return;
+  }
+  requireString(value, "kind", errors, prefix);
+  validateKnownValue(value?.kind, ["bundled", "external"], `${prefix}.kind`, errors);
+  requireString(value, "modulePath", errors, prefix);
+  requireString(value, "exportName", errors, prefix);
+  if (value.kind === "external") {
+    requireString(value, "packageName", errors, prefix);
+    requireString(value, "pluginId", errors, prefix);
+    requireString(value, "localBuildPath", errors, prefix);
+  }
+}
+
+function validateDeterministicShimPlatform(value, prefix, errors) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    errors.push(`${prefix} must be an object when set`);
+    return;
+  }
+  for (const key of ["replyOptionField", "threadOptionField", "threadTarget"]) {
+    if (value[key] !== undefined && (typeof value[key] !== "string" || value[key].length === 0)) {
+      errors.push(`${prefix}.${key} must be a non-empty string when set`);
+    }
+  }
+  for (const key of ["replyOptionValue", "threadOptionValue"]) {
+    if (value[key] !== undefined && !["string", "number", "boolean"].includes(typeof value[key])) {
+      errors.push(`${prefix}.${key} must be a string, number, or boolean when set`);
     }
   }
 }

@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { readFileSync } from "node:fs";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { pathToFileURL } from "node:url";
@@ -93,16 +94,41 @@ async function buildResult({ runtimeContext, adapterContext, timeoutMs: commandT
 }
 
 async function loadAdapterContext({ channelId: requestedChannelId, packageRoot }) {
-  if (requestedChannelId !== "telegram") {
-    throw new Error(`channel adapter conformance is not implemented for ${requestedChannelId}`);
-  }
-  const modulePath = join(packageRoot, "dist", "extensions", "telegram", "channel-plugin-api.js");
+  const distribution = channelRegistry.adapterDistribution;
+  assert(distribution, `${requestedChannelId} channel registry does not declare adapterDistribution`);
+  const modulePath = resolveAdapterModulePath({ distribution, packageRoot });
   const mod = await import(pathToFileURL(modulePath).href);
-  const adapter = mod.telegramPlugin?.message;
+  const adapter = mod[distribution.exportName]?.message;
   if (!adapter) {
-    throw new Error("packaged Telegram plugin does not expose a message adapter");
+    throw new Error(`packaged ${requestedChannelId} plugin does not expose a message adapter`);
   }
-  return { modulePath, adapter };
+  return { modulePath, adapter, distribution };
+}
+
+function resolveAdapterModulePath({ distribution, packageRoot }) {
+  if (distribution.kind === "bundled") {
+    return join(packageRoot, distribution.modulePath);
+  }
+  if (distribution.kind === "external") {
+    return join(readInstalledPluginRoot(distribution.pluginId), distribution.modulePath);
+  }
+  throw new Error(`unsupported adapter distribution kind '${distribution.kind}'`);
+}
+
+function readInstalledPluginRoot(pluginId) {
+  const stateRoot = process.env.OPENCLAW_STATE_DIR || join(process.env.OPENCLAW_HOME || "", ".openclaw");
+  const indexPath = join(stateRoot, "plugins", "installs.json");
+  let parsed;
+  try {
+    parsed = JSON.parse(readFileSync(indexPath, "utf8"));
+  } catch (error) {
+    throw new Error(`installed plugin index is unavailable at ${indexPath}: ${error.message}`);
+  }
+  const plugin = (parsed.plugins ?? []).find((entry) => entry.pluginId === pluginId);
+  if (!plugin?.rootDir) {
+    throw new Error(`installed plugin '${pluginId}' is not present in ${indexPath}`);
+  }
+  return plugin.rootDir;
 }
 
 async function runCapabilityProofs(adapter, channel) {
@@ -222,7 +248,7 @@ async function runWorkflowCase(adapter, testCase) {
 async function runAdapterSend(adapter, input) {
   const platformCalls = [];
   let sendIndex = 0;
-  const sendTelegram = async (...call) => {
+  const sendPlatform = async (...call) => {
     platformCalls.push(call);
     sendIndex += 1;
     return {
@@ -234,7 +260,12 @@ async function runAdapterSend(adapter, input) {
     cfg: {},
     to: shimConversationId(),
     text: input.text ?? "",
-    deps: { sendTelegram },
+    deps: {
+      sendTelegram: sendPlatform,
+      telegram: sendPlatform,
+      discord: sendPlatform
+    },
+    ...(shimAccountId() ? { accountId: shimAccountId() } : {}),
     ...(input.replyToId ? { replyToId: input.replyToId } : {}),
     ...(input.threadId ? { threadId: input.threadId } : {}),
     ...(input.silent === true ? { silent: true } : {})
@@ -284,8 +315,8 @@ function workflowInvariants(testCase, proof) {
     invariant(`${testCase.id}:delivery-kind`, !expected.kind || proof.send.kind === expected.kind, `${testCase.id} used expected adapter send kind`),
     invariant(`${testCase.id}:text`, !expected.text || firstCall?.text === expected.text, `${testCase.id} preserved expected text/caption`),
     invariant(`${testCase.id}:media`, expected.kind !== "media" || firstCall?.options?.mediaUrl === expected.mediaSource, `${testCase.id} preserved expected media source`),
-    invariant(`${testCase.id}:reply-to`, expected.replyTo !== "inbound-message" || firstCall?.options?.replyToMessageId === Number(shimReplyToId()), `${testCase.id} preserved reply target`),
-    invariant(`${testCase.id}:thread`, !expected.threadId || firstCall?.options?.messageThreadId === Number(shimThreadId()), `${testCase.id} preserved thread target`),
+    invariant(`${testCase.id}:reply-to`, expected.replyTo !== "inbound-message" || platformReplyTargetMatches(firstCall), `${testCase.id} preserved reply target`),
+    invariant(`${testCase.id}:thread`, !expected.threadId || platformThreadTargetMatches(firstCall), `${testCase.id} preserved thread target`),
     invariant(`${testCase.id}:silent`, expected.silent !== true || firstCall?.options?.silent === true, `${testCase.id} preserved silent delivery intent`),
     invariant(`${testCase.id}:terminal`, expected.terminal !== true || proof.result.platformMessageIds.length > 0, `${testCase.id} returned terminal adapter receipt`)
   ];
@@ -381,6 +412,7 @@ function compactPlatformCall(call) {
       mediaLocalRoots: options?.mediaLocalRoots ?? null,
       messageThreadId: options?.messageThreadId ?? null,
       replyToMessageId: options?.replyToMessageId ?? null,
+      replyTo: options?.replyTo ?? null,
       silent: options?.silent ?? null,
       forceDocument: options?.forceDocument ?? null
     }
@@ -427,6 +459,39 @@ function shimThreadId() {
 
 function shimReplyToId() {
   return channelRegistry.deterministicShim?.replyToId ?? "900";
+}
+
+function shimAccountId() {
+  return channelRegistry.deterministicShim?.accountId ?? null;
+}
+
+function platformReplyTargetMatches(call) {
+  const platform = channelRegistry.deterministicShim?.platform ?? {};
+  if (!platform.replyOptionField) {
+    return true;
+  }
+  return valuesEqual(call?.options?.[platform.replyOptionField], platform.replyOptionValue);
+}
+
+function platformThreadTargetMatches(call) {
+  const platform = channelRegistry.deterministicShim?.platform ?? {};
+  if (platform.threadTarget) {
+    return call?.to === platform.threadTarget;
+  }
+  if (platform.threadOptionField) {
+    return valuesEqual(call?.options?.[platform.threadOptionField], platform.threadOptionValue);
+  }
+  return true;
+}
+
+function valuesEqual(actual, expected) {
+  if (actual === expected) {
+    return true;
+  }
+  if (actual == null || expected == null) {
+    return false;
+  }
+  return String(actual) === String(expected);
 }
 
 function assert(condition, message) {

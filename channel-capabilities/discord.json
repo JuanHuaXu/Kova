@@ -1,18 +1,21 @@
 {
   "schemaVersion": "kova.channelCapability.v1",
-  "id": "telegram",
-  "title": "Telegram Channel",
-  "adapterId": "telegram",
+  "id": "discord",
+  "title": "Discord Channel",
+  "adapterId": "discord",
   "supportStatus": "supported",
   "adapterDistribution": {
-    "kind": "bundled",
-    "modulePath": "dist/extensions/telegram/channel-plugin-api.js",
-    "exportName": "telegramPlugin"
+    "kind": "external",
+    "packageName": "@openclaw/discord",
+    "pluginId": "discord",
+    "localBuildPath": "dist/extensions/discord",
+    "modulePath": "channel-plugin-api.js",
+    "exportName": "discordPlugin"
   },
   "declarationSources": [
     "src/channels/message/types.ts",
-    "extensions/telegram/src/channel.ts",
-    "extensions/telegram/src/outbound-adapter.ts"
+    "extensions/discord/src/channel.ts",
+    "extensions/discord/src/outbound-adapter.ts"
   ],
   "workflowCaseIds": [
     "media-final",
@@ -24,14 +27,14 @@
     "background-artifact-completion.video.message-tool-only"
   ],
   "deterministicShim": {
-    "conversationId": "12345",
-    "threadId": "12",
-    "replyToId": "900",
+    "conversationId": "channel:123456",
+    "threadId": "thread-1",
+    "replyToId": "reply-1",
+    "accountId": "default",
     "platform": {
-      "replyOptionField": "replyToMessageId",
-      "replyOptionValue": 900,
-      "threadOptionField": "messageThreadId",
-      "threadOptionValue": 12
+      "replyOptionField": "replyTo",
+      "replyOptionValue": "reply-1",
+      "threadTarget": "channel:thread-1"
     }
   },
   "capabilities": [
@@ -42,7 +45,7 @@
       "title": "Final Text Delivery",
       "requiredLevel": "blocking",
       "proofModes": ["deterministic-shim", "live-smoke"],
-      "declarationSource": "extensions/telegram/src/outbound-adapter.ts"
+      "declarationSource": "extensions/discord/src/outbound-adapter.ts"
     },
     {
       "id": "media",
@@ -51,7 +54,7 @@
       "title": "Final Media Delivery",
       "requiredLevel": "blocking",
       "proofModes": ["deterministic-shim", "live-smoke"],
-      "declarationSource": "extensions/telegram/src/outbound-adapter.ts"
+      "declarationSource": "extensions/discord/src/outbound-adapter.ts"
     },
     {
       "id": "payload",
@@ -60,7 +63,7 @@
       "title": "Final Payload Delivery",
       "requiredLevel": "blocking",
       "proofModes": ["deterministic-shim"],
-      "declarationSource": "extensions/telegram/src/outbound-adapter.ts"
+      "declarationSource": "extensions/discord/src/outbound-adapter.ts"
     },
     {
       "id": "silent",
@@ -69,7 +72,7 @@
       "title": "Silent Final Delivery",
       "requiredLevel": "warning",
       "proofModes": ["deterministic-shim"],
-      "declarationSource": "extensions/telegram/src/outbound-adapter.ts"
+      "declarationSource": "extensions/discord/src/outbound-adapter.ts"
     },
     {
       "id": "reply-to",
@@ -78,7 +81,7 @@
       "title": "Reply Target Mapping",
       "requiredLevel": "blocking",
       "proofModes": ["deterministic-shim"],
-      "declarationSource": "extensions/telegram/src/outbound-adapter.ts"
+      "declarationSource": "extensions/discord/src/outbound-adapter.ts"
     },
     {
       "id": "thread",
@@ -87,7 +90,7 @@
       "title": "Thread Target Mapping",
       "requiredLevel": "blocking",
       "proofModes": ["deterministic-shim"],
-      "declarationSource": "extensions/telegram/src/outbound-adapter.ts"
+      "declarationSource": "extensions/discord/src/outbound-adapter.ts"
     },
     {
       "id": "message-sending-hooks",
@@ -96,34 +99,16 @@
       "title": "Message Sending Hooks",
       "requiredLevel": "warning",
       "proofModes": ["deterministic-shim"],
-      "declarationSource": "extensions/telegram/src/outbound-adapter.ts"
+      "declarationSource": "extensions/discord/src/outbound-adapter.ts"
     },
     {
-      "id": "batch",
-      "group": "durable-final",
-      "catalogId": "durable-final:batch",
-      "title": "Batch Final Delivery",
+      "id": "manual",
+      "group": "ack",
+      "catalogId": "ack:manual",
+      "title": "Manual Ack",
       "requiredLevel": "warning",
       "proofModes": ["deterministic-shim"],
-      "declarationSource": "extensions/telegram/src/outbound-adapter.ts"
-    },
-    {
-      "id": "after-receive-record",
-      "group": "ack",
-      "catalogId": "ack:after-receive-record",
-      "title": "Ack After Receive Record",
-      "requiredLevel": "warning",
-      "proofModes": ["deterministic-shim"],
-      "declarationSource": "extensions/telegram/src/channel.ts"
-    },
-    {
-      "id": "after-agent-dispatch",
-      "group": "ack",
-      "catalogId": "ack:after-agent-dispatch",
-      "title": "Ack After Agent Dispatch",
-      "requiredLevel": "blocking",
-      "proofModes": ["deterministic-shim"],
-      "declarationSource": "extensions/telegram/src/channel.ts"
+      "declarationSource": "extensions/discord/src/channel.ts"
     },
     {
       "id": "draft-preview",
@@ -132,7 +117,7 @@
       "title": "Draft Preview",
       "requiredLevel": "warning",
       "proofModes": ["deterministic-shim"],
-      "declarationSource": "extensions/telegram/src/channel.ts"
+      "declarationSource": "extensions/discord/src/channel.ts"
     },
     {
       "id": "preview-finalization",
@@ -141,7 +126,7 @@
       "title": "Preview Finalization",
       "requiredLevel": "warning",
       "proofModes": ["deterministic-shim"],
-      "declarationSource": "extensions/telegram/src/channel.ts"
+      "declarationSource": "extensions/discord/src/channel.ts"
     },
     {
       "id": "progress-updates",
@@ -150,7 +135,7 @@
       "title": "Progress Updates",
       "requiredLevel": "warning",
       "proofModes": ["deterministic-shim"],
-      "declarationSource": "extensions/telegram/src/channel.ts"
+      "declarationSource": "extensions/discord/src/channel.ts"
     },
     {
       "id": "final-edit",
@@ -159,7 +144,7 @@
       "title": "Final Edit",
       "requiredLevel": "warning",
       "proofModes": ["deterministic-shim"],
-      "declarationSource": "extensions/telegram/src/channel.ts"
+      "declarationSource": "extensions/discord/src/channel.ts"
     },
     {
       "id": "normal-fallback",
@@ -168,25 +153,16 @@
       "title": "Normal Finalization Fallback",
       "requiredLevel": "warning",
       "proofModes": ["deterministic-shim"],
-      "declarationSource": "extensions/telegram/src/channel.ts"
+      "declarationSource": "extensions/discord/src/channel.ts"
     },
     {
-      "id": "preview-receipt",
+      "id": "discard-pending",
       "group": "live-finalizer",
-      "catalogId": "live-finalizer:preview-receipt",
-      "title": "Preview Receipt",
+      "catalogId": "live-finalizer:discard-pending",
+      "title": "Discard Pending Preview",
       "requiredLevel": "warning",
       "proofModes": ["deterministic-shim"],
-      "declarationSource": "extensions/telegram/src/channel.ts"
-    },
-    {
-      "id": "retain-on-ambiguous-failure",
-      "group": "live-finalizer",
-      "catalogId": "live-finalizer:retain-on-ambiguous-failure",
-      "title": "Retain Preview On Ambiguous Failure",
-      "requiredLevel": "warning",
-      "proofModes": ["deterministic-shim"],
-      "declarationSource": "extensions/telegram/src/channel.ts"
+      "declarationSource": "extensions/discord/src/channel.ts"
     }
   ]
 }

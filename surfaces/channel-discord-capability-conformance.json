@@ -1,0 +1,33 @@
+{
+  "id": "channel-discord-capability-conformance",
+  "title": "Discord Channel Capability Conformance",
+  "ownerArea": "OpenClaw Discord adapter",
+  "description": "Validate Discord's packaged message adapter against shared OpenClaw channel capability atoms and workflow cases using a deterministic platform shim.",
+  "processRoles": [
+    "command-tree"
+  ],
+  "thresholds": {},
+  "diagnostics": {
+    "timelineRequiredForSourceBuild": false,
+    "expectedSpans": []
+  },
+  "purposes": [
+    "regression",
+    "release"
+  ],
+  "requirements": [
+    {
+      "id": "discord-conformance",
+      "states": [
+        "fresh"
+      ],
+      "targetKinds": [
+        "npm",
+        "release",
+        "runtime",
+        "local-build"
+      ],
+      "metrics": []
+    }
+  ]
+}

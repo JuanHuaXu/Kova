@@ -57,7 +57,7 @@ export function parseSupportArgs(argv) {
     }
     const key = arg.slice(2);
     const value = argv[index + 1];
-    if (!value || value.startsWith("--")) {
+    if (value === undefined || value.startsWith("--")) {
       throw new Error(`${arg} requires a value`);
     }
     parsed[key] = value;
