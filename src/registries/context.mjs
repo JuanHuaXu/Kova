@@ -6,7 +6,11 @@ import {
 } from "./channel-capabilities.mjs";
 import { loadChannelCapabilityCatalog } from "./channel-capability-catalog.mjs";
 import { loadChannelWorkflowInventory, validateChannelWorkflowInventoryReferences } from "./channel-workflow-inventory.mjs";
-import { loadChannelWorkflowCaseCatalog, validateChannelWorkflowCaseCatalogReferences } from "./channel-workflow-cases.mjs";
+import {
+  loadChannelWorkflowCaseCatalog,
+  validateChannelWorkflowCaseCatalogReferences,
+  validateChannelWorkflowCaseInventoryReferences
+} from "./channel-workflow-cases.mjs";
 import { loadProcessRoles } from "./process-roles.mjs";
 import { loadProfiles } from "./profiles.mjs";
 import { loadScenarios } from "./scenarios.mjs";
@@ -31,6 +35,7 @@ export async function loadRegistryContext() {
   validateChannelCapabilityCatalogReferences(channelCapabilities, channelCapabilityCatalog);
   validateChannelWorkflowInventoryReferences(channelWorkflowInventory, channelCapabilityCatalog);
   validateChannelWorkflowCaseCatalogReferences(channelWorkflowCaseCatalog, channelCapabilityCatalog);
+  validateChannelWorkflowCaseInventoryReferences(channelWorkflowCaseCatalog, channelWorkflowInventory);
   validateChannelCapabilityWorkflowReferences(channelCapabilities, channelWorkflowCaseCatalog);
   return { surfaces, processRoles, metrics, channelCapabilityCatalog, channelWorkflowInventory, channelWorkflowCaseCatalog, channelCapabilities, scenarios, states, profiles };
 }

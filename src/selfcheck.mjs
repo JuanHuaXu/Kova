@@ -27,7 +27,11 @@ import {
 } from "./registries/channel-capabilities.mjs";
 import { loadChannelCapabilityCatalog, validateChannelCapabilityCatalogShape } from "./registries/channel-capability-catalog.mjs";
 import { loadChannelWorkflowInventory, validateChannelWorkflowInventoryReferences } from "./registries/channel-workflow-inventory.mjs";
-import { loadChannelWorkflowCaseCatalog, validateChannelWorkflowCaseCatalogReferences } from "./registries/channel-workflow-cases.mjs";
+import {
+  loadChannelWorkflowCaseCatalog,
+  validateChannelWorkflowCaseCatalogReferences,
+  validateChannelWorkflowCaseInventoryReferences
+} from "./registries/channel-workflow-cases.mjs";
 import { loadProcessRoles } from "./registries/process-roles.mjs";
 import { validateProfileShape } from "./registries/profiles.mjs";
 import { validateScenarioShape } from "./registries/scenarios.mjs";
@@ -9235,6 +9239,7 @@ async function channelCapabilityRegistryCheck() {
     validateChannelCapabilityCatalogReferences(await loadChannelCapabilities(), catalogs);
     validateChannelWorkflowInventoryReferences(workflowInventories, catalogs);
     validateChannelWorkflowCaseCatalogReferences(workflowCatalogs, catalogs);
+    validateChannelWorkflowCaseInventoryReferences(workflowCatalogs, workflowInventories);
     const workflowInventory = workflowInventories.find((inventory) => inventory.id === "openclaw-channel-workflow-inventory");
     assertEqual(Boolean(workflowInventory), true, "OpenClaw channel workflow inventory present");
     const completionHandoff = workflowInventory?.workflows?.find((workflow) => workflow.id === "completion-handoff");
@@ -9248,6 +9253,8 @@ async function channelCapabilityRegistryCheck() {
     assertEqual(Boolean(workflowCatalog), true, "OpenClaw channel workflow case catalog present");
     const sourceMediaCase = workflowCatalog?.cases?.find((testCase) => testCase.id === "source-visible-delivery.media.message-tool-only");
     assertEqual(Boolean(sourceMediaCase), true, "source visible media workflow case present");
+    assertEqual(sourceMediaCase?.inventoryWorkflow, "source-visible-delivery", "source media workflow case maps to inventory workflow");
+    assertEqual(sourceMediaCase?.matrix?.delivery, "message-tool-only-source-delivery", "source media workflow case declares matrix delivery mode");
     assertEqual(sourceMediaCase?.atoms?.some((atom) => atom.group === "workflow" && atom.id === "source-visible-delivery"), true, "source media workflow declares source delivery atom");
     const telegram = channels.find((channel) => channel.id === "telegram");
     assertEqual(Boolean(telegram), true, "telegram channel capability registry present");

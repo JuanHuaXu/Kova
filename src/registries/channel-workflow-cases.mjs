@@ -3,6 +3,12 @@ import { join } from "node:path";
 import { channelCapabilitiesDir } from "../paths.mjs";
 import { channelCapabilityCatalogMap } from "./channel-capability-catalog.mjs";
 import {
+  channelWorkflowContentKinds,
+  channelWorkflowDeliveryModes,
+  channelWorkflowLifecycles,
+  channelWorkflowRouteKinds
+} from "./channel-workflow-inventory.mjs";
+import {
   assertNoShapeErrors,
   requireArray,
   requireKebabId,
@@ -68,6 +74,65 @@ export function validateChannelWorkflowCaseCatalogReferences(workflowCatalogs, c
   assertNoShapeErrors(errors, "channel workflow case catalog references");
 }
 
+export function validateChannelWorkflowCaseInventoryReferences(workflowCatalogs, workflowInventories) {
+  const workflowInventoryMap = new Map();
+  for (const inventory of workflowInventories ?? []) {
+    for (const workflow of inventory.workflows ?? []) {
+      workflowInventoryMap.set(workflow.id, workflow);
+    }
+  }
+
+  const errors = [];
+  for (const catalog of workflowCatalogs ?? []) {
+    for (const testCase of catalog.cases ?? []) {
+      const workflowId = testCase.inventoryWorkflow;
+      const inventoryWorkflow = workflowInventoryMap.get(workflowId);
+      if (!inventoryWorkflow) {
+        errors.push(`${catalog.id}.${testCase.id} references unknown channel workflow inventory id '${workflowId}'`);
+        continue;
+      }
+      const matrix = testCase.matrix ?? {};
+      validateInventoryDimension({
+        errors,
+        catalogId: catalog.id,
+        caseId: testCase.id,
+        workflow: inventoryWorkflow,
+        field: "content",
+        inventoryField: "contentKinds",
+        value: matrix.content
+      });
+      validateInventoryDimension({
+        errors,
+        catalogId: catalog.id,
+        caseId: testCase.id,
+        workflow: inventoryWorkflow,
+        field: "route",
+        inventoryField: "routeKinds",
+        value: matrix.route
+      });
+      validateInventoryDimension({
+        errors,
+        catalogId: catalog.id,
+        caseId: testCase.id,
+        workflow: inventoryWorkflow,
+        field: "delivery",
+        inventoryField: "deliveryModes",
+        value: matrix.delivery
+      });
+      validateInventoryDimension({
+        errors,
+        catalogId: catalog.id,
+        caseId: testCase.id,
+        workflow: inventoryWorkflow,
+        field: "lifecycle",
+        inventoryField: "lifecycles",
+        value: matrix.lifecycle
+      });
+    }
+  }
+  assertNoShapeErrors(errors, "channel workflow case inventory references");
+}
+
 function validateCases(cases, errors) {
   if (!Array.isArray(cases)) {
     return;
@@ -82,12 +147,15 @@ function validateCases(cases, errors) {
     const prefix = `cases[${index}]`;
     requireWorkflowCaseId(testCase?.id, `${prefix}.id`, errors);
     requireKebabId(testCase, "workflow", errors, prefix);
+    requireKebabId(testCase, "inventoryWorkflow", errors, prefix);
     requireString(testCase, "userAction", errors, prefix);
     requireString(testCase, "openclawSurface", errors, prefix);
     requireString(testCase, "ownerArea", errors, prefix);
     requireString(testCase, "prompt", errors, prefix);
     requireObject(testCase, "providerScript", errors, prefix);
     requireObject(testCase, "expects", errors, prefix);
+    requireObject(testCase, "matrix", errors, prefix);
+    validateMatrix(testCase?.matrix, `${prefix}.matrix`, errors);
     requireArray(testCase, "atoms", errors, prefix);
     validateAtoms(testCase?.atoms, `${prefix}.atoms`, errors);
     validateStringArray(testCase?.adapterSupport, `${prefix}.adapterSupport`, errors, { optional: true });
@@ -99,6 +167,16 @@ function validateCases(cases, errors) {
       ids.add(testCase.id);
     }
   }
+}
+
+function validateMatrix(matrix, prefix, errors) {
+  if (!matrix || typeof matrix !== "object" || Array.isArray(matrix)) {
+    return;
+  }
+  validateKnownMatrixValue(matrix.content, channelWorkflowContentKinds, `${prefix}.content`, errors);
+  validateKnownMatrixValue(matrix.route, channelWorkflowRouteKinds, `${prefix}.route`, errors);
+  validateKnownMatrixValue(matrix.delivery, channelWorkflowDeliveryModes, `${prefix}.delivery`, errors);
+  validateKnownMatrixValue(matrix.lifecycle, channelWorkflowLifecycles, `${prefix}.lifecycle`, errors);
 }
 
 function validateAtoms(atoms, prefix, errors) {
@@ -128,5 +206,29 @@ function validateAtoms(atoms, prefix, errors) {
 function requireWorkflowCaseId(value, label, errors) {
   if (typeof value !== "string" || !/^[a-z0-9]+(?:[-.][a-z0-9]+)*$/.test(value)) {
     errors.push(`${label} must be a kebab/dot case id`);
+  }
+}
+
+function validateKnownMatrixValue(value, allowed, label, errors) {
+  if (typeof value !== "string" || value.length === 0) {
+    errors.push(`${label} must be a non-empty string`);
+    return;
+  }
+  if (!allowed.includes(value)) {
+    errors.push(`${label} must be one of ${allowed.join(", ")}`);
+  }
+}
+
+function validateInventoryDimension({
+  errors,
+  catalogId,
+  caseId,
+  workflow,
+  field,
+  inventoryField,
+  value
+}) {
+  if (!workflow?.[inventoryField]?.includes(value)) {
+    errors.push(`${catalogId}.${caseId} matrix.${field} '${value}' is not supported by inventory workflow '${workflow.id}'`);
   }
 }

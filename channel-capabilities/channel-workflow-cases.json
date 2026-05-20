@@ -7,6 +7,13 @@
     {
       "id": "text-final",
       "workflow": "final-text-reply",
+      "inventoryWorkflow": "final-delivery",
+      "matrix": {
+        "content": "text",
+        "route": "reply",
+        "delivery": "final",
+        "lifecycle": "success"
+      },
       "userAction": "user sends a normal text message and receives a text answer in the same conversation",
       "openclawSurface": "channel inbound direct message",
       "ownerArea": "OpenClaw channel runtime",
@@ -42,6 +49,13 @@
     {
       "id": "no-self-trigger.bot-authored-echo",
       "workflow": "no-self-trigger",
+      "inventoryWorkflow": "no-self-trigger",
+      "matrix": {
+        "content": "text",
+        "route": "direct",
+        "delivery": "final",
+        "lifecycle": "bot-echo"
+      },
       "userAction": "user receives a bot-authored channel response and the platform echoes that bot message back as an inbound event",
       "openclawSurface": "channel inbound direct message with bot-loop protection",
       "ownerArea": "OpenClaw channel runtime",
@@ -71,6 +85,13 @@
     {
       "id": "media-final",
       "workflow": "final-media-reply",
+      "inventoryWorkflow": "final-delivery",
+      "matrix": {
+        "content": "media",
+        "route": "reply",
+        "delivery": "final",
+        "lifecycle": "success"
+      },
       "userAction": "user asks OpenClaw for a media result and receives the media in the same conversation",
       "openclawSurface": "channel inbound direct message",
       "ownerArea": "OpenClaw channel runtime",
@@ -104,6 +125,13 @@
     {
       "id": "media-thread-final",
       "workflow": "final-media-thread",
+      "inventoryWorkflow": "final-delivery",
+      "matrix": {
+        "content": "media",
+        "route": "thread",
+        "delivery": "final",
+        "lifecycle": "success"
+      },
       "userAction": "user asks for a media result from inside a thread and receives the media in that thread",
       "openclawSurface": "channel inbound threaded message",
       "ownerArea": "OpenClaw channel runtime",
@@ -141,6 +169,13 @@
     {
       "id": "media-reply-thread-final",
       "workflow": "final-media-reply-thread",
+      "inventoryWorkflow": "final-delivery",
+      "matrix": {
+        "content": "media",
+        "route": "reply-thread",
+        "delivery": "final",
+        "lifecycle": "success"
+      },
       "userAction": "user replies in a thread and receives OpenClaw's media answer against the right message in that thread",
       "openclawSurface": "channel inbound threaded reply message",
       "ownerArea": "OpenClaw channel runtime",
@@ -179,6 +214,13 @@
     {
       "id": "thread-final",
       "workflow": "final-text-thread",
+      "inventoryWorkflow": "final-delivery",
+      "matrix": {
+        "content": "text",
+        "route": "thread",
+        "delivery": "final",
+        "lifecycle": "success"
+      },
       "userAction": "user replies in a thread and receives OpenClaw's answer in that thread",
       "openclawSurface": "channel inbound threaded message",
       "ownerArea": "OpenClaw channel runtime",
@@ -204,6 +246,13 @@
     {
       "id": "silent-final",
       "workflow": "final-text-silent",
+      "inventoryWorkflow": "final-delivery",
+      "matrix": {
+        "content": "text",
+        "route": "direct",
+        "delivery": "final",
+        "lifecycle": "success"
+      },
       "userAction": "user triggers a quiet channel response and OpenClaw sends it without noisy notification intent",
       "openclawSurface": "channel inbound direct message",
       "ownerArea": "OpenClaw channel runtime",
@@ -229,6 +278,13 @@
     {
       "id": "source-visible-delivery.text.automatic-final",
       "workflow": "source-visible-delivery",
+      "inventoryWorkflow": "source-visible-delivery",
+      "matrix": {
+        "content": "text",
+        "route": "direct",
+        "delivery": "automatic-source-delivery",
+        "lifecycle": "success"
+      },
       "userAction": "user asks OpenClaw a normal question and receives the final answer in the same chat",
       "openclawSurface": "channel inbound direct message with automatic source delivery",
       "ownerArea": "OpenClaw source delivery runtime",
@@ -255,6 +311,13 @@
     {
       "id": "source-visible-delivery.text.message-tool-only",
       "workflow": "source-visible-delivery",
+      "inventoryWorkflow": "source-visible-delivery",
+      "matrix": {
+        "content": "text",
+        "route": "direct",
+        "delivery": "message-tool-only-source-delivery",
+        "lifecycle": "success"
+      },
       "userAction": "user asks OpenClaw for an update that must be delivered through the source chat message path",
       "openclawSurface": "channel inbound direct message with source conversation delivery",
       "ownerArea": "OpenClaw source delivery runtime",
@@ -294,6 +357,13 @@
     {
       "id": "background-artifact-completion.video.message-tool-only",
       "workflow": "background-artifact-completion",
+      "inventoryWorkflow": "background-artifact-completion",
+      "matrix": {
+        "content": "video",
+        "route": "direct",
+        "delivery": "background-completion",
+        "lifecycle": "async-completion"
+      },
       "userAction": "user asks OpenClaw to create a video and receives the completed video in the same chat",
       "openclawSurface": "channel inbound direct message with background media-generation completion",
       "ownerArea": "OpenClaw completion delivery runtime",
@@ -340,6 +410,13 @@
     {
       "id": "source-visible-delivery.attachment.message-tool-only",
       "workflow": "source-visible-delivery",
+      "inventoryWorkflow": "source-visible-delivery",
+      "matrix": {
+        "content": "attachment",
+        "route": "direct",
+        "delivery": "message-tool-only-source-delivery",
+        "lifecycle": "success"
+      },
       "userAction": "user asks OpenClaw to send a generated file attachment back to the same chat",
       "openclawSurface": "channel inbound direct message with source conversation delivery",
       "ownerArea": "OpenClaw source delivery runtime",
@@ -392,6 +469,13 @@
     {
       "id": "background-artifact-completion.image.message-tool-only",
       "workflow": "background-artifact-completion",
+      "inventoryWorkflow": "background-artifact-completion",
+      "matrix": {
+        "content": "image",
+        "route": "direct",
+        "delivery": "background-completion",
+        "lifecycle": "async-completion"
+      },
       "userAction": "user asks OpenClaw to create an image and receives the completed image in the same chat",
       "openclawSurface": "channel inbound direct message with background media-generation completion",
       "ownerArea": "OpenClaw completion delivery runtime",
@@ -438,6 +522,13 @@
     {
       "id": "background-artifact-completion.music.message-tool-only",
       "workflow": "background-artifact-completion",
+      "inventoryWorkflow": "background-artifact-completion",
+      "matrix": {
+        "content": "audio",
+        "route": "direct",
+        "delivery": "background-completion",
+        "lifecycle": "async-completion"
+      },
       "userAction": "user asks OpenClaw to create music and receives the completed audio in the same chat",
       "openclawSurface": "channel inbound direct message with background media-generation completion",
       "ownerArea": "OpenClaw completion delivery runtime",
@@ -484,6 +575,13 @@
     {
       "id": "failure-visible-once.provider-error",
       "workflow": "failure-visible-once",
+      "inventoryWorkflow": "failure-visible-once",
+      "matrix": {
+        "content": "error",
+        "route": "direct",
+        "delivery": "final",
+        "lifecycle": "provider-failure"
+      },
       "userAction": "user sends a normal channel message while the configured model provider is failing and receives one clear error response",
       "openclawSurface": "channel inbound direct message with provider failure",
       "ownerArea": "OpenClaw channel runtime",
@@ -512,6 +610,13 @@
     {
       "id": "source-visible-delivery.media.message-tool-only",
       "workflow": "source-visible-delivery",
+      "inventoryWorkflow": "source-visible-delivery",
+      "matrix": {
+        "content": "media",
+        "route": "direct",
+        "delivery": "message-tool-only-source-delivery",
+        "lifecycle": "success"
+      },
       "userAction": "user asks OpenClaw to produce a media result and receives that result in the same chat",
       "openclawSurface": "channel inbound direct message with source conversation delivery",
       "ownerArea": "OpenClaw source delivery runtime",
