@@ -110,12 +110,14 @@ function resolveAdapterModulePath({ distribution, packageRoot }) {
     return join(packageRoot, distribution.modulePath);
   }
   if (distribution.kind === "external") {
-    return join(readInstalledPluginRoot(distribution.pluginId), distribution.modulePath);
+    const plugin = readInstalledPluginRecord(distribution.pluginId);
+    const moduleBase = plugin.source ? dirname(plugin.source) : plugin.rootDir;
+    return join(moduleBase, distribution.modulePath);
   }
   throw new Error(`unsupported adapter distribution kind '${distribution.kind}'`);
 }
 
-function readInstalledPluginRoot(pluginId) {
+function readInstalledPluginRecord(pluginId) {
   const stateRoot = process.env.OPENCLAW_STATE_DIR || join(process.env.OPENCLAW_HOME || "", ".openclaw");
   const indexPath = join(stateRoot, "plugins", "installs.json");
   let parsed;
@@ -128,7 +130,7 @@ function readInstalledPluginRoot(pluginId) {
   if (!plugin?.rootDir) {
     throw new Error(`installed plugin '${pluginId}' is not present in ${indexPath}`);
   }
-  return plugin.rootDir;
+  return plugin;
 }
 
 async function runCapabilityProofs(adapter, channel) {

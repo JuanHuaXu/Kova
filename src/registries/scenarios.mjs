@@ -241,6 +241,7 @@ export function materializeCommands(commands, values) {
     command
       .replaceAll("{env}", values.env)
       .replaceAll("{target}", values.target)
+      .replaceAll("{targetRepo}", values.targetRepo ?? "")
       .replaceAll("{from}", values.from)
       .replaceAll("{sourceEnv}", values.sourceEnv)
       .replaceAll("{artifactDir}", values.artifactDir ?? "")
