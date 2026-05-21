@@ -1,3 +1,5 @@
+import { maxOcmEnvNameLength } from "./run/env-name.mjs";
+
 export function assertSafeScenarioCommand(command, context, envName) {
   const trimmed = String(command ?? "").trim();
   for (const rule of mutationRules()) {
@@ -25,10 +27,14 @@ export function assertKovaEnvName(value, label = "env") {
   if (!isKovaEnvName(value)) {
     throw new Error(`refusing to mutate non-Kova ${label}: ${JSON.stringify(value)}`);
   }
+  if (String(value).length > maxOcmEnvNameLength()) {
+    throw new Error(`refusing to mutate overlong Kova ${label}: ${JSON.stringify(value)}`);
+  }
 }
 
 export function isKovaEnvName(value) {
-  return /^kova-[a-z0-9][a-z0-9-]*$/i.test(String(value ?? ""));
+  const text = String(value ?? "");
+  return text.length <= maxOcmEnvNameLength() && /^kova-[a-z0-9][a-z0-9-]*$/i.test(text);
 }
 
 function mutationRules() {

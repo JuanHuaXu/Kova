@@ -95,6 +95,7 @@ import {
   ocmTargetSelector
 } from "./ocm/commands.mjs";
 import { mockAiProviderServeCommand } from "./auth.mjs";
+import { envNameFor, maxOcmEnvNameLength } from "./run/env-name.mjs";
 import {
   checkAggregateThreshold,
   checkDuration,
@@ -173,6 +174,7 @@ export async function runSelfCheck(flags = {}) {
     checks.push(optionalNoLogsCommandCheck());
     checks.push(missingCollectorProofCheck());
     checks.push(ocmCommandBuildersCheck());
+    checks.push(envNameLengthCheck());
     checks.push(evaluationViolationHelpersCheck());
     checks.push(statusFoundationCheck());
     checks.push(evidenceLedgerGatingCheck());
@@ -728,6 +730,44 @@ function ocmCommandBuildersCheck() {
       id: "ocm-command-builders",
       status: "FAIL",
       command: "validate centralized OCM command builders",
+      durationMs: 0,
+      message: error.message
+    };
+  }
+}
+
+function envNameLengthCheck() {
+  try {
+    const name = envNameFor(
+      "channel-model-turn-baseline",
+      "mock-openai-provider",
+      "kova-260521-001757-f3cb72"
+    );
+    assertEqual(name.startsWith("kova-channel-model-turn"), true, "env name keeps readable scenario prefix");
+    if (name.length > maxOcmEnvNameLength()) {
+      throw new Error(`env name length ${name.length} exceeds ${maxOcmEnvNameLength()}: ${name}`);
+    }
+    assertEqual(/^kova-[a-z0-9][a-z0-9-]*$/.test(name), true, "env name remains OCM safe");
+    const repeatName = envNameFor(
+      "channel-model-turn-baseline",
+      "mock-openai-provider",
+      "kova-260521-001757-f3cb72",
+      { index: 2, total: 3 }
+    );
+    if (repeatName === name) {
+      throw new Error("repeat env name must be distinct");
+    }
+    return {
+      id: "env-name-length",
+      status: "PASS",
+      command: "validate generated OCM env names stay bounded",
+      durationMs: 0
+    };
+  } catch (error) {
+    return {
+      id: "env-name-length",
+      status: "FAIL",
+      command: "validate generated OCM env names stay bounded",
       durationMs: 0,
       message: error.message
     };

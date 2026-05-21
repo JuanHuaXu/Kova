@@ -26,6 +26,7 @@ import {
   phaseSupportsAuthSetup,
 } from "./run/phase-plan.mjs";
 import { executeTargetSetup } from "./run/target-setup.mjs";
+import { envNameFor } from "./run/env-name.mjs";
 import { collectEnvMetrics } from "./metrics.mjs";
 import { collectorArtifactDirs, prepareCollectorArtifactDirs } from "./collectors/artifacts.mjs";
 import {
@@ -289,12 +290,6 @@ function shouldApplyAuthAfterPhase(phase, authPolicy, record) {
     return false;
   }
   return !record.phases.some((planned) => planned.id === "auth-setup");
-}
-
-function envNameFor(scenarioId, stateId, runId, repeat = null) {
-  const stateSegment = stateId ? `${stateId}-` : "";
-  const repeatSegment = repeat?.total > 1 ? `r${repeat.index}-` : "";
-  return `kova-${scenarioId}-${stateSegment}${repeatSegment}${runId.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`;
 }
 
 function repeatSummary(repeat) {
