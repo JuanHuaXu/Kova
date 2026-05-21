@@ -2465,7 +2465,7 @@ function gateNonReleaseOutcomeCheck() {
       }
     });
 
-    assertEqual(gate.verdict, "SHIP", "non-release gate keeps compatibility verdict");
+    assertEqual(gate.verdict, "SHIP", "non-release gate keeps ship verdict");
     assertEqual(gate.outcome, "PASS", "non-release gate maps ship verdict to pass outcome");
     assertEqual(gate.purpose, "performance", "non-release gate purpose");
     return {

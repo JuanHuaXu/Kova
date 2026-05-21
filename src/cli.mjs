@@ -94,7 +94,7 @@ Notes:
   Report commands accept either full JSON paths or run IDs from kova reports.
   --repeat records independent samples and computes aggregate performance stats.
   --auth defaults to mock so every disposable env has deliberate model auth unless a scenario opts out.
-  setup provider/auth choices accept either numbers from the prompt or names such as openai, anthropic, env-only, api-key.
+  setup provider/auth choices accept prompt numbers in the interactive menu or canonical names such as openai, anthropic, env-only, api-key.
   external-cli setup derives Codex for OpenAI and Claude CLI for Anthropic, then verifies the CLI and auth evidence.
   --baseline compares executed aggregates against a Kova baseline store; without a path it uses the default store.
   --save-baseline writes only reviewed, passing, stable execution aggregates into the selected baseline store.

@@ -68,7 +68,7 @@ kova help <command>             # per-command detail
 ```
 
 Every command renders a dashboard by default. Add `--json` for machines,
-`--plain` for legacy text, `--no-progress` to silence streaming, or `--ascii`
+`--plain` for compact text, `--no-progress` to silence streaming, or `--ascii`
 for Unicode-free output. Color, width, `NO_COLOR`, and CI runners are
 auto-detected.
 

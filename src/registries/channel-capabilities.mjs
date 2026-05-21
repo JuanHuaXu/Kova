@@ -21,8 +21,7 @@ export const channelCapabilityRequiredLevels = [
 
 export const channelSupportStatuses = [
   "supported",
-  "experimental",
-  "deprecated"
+  "experimental"
 ];
 
 export async function loadChannelCapabilities(selectedId) {

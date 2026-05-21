@@ -21,8 +21,7 @@ export const channelCapabilityProofModes = [
   "baseline",
   "model-turn",
   "deterministic-shim",
-  "live-smoke",
-  "unsupported-fallback"
+  "live-smoke"
 ];
 
 export async function loadChannelCapabilityCatalog(selectedId) {
