@@ -1,3 +1,5 @@
+import { expectedFinalDeliveries } from "./final-deliveries.mjs";
+
 export function evaluateWorkflowCase({
   workflowCase,
   observations,
@@ -5,21 +7,20 @@ export function evaluateWorkflowCase({
   providerRequestsAfterEcho
 }) {
   const expects = objectOrEmpty(workflowCase.expects);
-  const deliveries = Array.isArray(observations?.deliveries) ? observations.deliveries : [];
-  const visible = deliveries.filter((delivery) => delivery.visible === true);
+  const finalVisible = expectedFinalDeliveries(workflowCase, observations);
   const expectedVisible = Number.isInteger(expects.visibleDeliveries) ? expects.visibleDeliveries : 1;
   const expectedText = typeof expects.text === "string" ? expects.text : null;
   const providerPolicy = objectOrEmpty(workflowCase.providerRequests);
   return [
     invariant(`${workflowCase.id}:provider-work`, providerRequestsMatch(providerPolicy, providerRequestsDelta), providerRequestReason(workflowCase.id, providerPolicy, providerRequestsDelta)),
-    invariant(`${workflowCase.id}:visible-delivery-count`, visible.length === expectedVisible, `${workflowCase.id} produced ${expectedVisible} visible delivery; observed ${visible.length}`),
-    invariant(`${workflowCase.id}:expected-kind`, expectedKindMatches(expects.kind, visible), `${workflowCase.id} produced ${expects.kind ?? "visible"} output`),
-    invariant(`${workflowCase.id}:expected-text`, !expectedText || visible.some((delivery) => deliveryText(delivery).includes(expectedText)), `${workflowCase.id} preserved expected text or caption`),
-    invariant(`${workflowCase.id}:route`, !requiresRoutePreservation(workflowCase) || visible.every((delivery) => delivery.route?.key === observations.inbound?.route?.key), `${workflowCase.id} preserved the inbound route`),
-    invariant(`${workflowCase.id}:reply-target`, !requiresReplyPreservation(workflowCase) || visible.some((delivery) => delivery.replyTo?.key === observations.inbound?.messageKey), `${workflowCase.id} preserved the reply target`),
-    invariant(`${workflowCase.id}:silent`, expects.silent !== true || visible.every((delivery) => delivery.silent === true), `${workflowCase.id} preserved silent delivery intent`),
-    invariant(`${workflowCase.id}:media-present`, expects.kind !== "media" || visible.some((delivery) => delivery.kind === "media" && delivery.media?.some((media) => media.present)), `${workflowCase.id} delivered media through a native media send`),
-    invariant(`${workflowCase.id}:no-duplicate-final`, expects.allowMultipleFinalSends === true || visible.length <= expectedVisible, `${workflowCase.id} did not duplicate visible final delivery`),
+    invariant(`${workflowCase.id}:visible-delivery-count`, finalVisible.length === expectedVisible, `${workflowCase.id} produced ${expectedVisible} final visible delivery; observed ${finalVisible.length}`),
+    invariant(`${workflowCase.id}:expected-kind`, expectedKindMatches(expects.kind, finalVisible), `${workflowCase.id} produced ${expects.kind ?? "visible"} output`),
+    invariant(`${workflowCase.id}:expected-text`, !expectedText || finalVisible.some((delivery) => deliveryText(delivery).includes(expectedText)), `${workflowCase.id} preserved expected text or caption`),
+    invariant(`${workflowCase.id}:route`, !requiresRoutePreservation(workflowCase) || finalVisible.every((delivery) => delivery.route?.key === observations.inbound?.route?.key), `${workflowCase.id} preserved the inbound route`),
+    invariant(`${workflowCase.id}:reply-target`, !requiresReplyPreservation(workflowCase) || finalVisible.some((delivery) => delivery.replyTo?.key === observations.inbound?.messageKey), `${workflowCase.id} preserved the reply target`),
+    invariant(`${workflowCase.id}:silent`, expects.silent !== true || finalVisible.every((delivery) => delivery.silent === true), `${workflowCase.id} preserved silent delivery intent`),
+    invariant(`${workflowCase.id}:media-present`, expects.kind !== "media" || finalVisible.some((delivery) => delivery.kind === "media" && delivery.media?.some((media) => media.present)), `${workflowCase.id} delivered media through a native media send`),
+    invariant(`${workflowCase.id}:no-duplicate-final`, expects.allowMultipleFinalSends === true || finalVisible.length <= expectedVisible, `${workflowCase.id} did not duplicate visible final delivery`),
     invariant(`${workflowCase.id}:no-self-trigger`, expects.noSelfTrigger !== true || providerRequestsAfterEcho === 0, `${workflowCase.id} did not start provider work from bot-authored channel echo`)
   ];
 }

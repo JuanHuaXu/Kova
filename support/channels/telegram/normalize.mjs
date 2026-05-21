@@ -10,14 +10,27 @@ const VISIBLE_SEND_METHODS = new Set([
 ]);
 
 export function normalizeTelegramObservations({ inbound, calls }) {
+  const deliveries = calls
+    .filter((call) => VISIBLE_SEND_METHODS.has(call.method))
+    .map(normalizeDelivery);
   return {
     schemaVersion: "kova.channelObservationSet.v1",
     channelId: "telegram",
     inbound,
-    deliveries: calls
-      .filter((call) => VISIBLE_SEND_METHODS.has(call.method))
-      .map(normalizeDelivery),
-    nativeCalls: calls
+    deliveries,
+    nativeCallSummary: summarizeNativeCalls(calls, deliveries.length)
+  };
+}
+
+function summarizeNativeCalls(calls, deliveryCount) {
+  const byMethod = {};
+  for (const call of calls) {
+    byMethod[call.method] = (byMethod[call.method] ?? 0) + 1;
+  }
+  return {
+    count: calls.length,
+    deliveryCount,
+    byMethod
   };
 }
 
