@@ -120,8 +120,10 @@ async function handleRequest(request, response) {
   const result = telegramResult(method, body);
   call.responseOk = result.ok === true;
   call.result = result.result ?? null;
-  calls.push(call);
-  await appendJsonLine(callsPath, call);
+  if (method !== "getUpdates") {
+    calls.push(call);
+    await appendJsonLine(callsPath, call);
+  }
   writeJson(response, 200, result);
 }
 
