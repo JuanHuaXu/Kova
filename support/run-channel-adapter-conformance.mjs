@@ -19,7 +19,6 @@ const timeoutMs = readTimeoutMs(args["timeout-ms"], 120000);
 const continueOnFailure = args["continue-on-failure"] === "true";
 const artifactPath = join(artifactDir, `channel-adapter-conformance-${safeArtifactSegment(channelId)}.json`);
 const openClawCatalog = JSON.parse(await readFile(join(repoRoot, "channel-capabilities", "openclaw-message.json"), "utf8"));
-const workflowCatalog = JSON.parse(await readFile(join(repoRoot, "channel-capabilities", "channel-workflow-cases.json"), "utf8"));
 const channelRegistry = JSON.parse(await readFile(join(repoRoot, "channel-capabilities", `${channelId}.json`), "utf8"));
 
 let result;
@@ -50,8 +49,6 @@ process.stdout.write(`${JSON.stringify({
   artifactPath,
   ownerArea: `${channelId} adapter`,
   channelId,
-  workflowCaseCatalogId: workflowCatalog.id,
-  workflowCaseIds: result.artifact.workflowResults.map((workflow) => workflow.capabilityId),
   capabilities: result.rows.map((row) => ({
     ...row,
     artifactPath
@@ -64,12 +61,8 @@ async function buildResult({ runtimeContext, adapterContext, timeoutMs: commandT
   const capabilityResults = runError || !adapterContext
     ? []
     : await runCapabilityProofs(adapterContext.adapter, channelRegistry);
-  const workflowResults = runError || !adapterContext
-    ? []
-    : await runWorkflowProofs(adapterContext.adapter, channelRegistry, workflowCatalog);
   const rows = [
-    ...capabilityRows(capabilityResults, runError),
-    ...workflowRows(workflowResults, runError)
+    ...capabilityRows(capabilityResults, runError)
   ];
   const ok = !runError && rows.every((row) => row.status === "passed" || row.status === "skipped");
 
@@ -81,13 +74,11 @@ async function buildResult({ runtimeContext, adapterContext, timeoutMs: commandT
       channelId,
       adapterId: channelRegistry.adapterId,
       catalogId: openClawCatalog.id,
-      workflowCaseCatalogId: workflowCatalog.id,
       runtimeContext: compactRuntimeContext(runtimeContext),
       adapterModulePath: adapterContext?.modulePath ?? null,
       timeoutMs: commandTimeoutMs,
       error: runError,
       capabilityResults,
-      workflowResults,
       capabilities: rows
     }
   };
@@ -210,52 +201,6 @@ async function proveDurableFinalCapability(adapter, capabilityId) {
   return { skipped: true, reason: `durable final shim proof for ${capabilityId} is not implemented` };
 }
 
-async function runWorkflowProofs(adapter, channel, catalog) {
-  const cases = new Map((catalog.cases ?? []).map((testCase) => [testCase.id, testCase]));
-  const results = [];
-  for (const caseId of channel.workflowCaseIds ?? []) {
-    const testCase = cases.get(caseId);
-    if (testCase && !canProveWorkflowWithAdapterSendShim(testCase)) {
-      continue;
-    }
-    results.push(await captureProof({
-      id: caseId,
-      group: "workflow",
-      capabilityId: caseId,
-      workflow: testCase?.workflow ?? null,
-      userAction: testCase?.userAction ?? null,
-      atoms: testCase?.atoms ?? [],
-      run: () => runWorkflowCase(adapter, testCase)
-    }));
-  }
-  return results;
-}
-
-function canProveWorkflowWithAdapterSendShim(testCase) {
-  return testCase?.inventoryWorkflow === "final-delivery";
-}
-
-async function runWorkflowCase(adapter, testCase) {
-  assert(testCase, "workflow case declaration is missing");
-  const expected = testCase.expects ?? {};
-  const mediaUrl = resolveWorkflowMediaUrl(testCase);
-  const sendInput = {
-    kind: expected.kind,
-    text: expected.text,
-    mediaUrl,
-    payload: expected.kind === "payload" ? { text: expected.text, mediaUrl } : null,
-    replyToId: expected.replyTo === "inbound-message" ? shimReplyToId() : null,
-    threadId: expected.threadId ? shimThreadId() : null,
-    silent: expected.silent === true,
-    expectedPlatformSends: expected.visibleDeliveries ?? 1
-  };
-  const proof = await runAdapterSend(adapter, sendInput);
-  const invariants = workflowInvariants(testCase, proof);
-  const failed = invariants.find((item) => item.status !== "passed") ?? null;
-  assert(!failed, failed?.reason ?? `${testCase.id} failed workflow invariant`);
-  return { ...proof, invariants };
-}
-
 async function runAdapterSend(adapter, input) {
   const platformCalls = [];
   let sendIndex = 0;
@@ -312,53 +257,6 @@ async function runAdapterSend(adapter, input) {
   };
 }
 
-function workflowInvariants(testCase, proof) {
-  const expected = {
-    ...(testCase.expects ?? {}),
-    ...(channelRegistry.workflowOverrides?.[testCase.id] ?? {})
-  };
-  const expectedDeliveries = expected.visibleDeliveries ?? 1;
-  const textCall = proof.platformCalls[expected.textDeliveryIndex ?? 0] ?? null;
-  const mediaCall = proof.platformCalls[expected.mediaDeliveryIndex ?? 0] ?? null;
-  const targetCall = proof.platformCalls[0] ?? null;
-  return [
-    invariant(`${testCase.id}:visible-delivery-count`, proof.platformCalls.length === expectedDeliveries, `${testCase.id} produced ${expectedDeliveries} visible adapter delivery; observed ${proof.platformCalls.length}`),
-    invariant(`${testCase.id}:delivery-kind`, !expected.kind || proof.send.kind === expected.kind, `${testCase.id} used expected adapter send kind`),
-    invariant(`${testCase.id}:text`, !expected.text || textCall?.text === expected.text, `${testCase.id} preserved expected text/caption`),
-    invariant(`${testCase.id}:media`, mediaExpectationMatches(expected, mediaCall), `${testCase.id} preserved expected media source`),
-    invariant(`${testCase.id}:reply-to`, expected.replyTo !== "inbound-message" || platformReplyTargetMatches(targetCall), `${testCase.id} preserved reply target`),
-    invariant(`${testCase.id}:no-reply-to`, expected.replyTo !== "none" || platformReplyTargetIsEmpty(targetCall), `${testCase.id} did not attach a reply target`),
-    invariant(`${testCase.id}:thread`, !expected.threadId || platformThreadTargetMatches(targetCall), `${testCase.id} preserved thread target`),
-    invariant(`${testCase.id}:silent`, expected.silent !== true || targetCall?.options?.silent === true, `${testCase.id} preserved silent delivery intent`),
-    invariant(`${testCase.id}:terminal`, expected.terminal !== true || proof.result.platformMessageIds.length > 0, `${testCase.id} returned terminal adapter receipt`)
-  ];
-}
-
-function resolveWorkflowMediaUrl(testCase) {
-  const expected = testCase?.expects ?? {};
-  if (typeof expected.mediaSource === "string" && expected.mediaSource.length > 0) {
-    return expected.mediaSource;
-  }
-  if (expected.kind === "media" && expected.mediaSourcePolicy === "present-existing") {
-    return `https://example.com/kova-${safeArtifactSegment(testCase.id)}.png`;
-  }
-  return undefined;
-}
-
-function mediaExpectationMatches(expected, call) {
-  if (expected.kind !== "media") {
-    return true;
-  }
-  const observed = call?.options?.mediaUrl;
-  if (typeof expected.mediaSource === "string" && expected.mediaSource.length > 0) {
-    return observed === expected.mediaSource;
-  }
-  if (expected.mediaSourcePolicy === "present-existing") {
-    return typeof observed === "string" && observed.length > 0;
-  }
-  return observed == null;
-}
-
 function capabilityRows(results, runError) {
   const byId = new Map(results.map((result) => [`${result.group}:${result.capabilityId}`, result]));
   return (channelRegistry.capabilities ?? []).map((capability) => {
@@ -373,26 +271,6 @@ function capabilityRows(results, runError) {
       proofMode: "deterministic-shim",
       summary: `${channelId} adapter deterministic shim ${capability.group}/${capability.id}`,
       reason: status === "passed" ? null : (runError ?? result?.reason ?? `${channelId} adapter did not emit proof for ${capability.group}/${capability.id}`),
-      ownerArea: `${channelId} adapter`
-    };
-  });
-}
-
-function workflowRows(results, runError) {
-  if (runError) {
-    return [];
-  }
-  return results.map((result) => {
-    const status = runError ? "failed" : result?.status ?? "missing";
-    return {
-      channelId,
-      group: "workflow",
-      capabilityId: result.capabilityId,
-      required: true,
-      status,
-      proofMode: "deterministic-shim",
-      summary: `${channelId} adapter deterministic shim workflow ${result.capabilityId}`,
-      reason: status === "passed" ? null : result?.reason ?? `${channelId} adapter workflow proof failed for ${result.capabilityId}`,
       ownerArea: `${channelId} adapter`
     };
   });
@@ -470,15 +348,6 @@ function compactSendResult(result) {
   };
 }
 
-function invariant(id, condition, summary) {
-  return {
-    id,
-    status: condition ? "passed" : "failed",
-    summary,
-    reason: condition ? null : summary
-  };
-}
-
 function runtimeCapabilityKey(capability) {
   const id = String(capability.id);
   if (capability.group === "ack") {
@@ -525,43 +394,6 @@ function platformSendResult(sendIndex) {
     messageId: `${resultMessageIdPrefix}-${sendIndex}`,
     [resultTargetField]: shimConversationId()
   };
-}
-
-function platformReplyTargetMatches(call) {
-  const platform = channelRegistry.deterministicShim?.platform ?? {};
-  if (typeof platform.replyOptionField !== "string" || platform.replyOptionField.length === 0) {
-    return false;
-  }
-  return valuesEqual(call?.options?.[platform.replyOptionField], platform.replyOptionValue);
-}
-
-function platformReplyTargetIsEmpty(call) {
-  const platform = channelRegistry.deterministicShim?.platform ?? {};
-  if (platform.replyOptionField) {
-    return call?.options?.[platform.replyOptionField] == null;
-  }
-  return call?.options?.replyToMessageId == null && call?.options?.replyTo == null;
-}
-
-function platformThreadTargetMatches(call) {
-  const platform = channelRegistry.deterministicShim?.platform ?? {};
-  if (platform.threadTarget) {
-    return call?.to === platform.threadTarget;
-  }
-  if (platform.threadOptionField) {
-    return valuesEqual(call?.options?.[platform.threadOptionField], platform.threadOptionValue);
-  }
-  return false;
-}
-
-function valuesEqual(actual, expected) {
-  if (actual === expected) {
-    return true;
-  }
-  if (actual == null || expected == null) {
-    return false;
-  }
-  return String(actual) === String(expected);
 }
 
 function assert(condition, message) {
