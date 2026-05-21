@@ -69,8 +69,10 @@ export function renderAssessment(report, flags = {}, env = process.env, stream =
 
 // Exposed for tests and downstream callers.
 export function renderFromSummary(input, ui) {
-  // Back-compat: callers used to pass just the summary; accept that too.
-  const summary = input.summary ?? input;
+  if (!input || typeof input !== "object" || !input.summary) {
+    throw new Error("renderFromSummary requires { summary, scenarios, isFull }");
+  }
+  const summary = input.summary;
   const scenarios = input.scenarios ?? aggregateScenarios({ records: [] }, summary.findings);
   const isFull = input.isFull ?? false;
 

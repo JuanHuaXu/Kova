@@ -396,6 +396,9 @@ function summarizeProviderRequests(requests) {
 }
 
 function normalizeProviderRequest(raw, line) {
+  if (raw.schemaVersion !== "mock-ai-provider.request.v1") {
+    throw new Error(`unsupported mock provider request schema at line ${line}: ${raw.schemaVersion ?? "missing"}`);
+  }
   const receivedAtEpochMs = numberOrParsedTime(raw.receivedAtEpochMs, raw.receivedAt);
   const respondedAtEpochMs = numberOrParsedTime(raw.respondedAtEpochMs, raw.respondedAt);
   const firstByteAtEpochMs = numberOrParsedTime(raw.firstByteAtEpochMs, raw.firstByteAt);
@@ -407,7 +410,7 @@ function normalizeProviderRequest(raw, line) {
   const inferredOutcome = mockAiProviderOutcome(raw, responseType);
   const inferredErrorClass = mockAiProviderErrorClass(raw, responseType);
   return {
-    schemaVersion: raw.schemaVersion ?? "kova.mockProvider.request.legacy",
+    schemaVersion: raw.schemaVersion,
     line,
     requestId: raw.requestId ?? `${basename(route ?? "request")}-${line}`,
     receivedAt: raw.receivedAt ?? isoOrNull(receivedAtEpochMs),

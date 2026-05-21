@@ -40,9 +40,7 @@ const UNICODE = {
   block: "▇",
   // Sparkline (low to high)
   spark: ["▁", "▂", "▃", "▄", "▅", "▆", "▇", "█"],
-  // Spinner frames (legacy braille — retained for back-compat)
-  spinner: ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"],
-  // Kova-brand spinner: pulse / heartbeat motif. Append-only-compatible
+  // Kova-brand spinner: pulse / heartbeat motif.
   // (single line, overwritten in place by the next real event).
   spinnerKovaPulse: ["▁", "▂", "▃", "▄", "▅", "▆", "▇", "█", "▇", "▆", "▅", "▄", "▃", "▂"],
 };
@@ -79,7 +77,6 @@ const ASCII = {
   shadeMed: "#",
   block: "#",
   spark: [".", ".", "-", "-", "=", "=", "#", "#"],
-  spinner: ["|", "/", "-", "\\"],
   spinnerKovaPulse: ["|", "/", "-", "\\"],
 };
 
