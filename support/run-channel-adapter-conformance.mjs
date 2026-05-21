@@ -51,7 +51,7 @@ process.stdout.write(`${JSON.stringify({
   ownerArea: `${channelId} adapter`,
   channelId,
   workflowCaseCatalogId: workflowCatalog.id,
-  workflowCaseIds: channelRegistry.workflowCaseIds ?? [],
+  workflowCaseIds: result.artifact.workflowResults.map((workflow) => workflow.capabilityId),
   capabilities: result.rows.map((row) => ({
     ...row,
     artifactPath
@@ -379,19 +379,20 @@ function capabilityRows(results, runError) {
 }
 
 function workflowRows(results, runError) {
-  const byId = new Map(results.map((result) => [result.capabilityId, result]));
-  return (channelRegistry.workflowCaseIds ?? []).map((caseId) => {
-    const result = byId.get(caseId) ?? null;
+  if (runError) {
+    return [];
+  }
+  return results.map((result) => {
     const status = runError ? "failed" : result?.status ?? "missing";
     return {
       channelId,
       group: "workflow",
-      capabilityId: caseId,
+      capabilityId: result.capabilityId,
       required: true,
       status,
       proofMode: "deterministic-shim",
-      summary: `${channelId} adapter deterministic shim workflow ${caseId}`,
-      reason: status === "passed" ? null : (runError ?? result?.reason ?? `${channelId} adapter did not emit workflow proof for ${caseId}`),
+      summary: `${channelId} adapter deterministic shim workflow ${result.capabilityId}`,
+      reason: status === "passed" ? null : result?.reason ?? `${channelId} adapter workflow proof failed for ${result.capabilityId}`,
       ownerArea: `${channelId} adapter`
     };
   });
