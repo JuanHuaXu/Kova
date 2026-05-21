@@ -45,6 +45,43 @@
       ]
     },
     {
+      "id": "text-reply-current-final",
+      "workflow": "final-text-current-reply",
+      "inventoryWorkflow": "final-delivery",
+      "matrix": {
+        "content": "text",
+        "route": "reply",
+        "delivery": "final",
+        "lifecycle": "success"
+      },
+      "userAction": "user replies to a message and receives OpenClaw's text answer against that message",
+      "openclawSurface": "channel inbound reply message with explicit current-message reply final",
+      "ownerArea": "OpenClaw channel runtime",
+      "prompt": "Reply with a short deployment acknowledgement.",
+      "providerScript": {
+        "finalText": "[[reply_to_current]]\nKOVA_AGENT_TEXT_REPLY_CURRENT_OK"
+      },
+      "expects": {
+        "visibleDeliveries": 1,
+        "kind": "text",
+        "text": "KOVA_AGENT_TEXT_REPLY_CURRENT_OK",
+        "replyTo": "inbound-message",
+        "terminal": true,
+        "noDuplicateFinal": true
+      },
+      "providerRequests": {
+        "mode": "minimum",
+        "min": 1
+      },
+      "atoms": [
+        { "group": "durable-final", "id": "text" },
+        { "group": "durable-final", "id": "reply-to" },
+        { "group": "workflow", "id": "single-inbound-single-final" },
+        { "group": "workflow", "id": "final-delivery-receipt-required" },
+        { "group": "workflow", "id": "terminal-after-final" }
+      ]
+    },
+    {
       "id": "receive-ack.after-receive-record",
       "workflow": "receive-ack",
       "inventoryWorkflow": "receive-ack",

@@ -15,6 +15,7 @@
     "extensions/telegram/src/outbound-adapter.ts"
   ],
   "workflowCaseIds": [
+    "text-reply-current-final",
     "media-final",
     "media-thread-final",
     "media-reply-thread-final",
