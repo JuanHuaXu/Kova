@@ -110,8 +110,8 @@ function renderFooter(plan, ui) {
   return lines.join("\n");
 }
 
-function positiveIntegerFlag(value, fallback) {
-  if (value === undefined || value === null || value === false) return fallback;
+function positiveIntegerFlag(value, defaultValue) {
+  if (value === undefined || value === null || value === false) return defaultValue;
   const parsed = Number(value);
-  return Number.isInteger(parsed) && parsed > 0 ? parsed : fallback;
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : defaultValue;
 }

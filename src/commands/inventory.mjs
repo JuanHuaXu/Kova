@@ -72,10 +72,10 @@ function formatSourceCount(source) {
   return count ? ` (${count})` : "";
 }
 
-function positiveIntegerFlag(value, fallback) {
+function positiveIntegerFlag(value, defaultValue) {
   if (value === undefined || value === null || value === false) {
-    return fallback;
+    return defaultValue;
   }
   const parsed = Number(value);
-  return Number.isInteger(parsed) && parsed > 0 ? parsed : fallback;
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : defaultValue;
 }

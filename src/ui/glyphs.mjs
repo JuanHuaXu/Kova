@@ -1,4 +1,4 @@
-// Glyph sets. Unicode (rich) and ASCII (CI/non-UTF-8 fallback).
+// Glyph sets. Unicode (rich) and ASCII (CI/non-UTF-8 alternative).
 
 const UNICODE = {
   // Status

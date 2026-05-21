@@ -1600,8 +1600,8 @@ function hasValue(value) {
   return value !== null && value !== undefined;
 }
 
-function valueMs(value, fallback = "unknown") {
-  return value === null || value === undefined ? fallback : `${value}ms`;
+function valueMs(value, defaultValue = "unknown") {
+  return value === null || value === undefined ? defaultValue : `${value}ms`;
 }
 
 function valueMb(value) {

@@ -271,8 +271,8 @@ function emptyHealthSummary(scope) {
 function summarizeFinalHealth(metrics) {
   const samples = Array.isArray(metrics?.healthSamples) ? metrics.healthSamples : [];
   const summary = samples.length > 0 ? summarizeSamples(samples.map((sample) => ({ ...sample, phaseId: "final" })), "final") : null;
-  const fallbackFailureCount = healthFailureCount([metrics?.health]);
-  const failureCount = summary?.failureCount ?? metrics?.healthSummary?.failureCount ?? fallbackFailureCount;
+  const singleSampleFailureCount = healthFailureCount([metrics?.health]);
+  const failureCount = summary?.failureCount ?? metrics?.healthSummary?.failureCount ?? singleSampleFailureCount;
   const maxMs = summary?.maxMs ?? metrics?.healthSummary?.maxMs ?? metrics?.health?.durationMs ?? null;
   const p95Ms = summary?.p95Ms ?? metrics?.healthSummary?.p95Ms ?? null;
   const gatewayState = metrics?.service?.gatewayState ?? null;

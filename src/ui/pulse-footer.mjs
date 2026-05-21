@@ -31,7 +31,7 @@ export function createPulseFooter({ stream = process.stderr, env = process.env, 
   // Wave mode renders the pulse across a fixed window of cells, with each
   // cell sampling a phase-shifted frame so the heartbeat reads as a moving
   // ripple. We only enable wave mode when the glyph set looks like the
-  // Kova pulse (>= 8 distinct height levels). ASCII fallbacks (e.g.
+  // Kova pulse (>= 8 distinct height levels). ASCII frames (e.g.
   // `|/-\`) stay in single-cell mode so they don't smear.
   const WAVE_WIDTH = 7;
   const waveMode = frames.length >= 8;

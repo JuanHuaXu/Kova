@@ -13,7 +13,7 @@ export const ALIGN_ENV = "KOVA_ALIGN";
 
 // resolveWidth(termCols, flags, env) -> { width, leftPad, capped, align }
 //
-// terminalCols  raw stream.columns (or fallback)
+// terminalCols  raw stream.columns (or default)
 // flags.width   "auto" | "full" | "off" | number | true | undefined
 // flags.align   "left" | "center" | undefined
 // env.KOVA_WIDTH same shape as flags.width

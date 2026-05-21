@@ -49,7 +49,7 @@ export function kpiStrip(items, ui) {
     }
   }
 
-  // Final fallback: stack one per line, full detail.
+  // Final layout option: stack one per line, full detail.
   return list
     .map((it) => "  " + renderItem(it, c, g, { includeLabel: true, includeHint: true, barWidth: BAR_WIDE }))
     .join("\n");
