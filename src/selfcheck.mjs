@@ -534,7 +534,7 @@ export async function runSelfCheck(flags = {}) {
       async (data) => {
         const report = JSON.parse(await readFile(data.jsonPath, "utf8"));
         assertEqual(report.state?.id, "fresh", "omitted direct-run state falls back to fresh");
-        assertEqual(report.records?.[0]?.state?.id, "fresh", "record uses fresh fallback state");
+        assertEqual(report.records?.[0]?.state?.id, "fresh", "record uses default fresh state");
       }
     ));
     checks.push(await failingCommandCheck(
@@ -3509,7 +3509,7 @@ function agentTurnBreakdownCheck() {
       finishedAtEpochMs: 1900,
       timelineSummary: { available: false, spanTotals: {}, keySpans: {} }
     });
-    assertEqual(missingTimeline.breakdown.evidenceQuality, "outside-in-only", "missing timeline fallback quality");
+    assertEqual(missingTimeline.breakdown.evidenceQuality, "outside-in-only", "missing timeline outside-in quality");
     assertEqual(missingTimeline.breakdown.buckets.unknownMs, 500, "missing timeline unknown");
 
     const record = {

@@ -273,7 +273,7 @@ async function collectLogAndTimelineMetrics(metrics, collectors, envName, timeou
         commandStatus: 0,
         durationMs: 0,
         statusLabel: metrics.openclawDiagnostics.available ? "PASS" : "INFO",
-        error: metrics.openclawDiagnostics.available ? null : "structured diagnostics unavailable; using log-pattern fallback"
+        error: metrics.openclawDiagnostics.available ? null : "structured diagnostics unavailable"
       });
     } else {
       recordSkippedCollector(collectors, "openclaw-diagnostics", "OpenClaw diagnostics require collected logs");

@@ -21,11 +21,11 @@ export function collectOpenClawDiagnostics(logs) {
   return {
     schemaVersion: OPENCLAW_DIAGNOSTICS_SCHEMA,
     available: events.length > 0,
-    source: events.length > 0 ? "structured-log-events" : "log-pattern-fallback",
+    source: events.length > 0 ? "structured-log-events" : "unavailable",
     eventCount: events.length,
     startupTimeline: summarizeTimedEvents(startupEvents),
-    pluginMetadataScanCount: numericSum(pluginEvents, ["metadataScanCount", "scanCount"]) ?? fallbackCount(logs, "metadataScanMentions"),
-    configNormalizationCount: numericSum(configEvents, ["normalizationCount", "configNormalizationCount"]) ?? fallbackCount(logs, "configNormalizationMentions"),
+    pluginMetadataScanCount: numericSum(pluginEvents, ["metadataScanCount", "scanCount"]),
+    configNormalizationCount: numericSum(configEvents, ["normalizationCount", "configNormalizationCount"]),
     runtimeDepsStagingMs: numericMax(runtimeDepEvents, ["durationMs", "runtimeDepsStagingMs", "stagingMs"]),
     eventLoopDelayMs: numericMax(eventLoopEvents, ["eventLoopDelayMs", "delayMs", "maxMs"]),
     providerModelTimingMs: numericMax(providerEvents, ["durationMs", "providerModelTimingMs", "modelCatalogMs"]),
@@ -218,11 +218,6 @@ function summarizeTimedEvents(events) {
       timestamp: event.timestamp ?? event.time ?? null
     }))
     .slice(0, 50);
-}
-
-function fallbackCount(logs, key) {
-  const value = logs?.[key];
-  return typeof value === "number" ? value : null;
 }
 
 function numericSum(events, keys) {
