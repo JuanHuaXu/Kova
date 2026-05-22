@@ -87,12 +87,12 @@
             "name": "message",
             "arguments": {
               "action": "send",
-              "message": "KOVA_TELEGRAM_PRESENTATION_PIN_OK",
+              "message": "KOVA_NATIVE_PRESENTATION_PIN_OK",
               "presentation": {
                 "blocks": [
                   {
                     "type": "text",
-                    "text": "KOVA_TELEGRAM_PRESENTATION_PIN_OK"
+                    "text": "KOVA_NATIVE_PRESENTATION_PIN_OK"
                   }
                 ]
               },
@@ -111,7 +111,7 @@
       "expects": {
         "visibleDeliveries": 1,
         "kind": "text",
-        "text": "KOVA_TELEGRAM_PRESENTATION_PIN_OK",
+        "text": "KOVA_NATIVE_PRESENTATION_PIN_OK",
         "nativeActions": {
           "action-send": 1,
           "delivery-pin": 1
@@ -297,7 +297,7 @@
               "action": "edit",
               "chatId": "200",
               "messageId": 900,
-              "message": "KOVA_TELEGRAM_EDITED_STATUS_OK"
+              "message": "KOVA_NATIVE_EDITED_STATUS_OK"
             }
           }
         ],
@@ -331,7 +331,7 @@
         "delivery": "native-action",
         "lifecycle": "success"
       },
-      "userAction": "user asks OpenClaw to create a topic in the current Telegram group",
+      "userAction": "user asks OpenClaw to create a new topic for launch updates in the current group chat",
       "openclawSurface": "channel inbound threaded group message with message tool topic-create action",
       "prompt": "Create a new topic for launch updates.",
       "providerScript": {
@@ -376,7 +376,7 @@
         "delivery": "native-action",
         "lifecycle": "success"
       },
-      "userAction": "user asks OpenClaw to rename the current Telegram topic",
+      "userAction": "user asks OpenClaw to rename the current topic for launch coordination",
       "openclawSurface": "channel inbound threaded group message with message tool topic-edit action",
       "prompt": "Rename this topic for launch coordination.",
       "providerScript": {
