@@ -115,7 +115,7 @@
         "hooks": true,
         "terminal": true,
         "noDuplicateFinal": true,
-        "asyncCompletionTimeoutMs": 15000
+        "asyncCompletionTimeoutMs": 60000
       },
       "providerRequests": {
         "mode": "minimum",
