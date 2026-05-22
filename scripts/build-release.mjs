@@ -21,11 +21,11 @@ const latestChecksumPath = `${latestArchivePath}.sha256`;
 await rm(stageRoot, { recursive: true, force: true });
 await mkdir(appDir, { recursive: true });
 
-for (const path of ["bin", "src", "scenarios", "states", "profiles", "surfaces", "process-roles", "metrics", "support", "fixtures", ".agents/skills/kova-operator", ".agents/skills/ocm-operator"]) {
+for (const path of ["bin", "src", "scenarios", "states", "profiles", "surfaces", "channel-capabilities", "process-roles", "metrics", "support", "fixtures", ".agents/skills/kova-operator", ".agents/skills/ocm-operator"]) {
   await copyRequired(path);
 }
 
-for (const path of ["README.md", "LICENSE", "package.json"]) {
+for (const path of ["README.md", "LICENSE", "package.json", "package-lock.json"]) {
   await copyRequired(path);
 }
 
@@ -41,6 +41,16 @@ for (const path of [
   "docs/REPORT_SCHEMA.md"
 ]) {
   await copyRequired(path);
+}
+
+const npm = spawnSync("npm", ["ci", "--omit=dev", "--ignore-scripts"], {
+  cwd: appDir,
+  encoding: "utf8",
+  stdio: ["ignore", "pipe", "pipe"]
+});
+
+if (npm.status !== 0) {
+  throw new Error(npm.stderr || npm.stdout || "npm ci failed");
 }
 
 await rm(archivePath, { force: true });
