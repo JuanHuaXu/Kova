@@ -1,4 +1,4 @@
-import { chmod, mkdir, mkdtemp, readFile, rm, stat, utimes, writeFile } from "node:fs/promises";
+import { chmod, mkdir, mkdtemp, readFile, readdir, rm, stat, utimes, writeFile } from "node:fs/promises";
 import { createServer } from "node:http";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -69,6 +69,7 @@ import { captureOpenClawStateSnapshot } from "./collectors/openclaw-state.mjs";
 import { buildReportSummary, renderMarkdownReport, renderPasteSummary, renderReportSummary, summarizeRecords } from "./reporting/report.mjs";
 import { buildRepeatedWorkAudit } from "./audits/repeated-work.mjs";
 import { ENV_COLLECTOR_IDS, resolveCollectionPolicy } from "./collection-policy.mjs";
+import { channelPlatformsDir } from "./paths.mjs";
 import {
   buildAgentCliLocalTurnEvidenceInvariants,
   buildAgentGatewayRpcTurnEvidenceInvariants,
@@ -9383,6 +9384,7 @@ async function channelCapabilityRegistryCheck() {
     assertEqual(completionHandoff?.atoms?.some((atom) => atom.group === "workflow" && atom.id === "background-artifact-completion"), true, "completion handoff maps to background completion atom");
 
     const channels = await loadChannelCapabilities();
+    await assertRawChannelPlatformFilesArePlatformOnly();
     validateChannelCapabilityWorkflowReferences(channels, workflowCatalogs);
     const workflowCatalog = workflowCatalogs.find((catalog) => catalog.id === "openclaw-channel-workflow-cases");
     assertEqual(Boolean(workflowCatalog), true, "OpenClaw channel workflow case catalog present");
@@ -9631,6 +9633,31 @@ async function channelCapabilityRegistryCheck() {
       durationMs: 0,
       message: error.message
     };
+  }
+}
+
+async function assertRawChannelPlatformFilesArePlatformOnly() {
+  const forbiddenKeys = [
+    "adapterDistribution",
+    "adapterId",
+    "claims",
+    "declarationSources",
+    "deterministicShim",
+    "proofModes",
+    "requiredLevel",
+    "supportStatus",
+    "workflowCaseIds",
+    "workflowOverrides"
+  ];
+  const names = (await readdir(channelPlatformsDir)).filter((name) => name.endsWith(".json")).sort();
+  for (const name of names) {
+    const platform = JSON.parse(await readFile(join(channelPlatformsDir, name), "utf8"));
+    assertEqual(Boolean(platform.adapter), true, `${name} declares adapter facts`);
+    assertEqual(Boolean(platform.capabilities && typeof platform.capabilities === "object" && !Array.isArray(platform.capabilities)), true, `${name} declares compact implemented capabilities`);
+    for (const key of forbiddenKeys) {
+      assertEqual(Object.hasOwn(platform, key), false, `${name} does not declare Kova/test policy key ${key}`);
+    }
+    assertEqual((platform.sources ?? []).includes("src/channels/message/types.ts"), false, `${name} does not declare generic OpenClaw contract as a platform source`);
   }
 }
 
