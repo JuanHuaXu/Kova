@@ -82,6 +82,7 @@ export function validateChannelCapabilityWorkflowReferences(channels, workflowCa
   const errors = [];
   for (const channel of channels ?? []) {
     const supportedAtoms = new Set((channel.capabilities ?? []).map((capability) => `${capability.group}:${capability.id}`));
+    const provenAtoms = new Set();
     const seen = new Set();
     for (const caseId of channel.workflowCaseIds ?? []) {
       if (seen.has(caseId)) {
@@ -101,7 +102,18 @@ export function validateChannelCapabilityWorkflowReferences(channels, workflowCa
         const key = `${atom.group}:${atom.id}`;
         if (!supportedAtoms.has(key)) {
           errors.push(`${channel.id}.workflowCaseIds '${caseId}' requires unsupported adapter atom ${key}`);
+          continue;
         }
+        provenAtoms.add(key);
+      }
+    }
+    for (const capability of channel.capabilities ?? []) {
+      if (capability.requiredLevel !== "blocking") {
+        continue;
+      }
+      const key = `${capability.group}:${capability.id}`;
+      if (!provenAtoms.has(key)) {
+        errors.push(`${channel.id}.${key} is blocking but has no declared runtime workflow proof`);
       }
     }
   }

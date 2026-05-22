@@ -25,6 +25,7 @@
     "silent-final",
     "source-visible-delivery.text.automatic-final",
     "source-visible-delivery.text.message-tool-only",
+    "source-visible-delivery.payload.message-tool-only",
     "source-visible-delivery.media.message-tool-only",
     "source-visible-delivery.media-thread.message-tool-only",
     "source-visible-delivery.attachment.message-tool-only",

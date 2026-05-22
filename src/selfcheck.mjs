@@ -9403,6 +9403,16 @@ async function channelCapabilityRegistryCheck() {
       capability.catalogId === `${capability.group}:${capability.id}`
     ), true, "telegram capabilities reference OpenClaw catalog ids");
     assertEqual(telegram.workflowCaseIds?.includes("source-visible-delivery.media.message-tool-only"), true, "telegram maps to shared source media workflow case");
+    const workflowCasesById = new Map((workflowCatalog?.cases ?? []).map((testCase) => [testCase.id, testCase]));
+    const telegramWorkflowAtoms = new Set((telegram.workflowCaseIds ?? []).flatMap((caseId) =>
+      (workflowCasesById.get(caseId)?.atoms ?? [])
+        .filter((atom) => atom.group !== "workflow")
+        .map((atom) => `${atom.group}:${atom.id}`)
+    ));
+    assertEqual(telegram.capabilities
+      .filter((capability) => capability.requiredLevel === "blocking")
+      .every((capability) => telegramWorkflowAtoms.has(`${capability.group}:${capability.id}`)),
+    true, "telegram blocking capabilities have declared workflow proof");
 
     let rejectedGroup = false;
     try {
@@ -9544,6 +9554,22 @@ async function channelCapabilityRegistryCheck() {
       rejectedUnsupportedWorkflowAtom = /requires unsupported adapter atom/.test(error.message);
     }
     assertEqual(rejectedUnsupportedWorkflowAtom, true, "channel workflow case references must match adapter atoms");
+
+    let rejectedMissingBlockingWorkflowProof = false;
+    try {
+      validateChannelCapabilityWorkflowReferences([{
+        ...telegram,
+        capabilities: telegram.capabilities.map((capability) =>
+          capability.group === "durable-final" && capability.id === "payload"
+            ? { ...capability, requiredLevel: "blocking" }
+            : capability
+        ),
+        workflowCaseIds: telegram.workflowCaseIds.filter((caseId) => caseId !== "source-visible-delivery.payload.message-tool-only")
+      }], workflowCatalogs);
+    } catch (error) {
+      rejectedMissingBlockingWorkflowProof = /blocking but has no declared runtime workflow proof/.test(error.message);
+    }
+    assertEqual(rejectedMissingBlockingWorkflowProof, true, "blocking channel capabilities require workflow proof");
 
     return {
       id: "channel-capability-registry",
