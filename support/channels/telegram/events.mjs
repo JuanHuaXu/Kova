@@ -13,11 +13,16 @@ let messageSequence = 5000;
 export function telegramInboundForCase(workflowCase) {
   const threaded = caseUsesThread(workflowCase);
   const reply = caseUsesReply(workflowCase);
+  const roomEvent = caseUsesRoomEvent(workflowCase);
   const messageId = nextMessageId();
-  const chat = threaded
+  const grouped = threaded || roomEvent;
+  const chat = grouped
     ? { id: GROUP_CHAT_ID, type: "supergroup", title: "Kova Telegram Shim", is_forum: true }
     : { id: DIRECT_CHAT_ID, type: "private", first_name: "Kova User" };
-  const routeKey = threaded ? `${GROUP_CHAT_ID}:topic:${THREAD_ID}` : String(DIRECT_CHAT_ID);
+  const routeKey = threaded
+    ? `${GROUP_CHAT_ID}:topic:${THREAD_ID}`
+    : String(grouped ? GROUP_CHAT_ID : DIRECT_CHAT_ID);
+  const text = grouped && !roomEvent ? `@${BOT_USERNAME} ${workflowCase.prompt}` : workflowCase.prompt;
   const message = {
     message_id: messageId,
     date: Math.floor(Date.now() / 1000),
@@ -28,7 +33,7 @@ export function telegramInboundForCase(workflowCase) {
       first_name: "Kova User",
       username: "kova_user"
     },
-    text: workflowCase.prompt,
+    text,
     ...(threaded ? { message_thread_id: THREAD_ID, is_topic_message: true } : {}),
     ...(reply ? {
       reply_to_message: {
@@ -96,6 +101,10 @@ function caseUsesReply(workflowCase) {
   return workflowCase.matrix?.route === "reply" ||
     workflowCase.matrix?.route === "reply-thread" ||
     workflowCase.expects?.replyTo === "inbound-message";
+}
+
+function caseUsesRoomEvent(workflowCase) {
+  return workflowCase.sourceReplyDeliveryMode === "message_tool_only";
 }
 
 function nextUpdateId() {

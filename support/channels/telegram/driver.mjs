@@ -4,7 +4,6 @@ import {
   telegramInboundForCase
 } from "./events.mjs";
 import {
-  configureTelegramOpenClawForCase,
   configureTelegramOpenClaw,
   startTelegramOpenClaw
 } from "./openclaw.mjs";
@@ -24,7 +23,6 @@ export function canDriveWorkflowCase() {
 }
 
 export async function enqueueUserEvent({ workflowCase, platform }) {
-  configureTelegramOpenClawForCase({ platform, workflowCase });
   const inbound = telegramInboundForCase(workflowCase);
   platform.currentInbound = inbound;
   await enqueueTelegramUpdate({ platform, update: inbound.native.update });
