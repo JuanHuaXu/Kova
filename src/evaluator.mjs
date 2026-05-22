@@ -8,7 +8,7 @@ import {
   summarizeGatewaySessionPreProviderAttributions
 } from "./collectors/gateway-session-turn-attribution.mjs";
 import { computeProviderTurnAttribution } from "./collectors/provider.mjs";
-import { summarizeRuntimeDepsLogs } from "./collectors/logs.mjs";
+import { isExpectedKovaMockProviderFailureLine, summarizeRuntimeDepsLogs } from "./collectors/logs.mjs";
 import { buildHealthMeasurement, healthReadinessClassification } from "./health.mjs";
 import { resolveThresholdPolicy } from "./evaluation/thresholds.mjs";
 import {
@@ -3296,7 +3296,9 @@ function countExplicitLogCommandMetric(results, key) {
     if (result.status === 0) {
       observed = true;
     }
-    const matchCount = countPattern(`${result.stdout ?? ""}\n${result.stderr ?? ""}`, pattern);
+    const matchCount = countPattern(`${result.stdout ?? ""}\n${result.stderr ?? ""}`, pattern, {
+      ignoreLine: key === "providerTimeoutMentions" ? isExpectedKovaMockProviderFailureLine : null
+    });
     if (matchCount > 0) {
       observed = true;
       count += matchCount;
@@ -3313,10 +3315,10 @@ function isLogCommandResult(result) {
   return /^ocm\s+logs\s+/.test(result?.command ?? "");
 }
 
-function countPattern(text, pattern) {
+function countPattern(text, pattern, { ignoreLine = null } = {}) {
   let count = 0;
   for (const line of String(text ?? "").split("\n")) {
-    if (pattern.test(line)) {
+    if (pattern.test(line) && !(typeof ignoreLine === "function" && ignoreLine(line))) {
       count += 1;
     }
   }

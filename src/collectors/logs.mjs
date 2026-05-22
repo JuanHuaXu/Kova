@@ -40,7 +40,9 @@ export async function collectLogMetrics(envName, timeoutMs, artifactDir) {
     listeningMentions: countPattern(text, /listening|server started|gateway ready|ready on|websocket/i),
     providerLoadMentions: countPattern(text, /provider.*load|load.*provider|provider registry|auth provider/i),
     modelCatalogMentions: countPattern(text, /model catalog|models list|loading models|available models/i),
-    providerTimeoutMentions: countPattern(text, /provider.*timeout|model.*timeout|timeout.*provider|timeout.*model/i),
+    providerTimeoutMentions: countPattern(text, /provider.*timeout|model.*timeout|timeout.*provider|timeout.*model/i, {
+      ignoreLine: isExpectedKovaMockProviderFailureLine
+    }),
     eventLoopDelayMentions: countPattern(text, /event loop|event-loop|blocked loop|loop delay/i),
     v8DiagnosticMentions: countPattern(text, /v8|diagnostic report|heapsnapshot|heap snapshot/i),
     errorMentions: countPattern(text, /\berror\b|exception|unhandled/i),
@@ -305,10 +307,14 @@ export function extractStructuredDiagnosticEvents(text) {
   return events;
 }
 
-function countPattern(text, pattern) {
+export function isExpectedKovaMockProviderFailureLine(line) {
+  return /mock provider channel workflow failure|kova_channel_workflow_error/i.test(String(line ?? ""));
+}
+
+function countPattern(text, pattern, { ignoreLine = null } = {}) {
   let count = 0;
   for (const line of text.split("\n")) {
-    if (pattern.test(line)) {
+    if (pattern.test(line) && !(typeof ignoreLine === "function" && ignoreLine(line))) {
       count += 1;
     }
   }

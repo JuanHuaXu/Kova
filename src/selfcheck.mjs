@@ -46,6 +46,7 @@ import { assertSafeScenarioCommand } from "./safety.mjs";
 import { parseTimelineText } from "./collectors/timeline.mjs";
 import {
   boundedLogSnippet,
+  isExpectedKovaMockProviderFailureLine,
   summarizeEmbeddedRunTraces,
   summarizeLivenessWarnings,
   summarizeRuntimeDepsLogs
@@ -176,6 +177,7 @@ export async function runSelfCheck(flags = {}) {
     checks.push(await commandTimeoutContractCheck());
     checks.push(await commandOutputBudgetCheck());
     checks.push(logSnippetBudgetCheck());
+    checks.push(expectedMockProviderFailureTimeoutLogCheck());
     checks.push(optionalNoLogsCommandCheck());
     checks.push(missingCollectorProofCheck());
     checks.push(ocmCommandBuildersCheck());
@@ -10567,6 +10569,73 @@ function logSnippetBudgetCheck() {
       id: "log-snippet-budget",
       status: "FAIL",
       command: "evaluate log snippet truncation metadata",
+      durationMs: 0,
+      message: error.message
+    };
+  }
+}
+
+function expectedMockProviderFailureTimeoutLogCheck() {
+  try {
+    assertEqual(
+      isExpectedKovaMockProviderFailureLine("embedded run failover decision reason=timeout rawError=503 mock provider channel workflow failure"),
+      true,
+      "expected Kova mock provider failure line is classified"
+    );
+
+    const expectedFailureRecord = {
+      scenario: "channel-telegram-capability-conformance",
+      status: "PASS",
+      phases: [{
+        id: "logs",
+        results: [{
+          command: "ocm logs kova-self-check --tail 200 --raw",
+          status: 0,
+          stdout: "model fallback decision reason=timeout detail=503 mock provider channel workflow failure",
+          stderr: "",
+          durationMs: 10
+        }]
+      }]
+    };
+    evaluateRecord(expectedFailureRecord, { thresholds: {} });
+    assertEqual(
+      expectedFailureRecord.violations?.some((violation) => violation.metric === "providerTimeoutMentions") ?? false,
+      false,
+      "expected Kova mock provider failure logs do not create global provider timeout violations"
+    );
+
+    const realTimeoutRecord = {
+      scenario: "provider-timeout-self-check",
+      status: "PASS",
+      phases: [{
+        id: "logs",
+        results: [{
+          command: "ocm logs kova-self-check --tail 200 --raw",
+          status: 0,
+          stdout: "provider timeout while calling upstream model",
+          stderr: "",
+          durationMs: 10
+        }]
+      }]
+    };
+    evaluateRecord(realTimeoutRecord, { thresholds: {} });
+    assertEqual(
+      realTimeoutRecord.violations?.some((violation) => violation.metric === "providerTimeoutMentions") ?? false,
+      true,
+      "real provider timeout logs still create provider timeout violations"
+    );
+
+    return {
+      id: "expected-mock-provider-failure-timeout-logs",
+      status: "PASS",
+      command: "evaluate expected mock provider failure timeout log filtering",
+      durationMs: 0
+    };
+  } catch (error) {
+    return {
+      id: "expected-mock-provider-failure-timeout-logs",
+      status: "FAIL",
+      command: "evaluate expected mock provider failure timeout log filtering",
       durationMs: 0,
       message: error.message
     };
