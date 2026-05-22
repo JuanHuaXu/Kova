@@ -5,6 +5,7 @@ import path from "node:path";
 const args = parseArgs(process.argv.slice(2));
 const portFile = requiredArg(args, "port-file");
 const token = args.token ?? "999001:kova-telegram-token";
+const visibleReplies = optionalVisibleReplies(args["visible-replies"]);
 const port = fs.readFileSync(portFile, "utf8").trim();
 if (!/^\d+$/u.test(port)) {
   throw new Error(`invalid Telegram shim port in ${portFile}`);
@@ -77,6 +78,13 @@ config.channels = {
   }
 };
 
+if (visibleReplies) {
+  config.messages = {
+    ...(config.messages ?? {}),
+    visibleReplies
+  };
+}
+
 fs.writeFileSync(configPath, `${JSON.stringify(config, null, 2)}\n`, "utf8");
 console.log(configPath);
 
@@ -103,6 +111,16 @@ function requiredArg(parsed, key) {
     throw new Error(`--${key} is required`);
   }
   return value;
+}
+
+function optionalVisibleReplies(value) {
+  if (value == null) {
+    return null;
+  }
+  if (value === "automatic" || value === "message_tool") {
+    return value;
+  }
+  throw new Error(`--visible-replies must be automatic or message_tool, got '${value}'`);
 }
 
 function requiredEnv(name) {

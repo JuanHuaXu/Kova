@@ -32,6 +32,10 @@ export async function startTelegramPlatform({ repoRoot, artifactDir, timeoutMs }
     process: child,
     stdoutFd,
     stderrFd,
+    repoRoot: null,
+    envName: null,
+    timeoutMs,
+    visibleReplies: null,
     currentInbound: null,
     driver: null
   };

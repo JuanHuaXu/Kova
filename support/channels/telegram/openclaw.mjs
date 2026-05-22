@@ -3,6 +3,9 @@ import { join } from "node:path";
 import { TELEGRAM_TOKEN } from "./events.mjs";
 
 export function configureTelegramOpenClaw({ repoRoot, envName, platform, timeoutMs }) {
+  platform.repoRoot = repoRoot;
+  platform.envName = envName;
+  platform.timeoutMs = timeoutMs;
   return runCommand("ocm", [
     "env",
     "exec",
@@ -13,8 +16,40 @@ export function configureTelegramOpenClaw({ repoRoot, envName, platform, timeout
     "--port-file",
     platform.portPath,
     "--token",
-    TELEGRAM_TOKEN
+    TELEGRAM_TOKEN,
+    "--visible-replies",
+    "automatic"
   ], timeoutMs);
+}
+
+export function configureTelegramOpenClawForCase({ platform, workflowCase }) {
+  if (!platform?.repoRoot || !platform?.envName) {
+    throw new Error("Telegram OpenClaw platform is not configured");
+  }
+  const visibleReplies =
+    workflowCase.sourceReplyDeliveryMode === "message_tool_only" ? "message_tool" : "automatic";
+  if (platform.visibleReplies === visibleReplies) {
+    return { skipped: true, visibleReplies };
+  }
+  const result = runCommand("ocm", [
+    "env",
+    "exec",
+    platform.envName,
+    "--",
+    "node",
+    join(platform.repoRoot, "support/channels/telegram/configure-openclaw.mjs"),
+    "--port-file",
+    platform.portPath,
+    "--token",
+    TELEGRAM_TOKEN,
+    "--visible-replies",
+    visibleReplies
+  ], platform.timeoutMs);
+  if (result.status !== 0) {
+    throw new Error(`telegram per-case OpenClaw configuration failed: ${result.command}`);
+  }
+  platform.visibleReplies = visibleReplies;
+  return result;
 }
 
 export function startTelegramOpenClaw({ repoRoot, envName, artifactDir, timeoutMs }) {
