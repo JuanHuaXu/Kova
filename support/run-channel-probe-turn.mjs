@@ -10,6 +10,7 @@ import {
   readTimeoutMs,
   waitForGatewayMethodOk
 } from "./openclaw-runtime.mjs";
+import { readChannelWorkflowCaseCatalogSync } from "./channel-workflow-catalog.mjs";
 import { channelWorkflowScript } from "./channel-workflow-provider-script.mjs";
 
 const repoRoot = dirname(dirname(fileURLToPath(import.meta.url)));
@@ -22,7 +23,7 @@ const continueOnFailure = args["continue-on-failure"] === "true";
 const artifactPath = join(artifactDir, `channel-probe-turn-${safeArtifactSegment(requestedCase)}.json`);
 const providerRequestLogPath = join(artifactDir, "mock-openai", "requests.jsonl");
 const providerPortPath = join(artifactDir, "mock-openai", "port");
-const workflowCaseCatalog = JSON.parse(await readFile(join(repoRoot, "channel-capabilities", "channel-workflow-cases.json"), "utf8"));
+const workflowCaseCatalog = readChannelWorkflowCaseCatalogSync(repoRoot);
 const selectedCases = selectWorkflowCases(workflowCaseCatalog, requestedCase);
 
 async function main() {

@@ -1,0 +1,63 @@
+{
+  "schemaVersion": "kova.channelWorkflowFamily.v1",
+  "id": "background-artifact-completion",
+  "title": "Background Artifact Completion",
+  "userAction": "user asks OpenClaw to generate an image, video, or audio artifact and receives the completed artifact back in the source conversation",
+  "openclawSurface": "channel inbound message with async generated artifact completion",
+  "ownerArea": "OpenClaw completion delivery runtime",
+  "sourceRefs": [
+    "src/agents/subagent-announce-delivery.ts",
+    "src/agents/pi-embedded-runner/run/payloads.ts",
+    "src/infra/outbound/source-delivery-plan.ts",
+    "src/infra/outbound/bound-delivery-router.ts"
+  ],
+  "contentKinds": [
+    "image",
+    "video",
+    "audio",
+    "media"
+  ],
+  "routeKinds": [
+    "direct",
+    "thread",
+    "reply",
+    "reply-thread",
+    "bound-requester"
+  ],
+  "deliveryModes": [
+    "background-completion",
+    "message-tool-only-source-delivery"
+  ],
+  "lifecycles": [
+    "async-completion",
+    "success",
+    "terminal"
+  ],
+  "atoms": [
+    {
+      "group": "workflow",
+      "id": "background-artifact-completion"
+    },
+    {
+      "group": "workflow",
+      "id": "source-visible-delivery"
+    },
+    {
+      "group": "workflow",
+      "id": "message-tool-only-source-delivery"
+    },
+    {
+      "group": "durable-final",
+      "id": "media"
+    },
+    {
+      "group": "durable-final",
+      "id": "thread"
+    },
+    {
+      "group": "durable-final",
+      "id": "message-sending-hooks"
+    }
+  ],
+  "cases": []
+}

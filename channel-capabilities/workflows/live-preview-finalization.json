@@ -1,0 +1,75 @@
+{
+  "schemaVersion": "kova.channelWorkflowFamily.v1",
+  "id": "live-preview-finalization",
+  "title": "Live Preview And Finalization",
+  "userAction": "user receives progress or draft output while OpenClaw works, then sees the preview finalize or fall back to a normal final message",
+  "openclawSurface": "channel live preview and live finalizer",
+  "ownerArea": "OpenClaw live channel runtime and adapter",
+  "sourceRefs": [
+    "src/channels/message/types.ts#channelMessageLiveCapabilities",
+    "src/channels/message/types.ts#livePreviewFinalizerCapabilities",
+    "extensions/telegram/src/channel.ts",
+    "extensions/discord/src/channel.ts"
+  ],
+  "contentKinds": [
+    "text",
+    "media"
+  ],
+  "routeKinds": [
+    "direct",
+    "thread"
+  ],
+  "deliveryModes": [
+    "live-preview",
+    "live-finalizer",
+    "final"
+  ],
+  "lifecycles": [
+    "success",
+    "ambiguous-send",
+    "terminal"
+  ],
+  "atoms": [
+    {
+      "group": "live-preview",
+      "id": "draft-preview"
+    },
+    {
+      "group": "live-preview",
+      "id": "preview-finalization"
+    },
+    {
+      "group": "live-preview",
+      "id": "progress-updates"
+    },
+    {
+      "group": "live-preview",
+      "id": "native-streaming"
+    },
+    {
+      "group": "live-preview",
+      "id": "quiet-finalization"
+    },
+    {
+      "group": "live-finalizer",
+      "id": "final-edit"
+    },
+    {
+      "group": "live-finalizer",
+      "id": "normal-fallback"
+    },
+    {
+      "group": "live-finalizer",
+      "id": "discard-pending"
+    },
+    {
+      "group": "live-finalizer",
+      "id": "preview-receipt"
+    },
+    {
+      "group": "live-finalizer",
+      "id": "retain-on-ambiguous-failure"
+    }
+  ],
+  "cases": []
+}

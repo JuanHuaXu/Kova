@@ -1,0 +1,462 @@
+{
+  "schemaVersion": "kova.channelWorkflowFamily.v1",
+  "id": "source-visible-delivery",
+  "title": "Source Visible Delivery",
+  "userAction": "user asks OpenClaw for output that must be delivered to the source chat instead of only becoming a private final answer",
+  "openclawSurface": "channel inbound message with source delivery plan",
+  "ownerArea": "OpenClaw source delivery runtime",
+  "sourceRefs": [
+    "src/infra/outbound/source-delivery-plan.ts#createSourceDeliveryPlan",
+    "src/infra/outbound/source-delivery-plan.ts#resolveSourceDeliveryOutcome",
+    "src/agents/pi-embedded-runner/run/message-tool-terminal.ts",
+    "src/agents/pi-embedded-runner/run/payloads.ts"
+  ],
+  "contentKinds": [
+    "text",
+    "media",
+    "payload",
+    "attachment"
+  ],
+  "routeKinds": [
+    "direct",
+    "thread",
+    "reply",
+    "reply-thread"
+  ],
+  "deliveryModes": [
+    "automatic-source-delivery",
+    "message-tool-only-source-delivery"
+  ],
+  "lifecycles": [
+    "success",
+    "terminal"
+  ],
+  "atoms": [
+    {
+      "group": "workflow",
+      "id": "source-visible-delivery"
+    },
+    {
+      "group": "workflow",
+      "id": "message-tool-only-source-delivery"
+    },
+    {
+      "group": "durable-final",
+      "id": "text"
+    },
+    {
+      "group": "durable-final",
+      "id": "media"
+    },
+    {
+      "group": "durable-final",
+      "id": "payload"
+    },
+    {
+      "group": "durable-final",
+      "id": "reply-to"
+    },
+    {
+      "group": "durable-final",
+      "id": "thread"
+    },
+    {
+      "group": "durable-final",
+      "id": "message-sending-hooks"
+    }
+  ],
+  "cases": [
+    {
+      "id": "silent-final",
+      "workflow": "source-visible-delivery-silent",
+      "matrix": {
+        "content": "text",
+        "route": "direct",
+        "delivery": "message-tool-only-source-delivery",
+        "lifecycle": "success"
+      },
+      "userAction": "user triggers a quiet channel response and OpenClaw sends it without noisy notification intent",
+      "openclawSurface": "channel inbound direct message with source conversation delivery",
+      "prompt": "Send a quiet deployment reminder.",
+      "providerScript": {
+        "toolCalls": [
+          {
+            "name": "message",
+            "arguments": {
+              "action": "send",
+              "message": "KOVA_AGENT_SILENT_OK",
+              "silent": true
+            }
+          }
+        ],
+        "finalText": "KOVA_SOURCE_DELIVERY_PRIVATE_DONE"
+      },
+      "sourceReplyDeliveryMode": "message_tool_only",
+      "expects": {
+        "visibleDeliveries": 1,
+        "kind": "text",
+        "text": "KOVA_AGENT_SILENT_OK",
+        "silent": true,
+        "terminal": true
+      },
+      "providerRequests": {
+        "mode": "minimum",
+        "min": 1
+      },
+      "atoms": [
+        {
+          "group": "durable-final",
+          "id": "silent"
+        }
+      ]
+    },
+    {
+      "id": "source-visible-delivery.text.automatic-final",
+      "workflow": "source-visible-delivery",
+      "matrix": {
+        "content": "text",
+        "route": "direct",
+        "delivery": "automatic-source-delivery",
+        "lifecycle": "success"
+      },
+      "userAction": "user asks OpenClaw a normal question and receives the final answer in the same chat",
+      "openclawSurface": "channel inbound direct message with automatic source delivery",
+      "prompt": "Summarize the launch checklist in one sentence.",
+      "providerScript": {
+        "finalText": "KOVA_SOURCE_DELIVERY_TEXT_AUTO_OK"
+      },
+      "expects": {
+        "visibleDeliveries": 1,
+        "kind": "text",
+        "text": "KOVA_SOURCE_DELIVERY_TEXT_AUTO_OK",
+        "terminal": true,
+        "noDuplicateFinal": true
+      },
+      "providerRequests": {
+        "mode": "minimum",
+        "min": 1
+      },
+      "atoms": [
+        {
+          "group": "workflow",
+          "id": "source-visible-delivery"
+        },
+        {
+          "group": "durable-final",
+          "id": "text"
+        }
+      ]
+    },
+    {
+      "id": "source-visible-delivery.text.message-tool-only",
+      "workflow": "source-visible-delivery",
+      "matrix": {
+        "content": "text",
+        "route": "direct",
+        "delivery": "message-tool-only-source-delivery",
+        "lifecycle": "success"
+      },
+      "userAction": "user asks OpenClaw for an update that must be delivered through the source chat message path",
+      "openclawSurface": "channel inbound direct message with source conversation delivery",
+      "prompt": "Post a short product launch update for this chat.",
+      "providerScript": {
+        "toolCalls": [
+          {
+            "name": "message",
+            "arguments": {
+              "action": "send",
+              "message": "KOVA_SOURCE_DELIVERY_TEXT_TOOL_OK"
+            }
+          }
+        ],
+        "finalText": "KOVA_SOURCE_DELIVERY_PRIVATE_DONE"
+      },
+      "sourceReplyDeliveryMode": "message_tool_only",
+      "expects": {
+        "visibleDeliveries": 1,
+        "kind": "text",
+        "text": "KOVA_SOURCE_DELIVERY_TEXT_TOOL_OK",
+        "hooks": true,
+        "terminal": true,
+        "noDuplicateFinal": true
+      },
+      "providerRequests": {
+        "mode": "minimum",
+        "min": 1
+      },
+      "atoms": [
+        {
+          "group": "workflow",
+          "id": "source-visible-delivery"
+        },
+        {
+          "group": "workflow",
+          "id": "message-tool-only-source-delivery"
+        },
+        {
+          "group": "durable-final",
+          "id": "text"
+        },
+        {
+          "group": "durable-final",
+          "id": "message-sending-hooks"
+        }
+      ]
+    },
+    {
+      "id": "source-visible-delivery.payload.message-tool-only",
+      "workflow": "source-visible-delivery",
+      "matrix": {
+        "content": "payload",
+        "route": "direct",
+        "delivery": "message-tool-only-source-delivery",
+        "lifecycle": "success"
+      },
+      "userAction": "user asks OpenClaw to send a structured channel response to the same chat",
+      "openclawSurface": "channel inbound direct message with message tool channelData payload delivery",
+      "prompt": "Send a compact status card to this chat.",
+      "providerScript": {
+        "toolCalls": [
+          {
+            "name": "message",
+            "arguments": {
+              "action": "send",
+              "message": "KOVA_SOURCE_DELIVERY_PAYLOAD_OK",
+              "channelData": {
+                "kovaPayloadKind": "status-card",
+                "severity": "info"
+              }
+            }
+          }
+        ],
+        "finalText": "KOVA_SOURCE_DELIVERY_PRIVATE_DONE"
+      },
+      "sourceReplyDeliveryMode": "message_tool_only",
+      "expects": {
+        "visibleDeliveries": 1,
+        "kind": "payload",
+        "text": "KOVA_SOURCE_DELIVERY_PAYLOAD_OK",
+        "channelData": {
+          "kovaPayloadKind": "status-card",
+          "severity": "info"
+        },
+        "hooks": true,
+        "terminal": true,
+        "noDuplicateFinal": true
+      },
+      "providerRequests": {
+        "mode": "minimum",
+        "min": 1
+      },
+      "atoms": [
+        {
+          "group": "workflow",
+          "id": "source-visible-delivery"
+        },
+        {
+          "group": "workflow",
+          "id": "message-tool-only-source-delivery"
+        },
+        {
+          "group": "durable-final",
+          "id": "payload"
+        },
+        {
+          "group": "durable-final",
+          "id": "message-sending-hooks"
+        }
+      ]
+    },
+    {
+      "id": "source-visible-delivery.attachment.message-tool-only",
+      "workflow": "source-visible-delivery",
+      "matrix": {
+        "content": "attachment",
+        "route": "direct",
+        "delivery": "message-tool-only-source-delivery",
+        "lifecycle": "success"
+      },
+      "userAction": "user asks OpenClaw to send a generated file attachment back to the same chat",
+      "openclawSurface": "channel inbound direct message with source conversation delivery",
+      "prompt": "Prepare a launch notes attachment and send it here.",
+      "providerScript": {
+        "toolCalls": [
+          {
+            "name": "message",
+            "arguments": {
+              "action": "send",
+              "message": "KOVA_SOURCE_DELIVERY_ATTACHMENT_OK",
+              "media": "kova-source-delivery-attachment.txt"
+            }
+          }
+        ],
+        "finalText": "KOVA_SOURCE_DELIVERY_PRIVATE_DONE"
+      },
+      "sourceReplyDeliveryMode": "message_tool_only",
+      "expects": {
+        "visibleDeliveries": 1,
+        "kind": "media",
+        "text": "KOVA_SOURCE_DELIVERY_ATTACHMENT_OK",
+        "mediaSource": "kova-source-delivery-attachment.txt",
+        "mediaSourcePolicy": "sendable-local-or-managed",
+        "hooks": true,
+        "terminal": true,
+        "noDuplicateFinal": true
+      },
+      "fixtures": {
+        "mediaPath": "kova-source-delivery-attachment.txt"
+      },
+      "providerRequests": {
+        "mode": "minimum",
+        "min": 1
+      },
+      "atoms": [
+        {
+          "group": "workflow",
+          "id": "source-visible-delivery"
+        },
+        {
+          "group": "workflow",
+          "id": "message-tool-only-source-delivery"
+        },
+        {
+          "group": "durable-final",
+          "id": "media"
+        },
+        {
+          "group": "durable-final",
+          "id": "message-sending-hooks"
+        }
+      ]
+    },
+    {
+      "id": "source-visible-delivery.media.message-tool-only",
+      "workflow": "source-visible-delivery",
+      "matrix": {
+        "content": "media",
+        "route": "direct",
+        "delivery": "message-tool-only-source-delivery",
+        "lifecycle": "success"
+      },
+      "userAction": "user asks OpenClaw to produce a media result and receives that result in the same chat",
+      "openclawSurface": "channel inbound direct message with source conversation delivery",
+      "prompt": "Create a short product launch video showing our new desktop app turning a messy inbox into a clean task list, with upbeat music and a clear final frame.",
+      "providerScript": {
+        "toolCalls": [
+          {
+            "name": "message",
+            "arguments": {
+              "action": "send",
+              "message": "KOVA_SOURCE_DELIVERY_MEDIA_OK",
+              "media": "kova-source-delivery-media.mp4"
+            }
+          }
+        ],
+        "finalText": "KOVA_SOURCE_DELIVERY_PRIVATE_DONE"
+      },
+      "sourceReplyDeliveryMode": "message_tool_only",
+      "expects": {
+        "visibleDeliveries": 1,
+        "kind": "media",
+        "text": "KOVA_SOURCE_DELIVERY_MEDIA_OK",
+        "mediaSource": "kova-source-delivery-media.mp4",
+        "mediaSourcePolicy": "sendable-local-or-managed",
+        "hooks": true,
+        "terminal": true,
+        "noDuplicateFinal": true
+      },
+      "fixtures": {
+        "mediaPath": "kova-source-delivery-media.mp4"
+      },
+      "providerRequests": {
+        "mode": "minimum",
+        "min": 1
+      },
+      "atoms": [
+        {
+          "group": "workflow",
+          "id": "source-visible-delivery"
+        },
+        {
+          "group": "workflow",
+          "id": "message-tool-only-source-delivery"
+        },
+        {
+          "group": "durable-final",
+          "id": "media"
+        },
+        {
+          "group": "durable-final",
+          "id": "message-sending-hooks"
+        }
+      ]
+    },
+    {
+      "id": "source-visible-delivery.media-thread.message-tool-only",
+      "workflow": "source-visible-delivery",
+      "matrix": {
+        "content": "media",
+        "route": "thread",
+        "delivery": "message-tool-only-source-delivery",
+        "lifecycle": "success"
+      },
+      "userAction": "user asks OpenClaw from inside a thread to produce a media result and receives that result in the same thread",
+      "openclawSurface": "channel inbound threaded message with source conversation delivery",
+      "prompt": "Create a short product launch video for this thread and send it here.",
+      "providerScript": {
+        "toolCalls": [
+          {
+            "name": "message",
+            "arguments": {
+              "action": "send",
+              "message": "KOVA_SOURCE_DELIVERY_MEDIA_THREAD_OK",
+              "media": "kova-source-delivery-media-thread.mp4"
+            }
+          }
+        ],
+        "finalText": "KOVA_SOURCE_DELIVERY_PRIVATE_DONE"
+      },
+      "sourceReplyDeliveryMode": "message_tool_only",
+      "expects": {
+        "visibleDeliveries": 1,
+        "kind": "media",
+        "text": "KOVA_SOURCE_DELIVERY_MEDIA_THREAD_OK",
+        "threadId": "kova-model-turn-thread",
+        "mediaSource": "kova-source-delivery-media-thread.mp4",
+        "mediaSourcePolicy": "sendable-local-or-managed",
+        "hooks": true,
+        "terminal": true,
+        "noDuplicateFinal": true
+      },
+      "fixtures": {
+        "mediaPath": "kova-source-delivery-media-thread.mp4"
+      },
+      "providerRequests": {
+        "mode": "minimum",
+        "min": 1
+      },
+      "atoms": [
+        {
+          "group": "workflow",
+          "id": "source-visible-delivery"
+        },
+        {
+          "group": "workflow",
+          "id": "message-tool-only-source-delivery"
+        },
+        {
+          "group": "durable-final",
+          "id": "media"
+        },
+        {
+          "group": "durable-final",
+          "id": "thread"
+        },
+        {
+          "group": "durable-final",
+          "id": "message-sending-hooks"
+        }
+      ]
+    }
+  ]
+}

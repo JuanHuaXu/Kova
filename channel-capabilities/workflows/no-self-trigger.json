@@ -1,0 +1,101 @@
+{
+  "schemaVersion": "kova.channelWorkflowFamily.v1",
+  "id": "no-self-trigger",
+  "title": "No Self Trigger",
+  "userAction": "user receives an OpenClaw channel response and the platform echoes that bot-authored message back without starting another user turn",
+  "openclawSurface": "channel inbound bot/self echo protection",
+  "ownerArea": "OpenClaw channel runtime and adapter preflight",
+  "sourceRefs": [
+    "src/channels/turn/bot-loop-protection.ts",
+    "src/channels/turn/kernel.ts",
+    "extensions/telegram/src/bot-message-dispatch.ts",
+    "extensions/discord/src/monitor/message-handler.process.ts"
+  ],
+  "contentKinds": [
+    "text",
+    "media"
+  ],
+  "routeKinds": [
+    "direct",
+    "thread",
+    "reply"
+  ],
+  "deliveryModes": [
+    "final"
+  ],
+  "lifecycles": [
+    "bot-echo",
+    "terminal"
+  ],
+  "atoms": [
+    {
+      "group": "workflow",
+      "id": "no-self-trigger"
+    },
+    {
+      "group": "workflow",
+      "id": "single-inbound-single-final"
+    },
+    {
+      "group": "workflow",
+      "id": "terminal-after-final"
+    },
+    {
+      "group": "durable-final",
+      "id": "text"
+    },
+    {
+      "group": "durable-final",
+      "id": "media"
+    }
+  ],
+  "cases": [
+    {
+      "id": "no-self-trigger.bot-authored-echo",
+      "workflow": "no-self-trigger",
+      "matrix": {
+        "content": "text",
+        "route": "direct",
+        "delivery": "final",
+        "lifecycle": "bot-echo"
+      },
+      "userAction": "user receives a bot-authored channel response and the platform echoes that bot message back as an inbound event",
+      "openclawSurface": "channel inbound direct message with bot-loop protection",
+      "ownerArea": "OpenClaw channel runtime",
+      "prompt": "Confirm the latest channel update.",
+      "providerScript": {
+        "finalText": "KOVA_NO_SELF_TRIGGER_OK"
+      },
+      "expects": {
+        "visibleDeliveries": 1,
+        "kind": "text",
+        "text": "KOVA_NO_SELF_TRIGGER_OK",
+        "terminal": true,
+        "noDuplicateFinal": true,
+        "noSelfTrigger": true
+      },
+      "providerRequests": {
+        "mode": "minimum",
+        "min": 1
+      },
+      "atoms": [
+        {
+          "group": "workflow",
+          "id": "no-self-trigger"
+        },
+        {
+          "group": "workflow",
+          "id": "single-inbound-single-final"
+        },
+        {
+          "group": "workflow",
+          "id": "terminal-after-final"
+        },
+        {
+          "group": "durable-final",
+          "id": "text"
+        }
+      ]
+    }
+  ]
+}

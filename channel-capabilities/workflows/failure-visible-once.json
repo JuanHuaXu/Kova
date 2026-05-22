@@ -1,0 +1,94 @@
+{
+  "schemaVersion": "kova.channelWorkflowFamily.v1",
+  "id": "failure-visible-once",
+  "title": "Failure Visible Once",
+  "userAction": "user sends a channel message while provider or runtime work fails and receives one clear visible failure response",
+  "openclawSurface": "channel model turn with provider/runtime failure",
+  "ownerArea": "OpenClaw channel runtime",
+  "sourceRefs": [
+    "src/agents/pi-embedded-runner/run/payloads.ts",
+    "src/agents/pi-embedded-runner/run/attempt.ts",
+    "src/channels/turn/kernel.ts"
+  ],
+  "contentKinds": [
+    "error",
+    "text"
+  ],
+  "routeKinds": [
+    "direct",
+    "thread",
+    "reply"
+  ],
+  "deliveryModes": [
+    "final"
+  ],
+  "lifecycles": [
+    "provider-failure",
+    "terminal"
+  ],
+  "atoms": [
+    {
+      "group": "workflow",
+      "id": "failure-visible-once"
+    },
+    {
+      "group": "workflow",
+      "id": "single-inbound-single-final"
+    },
+    {
+      "group": "workflow",
+      "id": "terminal-after-final"
+    },
+    {
+      "group": "durable-final",
+      "id": "text"
+    }
+  ],
+  "cases": [
+    {
+      "id": "failure-visible-once.provider-error",
+      "workflow": "failure-visible-once",
+      "matrix": {
+        "content": "error",
+        "route": "direct",
+        "delivery": "final",
+        "lifecycle": "provider-failure"
+      },
+      "userAction": "user sends a normal channel message while the configured model provider is failing and receives one clear error response",
+      "openclawSurface": "channel inbound direct message with provider failure",
+      "prompt": "Check the launch status for this chat.",
+      "providerScript": {
+        "errorStatus": 503
+      },
+      "expects": {
+        "visibleDeliveries": 1,
+        "kind": "text",
+        "errorFinal": true,
+        "terminal": true,
+        "noDuplicateFinal": true
+      },
+      "providerRequests": {
+        "mode": "minimum",
+        "min": 1
+      },
+      "atoms": [
+        {
+          "group": "workflow",
+          "id": "failure-visible-once"
+        },
+        {
+          "group": "workflow",
+          "id": "single-inbound-single-final"
+        },
+        {
+          "group": "workflow",
+          "id": "terminal-after-final"
+        },
+        {
+          "group": "durable-final",
+          "id": "text"
+        }
+      ]
+    }
+  ]
+}

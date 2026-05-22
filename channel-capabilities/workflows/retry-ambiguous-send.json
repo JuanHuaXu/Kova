@@ -1,0 +1,59 @@
+{
+  "schemaVersion": "kova.channelWorkflowFamily.v1",
+  "id": "retry-ambiguous-send",
+  "title": "Retry And Ambiguous Send Reconciliation",
+  "userAction": "user receives exactly one visible response even when a channel send outcome is ambiguous or retried",
+  "openclawSurface": "durable final send retry and unknown-send reconciliation",
+  "ownerArea": "OpenClaw channel runtime and adapter",
+  "sourceRefs": [
+    "src/channels/message/types.ts#reconcileUnknownSend",
+    "src/channels/turn/durable-delivery.ts",
+    "extensions/telegram/src/channel.ts",
+    "extensions/discord/src/channel.ts"
+  ],
+  "contentKinds": [
+    "text",
+    "media",
+    "payload"
+  ],
+  "routeKinds": [
+    "direct",
+    "thread",
+    "reply"
+  ],
+  "deliveryModes": [
+    "final"
+  ],
+  "lifecycles": [
+    "ambiguous-send",
+    "retry",
+    "terminal"
+  ],
+  "atoms": [
+    {
+      "group": "durable-final",
+      "id": "reconcile-unknown-send"
+    },
+    {
+      "group": "durable-final",
+      "id": "after-send-success"
+    },
+    {
+      "group": "durable-final",
+      "id": "after-commit"
+    },
+    {
+      "group": "workflow",
+      "id": "single-inbound-single-final"
+    },
+    {
+      "group": "workflow",
+      "id": "final-delivery-receipt-required"
+    },
+    {
+      "group": "workflow",
+      "id": "terminal-after-final"
+    }
+  ],
+  "cases": []
+}

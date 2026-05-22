@@ -1,0 +1,242 @@
+{
+  "schemaVersion": "kova.channelWorkflowFamily.v1",
+  "id": "receive-ack",
+  "title": "Receive Acknowledgement",
+  "userAction": "user sends a channel message and the channel adapter acknowledges the platform event at the configured stage",
+  "openclawSurface": "channel receive context and acknowledgement policy",
+  "ownerArea": "OpenClaw channel receive runtime and adapter",
+  "sourceRefs": [
+    "src/channels/message/receive.ts#createMessageReceiveContext",
+    "src/channels/message/receive.ts#shouldAckMessageAfterStage",
+    "src/channels/message/types.ts#channelMessageReceiveAckPolicies",
+    "extensions/telegram/src/channel.ts",
+    "extensions/discord/src/channel.ts"
+  ],
+  "contentKinds": [
+    "text",
+    "media"
+  ],
+  "routeKinds": [
+    "direct",
+    "thread"
+  ],
+  "deliveryModes": [
+    "ack"
+  ],
+  "lifecycles": [
+    "success",
+    "terminal"
+  ],
+  "atoms": [
+    {
+      "group": "ack",
+      "id": "after-receive-record"
+    },
+    {
+      "group": "ack",
+      "id": "after-agent-dispatch"
+    },
+    {
+      "group": "ack",
+      "id": "after-durable-send"
+    },
+    {
+      "group": "ack",
+      "id": "manual"
+    }
+  ],
+  "cases": [
+    {
+      "id": "receive-ack.after-receive-record",
+      "workflow": "receive-ack",
+      "matrix": {
+        "content": "text",
+        "route": "direct",
+        "delivery": "ack",
+        "lifecycle": "success"
+      },
+      "userAction": "user sends a normal channel message and the adapter acknowledges the platform event after OpenClaw records the receive context",
+      "openclawSurface": "channel receive context with after_receive_record acknowledgement policy",
+      "ownerArea": "OpenClaw channel receive runtime",
+      "prompt": "Acknowledge this status check with one short line.",
+      "providerScript": {
+        "finalText": "KOVA_ACK_AFTER_RECEIVE_RECORD_OK"
+      },
+      "receiveAckPolicy": "after_receive_record",
+      "expects": {
+        "visibleDeliveries": 1,
+        "kind": "text",
+        "text": "KOVA_ACK_AFTER_RECEIVE_RECORD_OK",
+        "ackStage": "receive_record",
+        "terminal": true,
+        "noDuplicateFinal": true
+      },
+      "providerRequests": {
+        "mode": "minimum",
+        "min": 1
+      },
+      "atoms": [
+        {
+          "group": "ack",
+          "id": "after-receive-record"
+        },
+        {
+          "group": "workflow",
+          "id": "single-inbound-single-final"
+        },
+        {
+          "group": "workflow",
+          "id": "terminal-after-final"
+        },
+        {
+          "group": "durable-final",
+          "id": "text"
+        }
+      ]
+    },
+    {
+      "id": "receive-ack.after-agent-dispatch",
+      "workflow": "receive-ack",
+      "matrix": {
+        "content": "text",
+        "route": "direct",
+        "delivery": "ack",
+        "lifecycle": "success"
+      },
+      "userAction": "user sends a normal channel message and the adapter acknowledges the platform event after OpenClaw dispatches the agent turn",
+      "openclawSurface": "channel receive context with after_agent_dispatch acknowledgement policy",
+      "ownerArea": "OpenClaw channel receive runtime",
+      "prompt": "Acknowledge this dispatch check with one short line.",
+      "providerScript": {
+        "finalText": "KOVA_ACK_AFTER_AGENT_DISPATCH_OK"
+      },
+      "receiveAckPolicy": "after_agent_dispatch",
+      "expects": {
+        "visibleDeliveries": 1,
+        "kind": "text",
+        "text": "KOVA_ACK_AFTER_AGENT_DISPATCH_OK",
+        "ackStage": "agent_dispatch",
+        "terminal": true,
+        "noDuplicateFinal": true
+      },
+      "providerRequests": {
+        "mode": "minimum",
+        "min": 1
+      },
+      "atoms": [
+        {
+          "group": "ack",
+          "id": "after-agent-dispatch"
+        },
+        {
+          "group": "workflow",
+          "id": "single-inbound-single-final"
+        },
+        {
+          "group": "workflow",
+          "id": "terminal-after-final"
+        },
+        {
+          "group": "durable-final",
+          "id": "text"
+        }
+      ]
+    },
+    {
+      "id": "receive-ack.after-durable-send",
+      "workflow": "receive-ack",
+      "matrix": {
+        "content": "text",
+        "route": "direct",
+        "delivery": "ack",
+        "lifecycle": "success"
+      },
+      "userAction": "user sends a normal channel message and the adapter acknowledges the platform event after OpenClaw completes durable response delivery",
+      "openclawSurface": "channel receive context with after_durable_send acknowledgement policy",
+      "ownerArea": "OpenClaw channel receive runtime",
+      "prompt": "Acknowledge this delivery check with one short line.",
+      "providerScript": {
+        "finalText": "KOVA_ACK_AFTER_DURABLE_SEND_OK"
+      },
+      "receiveAckPolicy": "after_durable_send",
+      "expects": {
+        "visibleDeliveries": 1,
+        "kind": "text",
+        "text": "KOVA_ACK_AFTER_DURABLE_SEND_OK",
+        "ackStage": "durable_send",
+        "terminal": true,
+        "noDuplicateFinal": true
+      },
+      "providerRequests": {
+        "mode": "minimum",
+        "min": 1
+      },
+      "atoms": [
+        {
+          "group": "ack",
+          "id": "after-durable-send"
+        },
+        {
+          "group": "workflow",
+          "id": "single-inbound-single-final"
+        },
+        {
+          "group": "workflow",
+          "id": "terminal-after-final"
+        },
+        {
+          "group": "durable-final",
+          "id": "text"
+        }
+      ]
+    },
+    {
+      "id": "receive-ack.manual",
+      "workflow": "receive-ack",
+      "matrix": {
+        "content": "text",
+        "route": "direct",
+        "delivery": "ack",
+        "lifecycle": "success"
+      },
+      "userAction": "user sends a normal channel message and the adapter acknowledges the platform event through its manual receive policy",
+      "openclawSurface": "channel receive context with manual acknowledgement policy",
+      "ownerArea": "OpenClaw channel receive runtime",
+      "prompt": "Acknowledge this manual check with one short line.",
+      "providerScript": {
+        "finalText": "KOVA_ACK_MANUAL_OK"
+      },
+      "receiveAckPolicy": "manual",
+      "expects": {
+        "visibleDeliveries": 1,
+        "kind": "text",
+        "text": "KOVA_ACK_MANUAL_OK",
+        "ackStage": "manual",
+        "terminal": true,
+        "noDuplicateFinal": true
+      },
+      "providerRequests": {
+        "mode": "minimum",
+        "min": 1
+      },
+      "atoms": [
+        {
+          "group": "ack",
+          "id": "manual"
+        },
+        {
+          "group": "workflow",
+          "id": "single-inbound-single-final"
+        },
+        {
+          "group": "workflow",
+          "id": "terminal-after-final"
+        },
+        {
+          "group": "durable-final",
+          "id": "text"
+        }
+      ]
+    }
+  ]
+}

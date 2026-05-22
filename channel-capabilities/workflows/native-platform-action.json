@@ -1,0 +1,417 @@
+{
+  "schemaVersion": "kova.channelWorkflowFamily.v1",
+  "id": "native-platform-action",
+  "title": "Native Platform Message Action",
+  "userAction": "user asks OpenClaw to use a channel-native message action from the current conversation",
+  "openclawSurface": "channel inbound message with message tool native action dispatch",
+  "ownerArea": "OpenClaw message tool and channel adapter runtime",
+  "sourceRefs": [
+    "src/channels/plugins/message-action-discovery.ts",
+    "src/channels/plugins/message-capabilities.ts",
+    "src/agents/pi-embedded-runner/run/message-tool-terminal.ts"
+  ],
+  "contentKinds": [
+    "text",
+    "poll",
+    "reaction",
+    "topic",
+    "presentation"
+  ],
+  "routeKinds": [
+    "direct",
+    "thread",
+    "reply"
+  ],
+  "deliveryModes": [
+    "native-action",
+    "message-tool-only-source-delivery"
+  ],
+  "lifecycles": [
+    "success",
+    "terminal"
+  ],
+  "atoms": [
+    {
+      "group": "native-platform",
+      "id": "action-send"
+    },
+    {
+      "group": "native-platform",
+      "id": "action-poll"
+    },
+    {
+      "group": "native-platform",
+      "id": "action-react"
+    },
+    {
+      "group": "native-platform",
+      "id": "action-delete"
+    },
+    {
+      "group": "native-platform",
+      "id": "action-edit"
+    },
+    {
+      "group": "native-platform",
+      "id": "action-topic-create"
+    },
+    {
+      "group": "native-platform",
+      "id": "action-topic-edit"
+    },
+    {
+      "group": "native-platform",
+      "id": "delivery-pin"
+    },
+    {
+      "group": "native-platform",
+      "id": "presentation"
+    }
+  ],
+  "cases": [
+    {
+      "id": "native-action.send.presentation-pin",
+      "workflow": "native-platform-action",
+      "matrix": {
+        "content": "presentation",
+        "route": "direct",
+        "delivery": "native-action",
+        "lifecycle": "success"
+      },
+      "userAction": "user asks OpenClaw to send a status card and pin it in the current chat",
+      "openclawSurface": "channel inbound direct message with message tool send action, presentation payload, and delivery pin",
+      "prompt": "Send a launch status card and pin it here.",
+      "providerScript": {
+        "toolCalls": [
+          {
+            "name": "message",
+            "arguments": {
+              "action": "send",
+              "message": "KOVA_TELEGRAM_PRESENTATION_PIN_OK",
+              "presentation": {
+                "blocks": [
+                  {
+                    "type": "text",
+                    "text": "KOVA_TELEGRAM_PRESENTATION_PIN_OK"
+                  }
+                ]
+              },
+              "delivery": {
+                "pin": {
+                  "enabled": true,
+                  "notify": false
+                }
+              }
+            }
+          }
+        ],
+        "finalText": "NO_REPLY"
+      },
+      "sourceReplyDeliveryMode": "message_tool_only",
+      "expects": {
+        "visibleDeliveries": 1,
+        "kind": "text",
+        "text": "KOVA_TELEGRAM_PRESENTATION_PIN_OK",
+        "nativeActions": {
+          "action-send": 1,
+          "delivery-pin": 1
+        },
+        "terminal": true,
+        "noDuplicateFinal": true
+      },
+      "providerRequests": {
+        "mode": "minimum",
+        "min": 1
+      },
+      "atoms": [
+        {
+          "group": "native-platform",
+          "id": "action-send"
+        },
+        {
+          "group": "native-platform",
+          "id": "presentation"
+        },
+        {
+          "group": "native-platform",
+          "id": "delivery-pin"
+        }
+      ]
+    },
+    {
+      "id": "native-action.poll",
+      "workflow": "native-platform-action",
+      "matrix": {
+        "content": "poll",
+        "route": "direct",
+        "delivery": "native-action",
+        "lifecycle": "success"
+      },
+      "userAction": "user asks OpenClaw to create a poll in the current chat",
+      "openclawSurface": "channel inbound direct message with message tool poll action",
+      "prompt": "Create a launch readiness poll here.",
+      "providerScript": {
+        "toolCalls": [
+          {
+            "name": "message",
+            "arguments": {
+              "action": "poll",
+              "question": "Is the launch ready?",
+              "answers": [
+                "Yes",
+                "No"
+              ],
+              "allowMultiselect": false,
+              "isAnonymous": false
+            }
+          }
+        ],
+        "finalText": "NO_REPLY"
+      },
+      "sourceReplyDeliveryMode": "message_tool_only",
+      "expects": {
+        "visibleDeliveries": 1,
+        "kind": "poll",
+        "text": "Is the launch ready?",
+        "nativeActions": {
+          "action-poll": 1
+        },
+        "terminal": true,
+        "noDuplicateFinal": true
+      },
+      "providerRequests": {
+        "mode": "minimum",
+        "min": 1
+      },
+      "atoms": [
+        {
+          "group": "native-platform",
+          "id": "action-poll"
+        }
+      ]
+    },
+    {
+      "id": "native-action.react",
+      "workflow": "native-platform-action",
+      "matrix": {
+        "content": "reaction",
+        "route": "direct",
+        "delivery": "native-action",
+        "lifecycle": "success"
+      },
+      "userAction": "user asks OpenClaw to react to the current message",
+      "openclawSurface": "channel inbound direct message with message tool reaction action",
+      "prompt": "React to this launch update.",
+      "providerScript": {
+        "toolCalls": [
+          {
+            "name": "message",
+            "arguments": {
+              "action": "react",
+              "emoji": "👍"
+            }
+          }
+        ],
+        "finalText": "NO_REPLY"
+      },
+      "sourceReplyDeliveryMode": "message_tool_only",
+      "expects": {
+        "visibleDeliveries": 0,
+        "nativeActions": {
+          "action-react": 1
+        },
+        "terminal": true
+      },
+      "providerRequests": {
+        "mode": "minimum",
+        "min": 1
+      },
+      "atoms": [
+        {
+          "group": "native-platform",
+          "id": "action-react"
+        }
+      ]
+    },
+    {
+      "id": "native-action.delete",
+      "workflow": "native-platform-action",
+      "matrix": {
+        "content": "text",
+        "route": "reply",
+        "delivery": "native-action",
+        "lifecycle": "success"
+      },
+      "userAction": "user asks OpenClaw to delete a previous message in the current chat",
+      "openclawSurface": "channel inbound reply message with message tool delete action",
+      "prompt": "Delete the previous launch status message.",
+      "providerScript": {
+        "toolCalls": [
+          {
+            "name": "message",
+            "arguments": {
+              "action": "delete",
+              "chatId": "200",
+              "messageId": 900
+            }
+          }
+        ],
+        "finalText": "NO_REPLY"
+      },
+      "sourceReplyDeliveryMode": "message_tool_only",
+      "expects": {
+        "visibleDeliveries": 0,
+        "nativeActions": {
+          "action-delete": 1
+        },
+        "terminal": true
+      },
+      "providerRequests": {
+        "mode": "minimum",
+        "min": 1
+      },
+      "atoms": [
+        {
+          "group": "native-platform",
+          "id": "action-delete"
+        }
+      ]
+    },
+    {
+      "id": "native-action.edit",
+      "workflow": "native-platform-action",
+      "matrix": {
+        "content": "text",
+        "route": "reply",
+        "delivery": "native-action",
+        "lifecycle": "success"
+      },
+      "userAction": "user asks OpenClaw to edit a previous message in the current chat",
+      "openclawSurface": "channel inbound reply message with message tool edit action",
+      "prompt": "Edit the previous launch status message.",
+      "providerScript": {
+        "toolCalls": [
+          {
+            "name": "message",
+            "arguments": {
+              "action": "edit",
+              "chatId": "200",
+              "messageId": 900,
+              "message": "KOVA_TELEGRAM_EDITED_STATUS_OK"
+            }
+          }
+        ],
+        "finalText": "NO_REPLY"
+      },
+      "sourceReplyDeliveryMode": "message_tool_only",
+      "expects": {
+        "visibleDeliveries": 0,
+        "nativeActions": {
+          "action-edit": 1
+        },
+        "terminal": true
+      },
+      "providerRequests": {
+        "mode": "minimum",
+        "min": 1
+      },
+      "atoms": [
+        {
+          "group": "native-platform",
+          "id": "action-edit"
+        }
+      ]
+    },
+    {
+      "id": "native-action.topic-create",
+      "workflow": "native-platform-action",
+      "matrix": {
+        "content": "topic",
+        "route": "thread",
+        "delivery": "native-action",
+        "lifecycle": "success"
+      },
+      "userAction": "user asks OpenClaw to create a topic in the current Telegram group",
+      "openclawSurface": "channel inbound threaded group message with message tool topic-create action",
+      "prompt": "Create a new topic for launch updates.",
+      "providerScript": {
+        "toolCalls": [
+          {
+            "name": "message",
+            "arguments": {
+              "action": "topic-create",
+              "chatId": "-1003970070733",
+              "name": "Kova Launch Updates"
+            }
+          }
+        ],
+        "finalText": "NO_REPLY"
+      },
+      "sourceReplyDeliveryMode": "message_tool_only",
+      "expects": {
+        "visibleDeliveries": 0,
+        "threadId": "12",
+        "nativeActions": {
+          "action-topic-create": 1
+        },
+        "terminal": true
+      },
+      "providerRequests": {
+        "mode": "minimum",
+        "min": 1
+      },
+      "atoms": [
+        {
+          "group": "native-platform",
+          "id": "action-topic-create"
+        }
+      ]
+    },
+    {
+      "id": "native-action.topic-edit",
+      "workflow": "native-platform-action",
+      "matrix": {
+        "content": "topic",
+        "route": "thread",
+        "delivery": "native-action",
+        "lifecycle": "success"
+      },
+      "userAction": "user asks OpenClaw to rename the current Telegram topic",
+      "openclawSurface": "channel inbound threaded group message with message tool topic-edit action",
+      "prompt": "Rename this topic for launch coordination.",
+      "providerScript": {
+        "toolCalls": [
+          {
+            "name": "message",
+            "arguments": {
+              "action": "topic-edit",
+              "chatId": "-1003970070733",
+              "threadId": 12,
+              "name": "Kova Launch Coordination"
+            }
+          }
+        ],
+        "finalText": "NO_REPLY"
+      },
+      "sourceReplyDeliveryMode": "message_tool_only",
+      "expects": {
+        "visibleDeliveries": 0,
+        "threadId": "12",
+        "nativeActions": {
+          "action-topic-edit": 1
+        },
+        "terminal": true
+      },
+      "providerRequests": {
+        "mode": "minimum",
+        "min": 1
+      },
+      "atoms": [
+        {
+          "group": "native-platform",
+          "id": "action-topic-edit"
+        }
+      ]
+    }
+  ]
+}

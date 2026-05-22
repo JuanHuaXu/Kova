@@ -1,0 +1,468 @@
+{
+  "schemaVersion": "kova.channelWorkflowFamily.v1",
+  "id": "final-delivery",
+  "title": "Final Channel Delivery",
+  "userAction": "user sends a normal channel message and receives OpenClaw's final answer in the same conversation",
+  "openclawSurface": "channel inbound message with durable final reply",
+  "ownerArea": "OpenClaw channel runtime",
+  "sourceRefs": [
+    "src/channels/turn/kernel.ts#runChannelTurn",
+    "src/channels/turn/durable-delivery.ts#deliverDurableInboundReplyPayload",
+    "src/channels/message/types.ts#durableFinalDeliveryCapabilities"
+  ],
+  "contentKinds": [
+    "text",
+    "media",
+    "payload",
+    "batch"
+  ],
+  "routeKinds": [
+    "direct",
+    "thread",
+    "reply",
+    "reply-thread"
+  ],
+  "deliveryModes": [
+    "final"
+  ],
+  "lifecycles": [
+    "success",
+    "terminal"
+  ],
+  "atoms": [
+    {
+      "group": "durable-final",
+      "id": "text"
+    },
+    {
+      "group": "durable-final",
+      "id": "media"
+    },
+    {
+      "group": "durable-final",
+      "id": "payload"
+    },
+    {
+      "group": "durable-final",
+      "id": "reply-to"
+    },
+    {
+      "group": "durable-final",
+      "id": "thread"
+    },
+    {
+      "group": "durable-final",
+      "id": "message-sending-hooks"
+    },
+    {
+      "group": "durable-final",
+      "id": "batch"
+    },
+    {
+      "group": "durable-final",
+      "id": "after-send-success"
+    },
+    {
+      "group": "durable-final",
+      "id": "after-commit"
+    },
+    {
+      "group": "workflow",
+      "id": "single-inbound-single-final"
+    },
+    {
+      "group": "workflow",
+      "id": "final-delivery-receipt-required"
+    },
+    {
+      "group": "workflow",
+      "id": "terminal-after-final"
+    }
+  ],
+  "cases": [
+    {
+      "id": "text-final",
+      "workflow": "final-text-reply",
+      "matrix": {
+        "content": "text",
+        "route": "reply",
+        "delivery": "final",
+        "lifecycle": "success"
+      },
+      "userAction": "user sends a normal text message and receives a text answer in the same conversation",
+      "openclawSurface": "channel inbound direct message",
+      "prompt": "Give me a short launch status update for the team.",
+      "providerScript": {
+        "finalText": "KOVA_AGENT_OK"
+      },
+      "expects": {
+        "visibleDeliveries": 1,
+        "kind": "text",
+        "text": "KOVA_AGENT_OK",
+        "replyTo": "inbound-message",
+        "hooks": true,
+        "terminal": true
+      },
+      "providerRequests": {
+        "mode": "minimum",
+        "min": 1
+      },
+      "atoms": [
+        {
+          "group": "durable-final",
+          "id": "text"
+        },
+        {
+          "group": "durable-final",
+          "id": "reply-to"
+        },
+        {
+          "group": "durable-final",
+          "id": "message-sending-hooks"
+        },
+        {
+          "group": "durable-final",
+          "id": "after-send-success"
+        },
+        {
+          "group": "durable-final",
+          "id": "after-commit"
+        },
+        {
+          "group": "workflow",
+          "id": "single-inbound-single-final"
+        },
+        {
+          "group": "workflow",
+          "id": "final-delivery-receipt-required"
+        },
+        {
+          "group": "workflow",
+          "id": "terminal-after-final"
+        }
+      ]
+    },
+    {
+      "id": "text-reply-current-final",
+      "workflow": "final-text-current-reply",
+      "matrix": {
+        "content": "text",
+        "route": "reply",
+        "delivery": "final",
+        "lifecycle": "success"
+      },
+      "userAction": "user replies to a message and receives OpenClaw's text answer against that message",
+      "openclawSurface": "channel inbound reply message with explicit current-message reply final",
+      "prompt": "Reply with a short deployment acknowledgement.",
+      "providerScript": {
+        "finalText": "[[reply_to_current]]\nKOVA_AGENT_TEXT_REPLY_CURRENT_OK"
+      },
+      "expects": {
+        "visibleDeliveries": 1,
+        "kind": "text",
+        "text": "KOVA_AGENT_TEXT_REPLY_CURRENT_OK",
+        "replyTo": "inbound-message",
+        "terminal": true,
+        "noDuplicateFinal": true
+      },
+      "providerRequests": {
+        "mode": "minimum",
+        "min": 1
+      },
+      "atoms": [
+        {
+          "group": "durable-final",
+          "id": "text"
+        },
+        {
+          "group": "durable-final",
+          "id": "reply-to"
+        },
+        {
+          "group": "workflow",
+          "id": "single-inbound-single-final"
+        },
+        {
+          "group": "workflow",
+          "id": "final-delivery-receipt-required"
+        },
+        {
+          "group": "workflow",
+          "id": "terminal-after-final"
+        }
+      ]
+    },
+    {
+      "id": "media-final",
+      "workflow": "final-media-reply",
+      "matrix": {
+        "content": "media",
+        "route": "direct",
+        "delivery": "final",
+        "lifecycle": "success"
+      },
+      "userAction": "user asks OpenClaw for a media result and receives the media in the same conversation",
+      "openclawSurface": "channel inbound direct message",
+      "prompt": "Create a simple launch image with a short caption.",
+      "providerScript": {
+        "finalText": "MEDIA:/tmp/kova-channel-model-turn-media.png\nKOVA_AGENT_MEDIA_OK"
+      },
+      "expects": {
+        "visibleDeliveries": 1,
+        "kind": "media",
+        "text": "KOVA_AGENT_MEDIA_OK",
+        "replyTo": "none",
+        "mediaSource": "/tmp/kova-channel-model-turn-media.png",
+        "mediaSourcePolicy": "exact",
+        "terminal": true
+      },
+      "fixtures": {
+        "mediaPath": "/tmp/kova-channel-model-turn-media.png"
+      },
+      "providerRequests": {
+        "mode": "minimum",
+        "min": 1
+      },
+      "atoms": [
+        {
+          "group": "durable-final",
+          "id": "media"
+        },
+        {
+          "group": "workflow",
+          "id": "single-inbound-single-final"
+        },
+        {
+          "group": "workflow",
+          "id": "final-delivery-receipt-required"
+        },
+        {
+          "group": "workflow",
+          "id": "terminal-after-final"
+        }
+      ]
+    },
+    {
+      "id": "media-thread-final",
+      "workflow": "final-media-thread",
+      "matrix": {
+        "content": "media",
+        "route": "thread",
+        "delivery": "final",
+        "lifecycle": "success"
+      },
+      "userAction": "user asks for a media result from inside a thread and receives the media in that thread",
+      "openclawSurface": "channel inbound threaded message",
+      "prompt": "Create a launch image for this thread.",
+      "providerScript": {
+        "finalText": "MEDIA:/tmp/kova-channel-model-turn-media-thread.png\nKOVA_AGENT_MEDIA_THREAD_OK"
+      },
+      "expects": {
+        "visibleDeliveries": 1,
+        "kind": "media",
+        "text": "KOVA_AGENT_MEDIA_THREAD_OK",
+        "replyTo": "none",
+        "threadId": "kova-model-turn-thread",
+        "mediaSource": "/tmp/kova-channel-model-turn-media-thread.png",
+        "mediaSourcePolicy": "exact",
+        "terminal": true,
+        "noDuplicateFinal": true
+      },
+      "fixtures": {
+        "mediaPath": "/tmp/kova-channel-model-turn-media-thread.png"
+      },
+      "providerRequests": {
+        "mode": "minimum",
+        "min": 1
+      },
+      "atoms": [
+        {
+          "group": "durable-final",
+          "id": "media"
+        },
+        {
+          "group": "durable-final",
+          "id": "thread"
+        },
+        {
+          "group": "workflow",
+          "id": "media-thread-final"
+        },
+        {
+          "group": "workflow",
+          "id": "single-inbound-single-final"
+        },
+        {
+          "group": "workflow",
+          "id": "final-delivery-receipt-required"
+        },
+        {
+          "group": "workflow",
+          "id": "terminal-after-final"
+        }
+      ]
+    },
+    {
+      "id": "media-reply-thread-final",
+      "workflow": "final-media-reply-thread",
+      "matrix": {
+        "content": "media",
+        "route": "reply-thread",
+        "delivery": "final",
+        "lifecycle": "success"
+      },
+      "userAction": "user replies in a thread and receives OpenClaw's media answer against the right message in that thread",
+      "openclawSurface": "channel inbound threaded reply message",
+      "prompt": "Create a launch image as a reply in this thread.",
+      "providerScript": {
+        "finalText": "[[reply_to_current]]\nMEDIA:/tmp/kova-channel-model-turn-media-reply-thread.png\nKOVA_AGENT_MEDIA_REPLY_THREAD_OK"
+      },
+      "expects": {
+        "visibleDeliveries": 1,
+        "kind": "media",
+        "text": "KOVA_AGENT_MEDIA_REPLY_THREAD_OK",
+        "replyTo": "inbound-message",
+        "threadId": "kova-model-turn-thread",
+        "mediaSource": "/tmp/kova-channel-model-turn-media-reply-thread.png",
+        "mediaSourcePolicy": "exact",
+        "terminal": true,
+        "noDuplicateFinal": true
+      },
+      "fixtures": {
+        "mediaPath": "/tmp/kova-channel-model-turn-media-reply-thread.png"
+      },
+      "providerRequests": {
+        "mode": "minimum",
+        "min": 1
+      },
+      "atoms": [
+        {
+          "group": "durable-final",
+          "id": "media"
+        },
+        {
+          "group": "durable-final",
+          "id": "reply-to"
+        },
+        {
+          "group": "durable-final",
+          "id": "thread"
+        },
+        {
+          "group": "workflow",
+          "id": "media-reply-thread-final"
+        },
+        {
+          "group": "workflow",
+          "id": "single-inbound-single-final"
+        },
+        {
+          "group": "workflow",
+          "id": "final-delivery-receipt-required"
+        },
+        {
+          "group": "workflow",
+          "id": "terminal-after-final"
+        }
+      ]
+    },
+    {
+      "id": "media-batch-final",
+      "workflow": "final-media-batch",
+      "matrix": {
+        "content": "batch",
+        "route": "reply",
+        "delivery": "final",
+        "lifecycle": "success"
+      },
+      "userAction": "user asks OpenClaw for multiple media results and receives every media item in the same conversation",
+      "openclawSurface": "channel inbound direct message with durable batched media final reply",
+      "prompt": "Create two simple launch images with a short caption.",
+      "providerScript": {
+        "finalText": "MEDIA:/tmp/kova-channel-model-turn-batch-a.png\nMEDIA:/tmp/kova-channel-model-turn-batch-b.png\nKOVA_AGENT_MEDIA_BATCH_OK"
+      },
+      "expects": {
+        "visibleDeliveries": 2,
+        "kind": "media",
+        "text": "KOVA_AGENT_MEDIA_BATCH_OK",
+        "replyTo": "inbound-message",
+        "mediaSources": [
+          "/tmp/kova-channel-model-turn-batch-a.png",
+          "/tmp/kova-channel-model-turn-batch-b.png"
+        ],
+        "mediaSourcePolicy": "exact",
+        "terminal": true,
+        "allowMultipleFinalSends": true
+      },
+      "fixtures": {
+        "mediaPaths": [
+          "/tmp/kova-channel-model-turn-batch-a.png",
+          "/tmp/kova-channel-model-turn-batch-b.png"
+        ]
+      },
+      "providerRequests": {
+        "mode": "minimum",
+        "min": 1
+      },
+      "atoms": [
+        {
+          "group": "durable-final",
+          "id": "media"
+        },
+        {
+          "group": "durable-final",
+          "id": "batch"
+        },
+        {
+          "group": "durable-final",
+          "id": "reply-to"
+        },
+        {
+          "group": "workflow",
+          "id": "single-inbound-single-final"
+        },
+        {
+          "group": "workflow",
+          "id": "final-delivery-receipt-required"
+        },
+        {
+          "group": "workflow",
+          "id": "terminal-after-final"
+        }
+      ]
+    },
+    {
+      "id": "thread-final",
+      "workflow": "final-text-thread",
+      "matrix": {
+        "content": "text",
+        "route": "thread",
+        "delivery": "final",
+        "lifecycle": "success"
+      },
+      "userAction": "user replies in a thread and receives OpenClaw's answer in that thread",
+      "openclawSurface": "channel inbound threaded message",
+      "prompt": "Reply in this thread with the deployment status.",
+      "providerScript": {
+        "finalText": "KOVA_AGENT_THREAD_OK"
+      },
+      "expects": {
+        "visibleDeliveries": 1,
+        "kind": "text",
+        "text": "KOVA_AGENT_THREAD_OK",
+        "threadId": "kova-model-turn-thread",
+        "terminal": true
+      },
+      "providerRequests": {
+        "mode": "minimum",
+        "min": 1
+      },
+      "atoms": [
+        {
+          "group": "durable-final",
+          "id": "thread"
+        }
+      ]
+    }
+  ]
+}

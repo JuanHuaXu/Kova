@@ -1,5 +1,4 @@
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
+import { readChannelWorkflowCaseCatalogSync } from "./channel-workflow-catalog.mjs";
 
 export function scriptForMode(options, repoRoot) {
   if (options.channelWorkflowCases.length > 0) {
@@ -104,7 +103,7 @@ export function scriptStepsForWorkflowCase(testCase, options = {}) {
 }
 
 function readChannelWorkflowCatalog(repoRoot) {
-  return JSON.parse(readFileSync(join(repoRoot, "channel-capabilities", "channel-workflow-cases.json"), "utf8"));
+  return readChannelWorkflowCaseCatalogSync(repoRoot);
 }
 
 function primaryScriptStepsForWorkflowCase(testCase, options = {}) {
