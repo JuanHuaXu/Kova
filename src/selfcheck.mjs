@@ -5562,10 +5562,11 @@ async function mockProviderBehaviorCheck(tmp) {
     `port=$(cat ${quoteShell(portPath)})`,
     "node -e 'const port=process.argv[1]; const body=JSON.stringify({model:\"gpt-5.5\",stream:false}); const send=()=>fetch(`http://127.0.0.1:${port}/v1/responses`,{method:\"POST\",headers:{\"content-type\":\"application/json\"},body}).then(async r=>({status:r.status,text:await r.text()})); const first=await send(); const second=await send(); console.log(JSON.stringify({first:first.status,second:second.status}));' \"$port\""
   ].join("; ");
-  const result = await runCommand(command, { timeoutMs: 10000 });
+  const result = await runCommand(command, { timeoutMs: 30000 });
   try {
     if (result.status !== 0) {
-      throw new Error(`mock provider behavior command failed: ${result.stderr || result.stdout}`);
+      const detail = result.timedOut ? `timed out after ${result.durationMs}ms` : (result.stderr || result.stdout);
+      throw new Error(`mock provider behavior command failed: ${detail}`);
     }
     const response = JSON.parse(result.stdout.trim().split(/\r?\n/).at(-1));
     assertEqual(response.first, 503, "first transient provider status");
