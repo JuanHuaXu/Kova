@@ -111,6 +111,7 @@ process.stdout.write(`${JSON.stringify({
     proofMode: "channel-platform-conformance",
     summary: row.summary,
     reason: row.reason,
+    failureOwner: row.failureOwner ?? null,
     ownerArea: row.ownerArea,
     artifactPath
   }))
@@ -191,6 +192,11 @@ async function runWorkflowCase({ driver, workflowCase, platform }) {
       });
       failed = invariants.find((invariant) => invariant.status !== "passed") ?? null;
     }
+    const failureClassification = classifyWorkflowFailure({
+      failedInvariant: failed,
+      runtimeDiagnostics,
+      workflowCase: runnableWorkflowCase
+    });
     row = {
       id: runnableWorkflowCase.id,
       status: failed ? "failed" : "passed",
@@ -200,7 +206,10 @@ async function runWorkflowCase({ driver, workflowCase, platform }) {
       inventoryWorkflow: runnableWorkflowCase.inventoryWorkflow,
       matrix: runnableWorkflowCase.matrix,
       userAction: runnableWorkflowCase.userAction,
-      ownerArea: runtimeDiagnosticOwnerArea(runtimeDiagnostics) ?? runnableWorkflowCase.ownerArea ?? `${channelId} adapter/runtime`,
+      failureOwner: failed ? failureClassification.failureOwner : null,
+      ownerArea: failed
+        ? failureClassification.ownerArea
+        : (runnableWorkflowCase.ownerArea ?? `${channelId} adapter/runtime`),
       capabilities: runnableWorkflowCase.atoms ?? [],
       providerRequestsDelta,
       providerRequestsAfterEcho,
@@ -249,12 +258,14 @@ async function restartOpenClawAfterFailedCase({ driver, platform, failedCaseId }
 }
 
 function failedRow(workflowCase, reason) {
+  const classification = classifyRunnerFailure(reason, workflowCase);
   return {
     id: workflowCase.id,
     status: "failed",
     summary: `${workflowCase.id} channel workflow failed`,
     reason,
-    ownerArea: workflowCase.ownerArea ?? "OpenClaw channel adapter/runtime",
+    failureOwner: classification.failureOwner,
+    ownerArea: classification.ownerArea,
     invariants: [
       {
         id: `${workflowCase.id}:runner`,
@@ -263,6 +274,83 @@ function failedRow(workflowCase, reason) {
         reason
       }
     ]
+  };
+}
+
+function classifyWorkflowFailure({ failedInvariant, runtimeDiagnostics, workflowCase }) {
+  const diagnosticOwner = runtimeDiagnosticOwnerArea(runtimeDiagnostics);
+  if (diagnosticOwner) {
+    return {
+      failureOwner: "openclaw-runtime",
+      ownerArea: diagnosticOwner
+    };
+  }
+
+  const invariantId = failedInvariant?.id ?? "";
+  if (invariantId.endsWith(":runtime-diagnostics")) {
+    return {
+      failureOwner: "openclaw-runtime",
+      ownerArea: workflowCase.ownerArea ?? "OpenClaw runtime"
+    };
+  }
+  if (invariantId.endsWith(":inbound-media") ||
+      invariantId.endsWith(":native-actions") ||
+      invariantId.endsWith(":native-message-proof")) {
+    return {
+      failureOwner: "channel-adapter",
+      ownerArea: `${channelId} adapter/platform mapping`
+    };
+  }
+  if (invariantId.endsWith(":route") ||
+      invariantId.endsWith(":reply-target") ||
+      invariantId.endsWith(":silent")) {
+    return {
+      failureOwner: "channel-adapter",
+      ownerArea: `${channelId} adapter delivery mapping`
+    };
+  }
+  if (invariantId.endsWith(":unmatched-native-visible-sends") ||
+      invariantId.endsWith(":no-duplicate-final") ||
+      invariantId.endsWith(":no-self-trigger")) {
+    return {
+      failureOwner: "openclaw-runtime",
+      ownerArea: workflowCase.ownerArea ?? "OpenClaw channel runtime"
+    };
+  }
+  if (invariantId.endsWith(":media-source") ||
+      invariantId.endsWith(":media-present") ||
+      invariantId.endsWith(":visible-delivery-count") ||
+      invariantId.endsWith(":expected-kind") ||
+      invariantId.endsWith(":expected-text")) {
+    return {
+      failureOwner: "openclaw-runtime",
+      ownerArea: workflowCase.ownerArea ?? `${channelId} adapter/runtime`
+    };
+  }
+
+  return {
+    failureOwner: "unknown",
+    ownerArea: workflowCase.ownerArea ?? `${channelId} adapter/runtime`
+  };
+}
+
+function classifyRunnerFailure(reason, workflowCase) {
+  const text = String(reason ?? "");
+  if (/mock provider|mock-ai-provider|script reset|script/i.test(text)) {
+    return {
+      failureOwner: "mock-provider",
+      ownerArea: "Kova mock provider"
+    };
+  }
+  if (/invalid observation|observation.*must|driver|normalizeObservations|enqueueUserEvent|readPlatformCalls/i.test(text)) {
+    return {
+      failureOwner: "kova-harness",
+      ownerArea: "Kova channel conformance harness"
+    };
+  }
+  return {
+    failureOwner: "kova-harness",
+    ownerArea: workflowCase.ownerArea ?? "Kova channel conformance harness"
   };
 }
 

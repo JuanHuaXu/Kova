@@ -84,6 +84,7 @@ function channelCapabilityEntry(capability) {
     capabilityId: capability.capabilityId,
     group: capability.group,
     proofMode: capability.proofMode ?? null,
+    failureOwner: capability.failureOwner ?? null,
     ownerArea: capability.ownerArea ?? null
   };
 }

@@ -30,6 +30,7 @@ export function channelCapabilityEvidenceFromResult(result, phaseId, commandInde
     commandIndex: capability.commandIndex ?? commandIndex,
     summary: capability.summary,
     reason: capability.reason ?? null,
+    failureOwner: capability.failureOwner ?? null,
     artifactPath: capability.artifactPath ?? payload.artifactPath ?? null,
     ownerArea: capability.ownerArea ?? payload.ownerArea ?? null
   }));

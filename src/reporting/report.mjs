@@ -163,11 +163,14 @@ function formatChannelCapabilityProofSection(proof) {
       lines.push("- Preflight gaps mean the selected OpenClaw runtime package contract differs from Kova's expected channel capability catalog. Use `kova inventory plan --openclaw-repo <path> --json` to compare the catalog with source.");
     }
     lines.push("");
-    lines.push("| Channel | Capability | Proof | Status | Reason |");
-    lines.push("|---|---|---|---|---|");
+    lines.push("| Channel | Capability | Proof | Status | Owner | Reason |");
+    lines.push("|---|---|---|---|---|---|");
     for (const gap of gaps) {
       const capability = [gap.group, gap.capabilityId].filter(Boolean).join("/") || gap.id;
-      lines.push(`| ${tableCell(gap.channelId)} | ${tableCell(capability)} | ${tableCell(gap.proofMode ?? "unknown")} | ${tableCell(gap.status)} | ${tableCell(gap.reason ?? gap.summary ?? "see JSON")} |`);
+      const owner = gap.failureOwner
+        ? `${gap.failureOwner}${gap.ownerArea ? `: ${gap.ownerArea}` : ""}`
+        : (gap.ownerArea ?? "unknown");
+      lines.push(`| ${tableCell(gap.channelId)} | ${tableCell(capability)} | ${tableCell(gap.proofMode ?? "unknown")} | ${tableCell(gap.status)} | ${tableCell(owner)} | ${tableCell(gap.reason ?? gap.summary ?? "see JSON")} |`);
     }
   }
   lines.push("");
@@ -903,6 +906,7 @@ function summarizeChannelCapabilityProof(records) {
           summary: entry.summary ?? null,
           reason: entry.reason ?? null,
           artifactPath: entry.artifactPath ?? null,
+          failureOwner: entry.failureOwner ?? null,
           ownerArea: entry.ownerArea ?? record.likelyOwner ?? null
         };
         if (entry.status === "failed") {
