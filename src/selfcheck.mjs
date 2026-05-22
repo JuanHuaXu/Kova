@@ -11,6 +11,8 @@ import { summarizeCpuProfiles } from "./collectors/node-profiles.mjs";
 import { summarizeHeapProfiles } from "./collectors/heap.mjs";
 import { collectEnvMetrics } from "./metrics.mjs";
 import { evaluateRecord } from "./evaluator.mjs";
+import { evaluateWorkflowCase } from "../support/channel-conformance/evaluator.mjs";
+import { assertValidObservationSet } from "../support/channel-conformance/observation-schema.mjs";
 import { evaluateGate } from "./matrix/gate.mjs";
 import {
   comparePerformanceToBaseline,
@@ -9456,6 +9458,7 @@ async function channelCapabilityRegistryCheck() {
       .filter((capability) => capability.requiredLevel === "blocking")
       .every((capability) => telegramWorkflowAtoms.has(`${capability.group}:${capability.id}`)),
     true, "telegram blocking capabilities have declared workflow proof");
+    assertChannelObservationLogicalNativeBoundary();
 
     let rejectedGroup = false;
     try {
@@ -9690,6 +9693,111 @@ function assertOpenClawChannelCapabilityCatalog(catalog) {
     ]),
     "OpenClaw ack policy catalog matches src/channels/message/types.ts"
   );
+}
+
+function assertChannelObservationLogicalNativeBoundary() {
+  const workflowCase = {
+    id: "selfcheck.media-logical-delivery",
+    expects: {
+      visibleDeliveries: 1,
+      kind: "media",
+      text: "KOVA_AGENT_MEDIA_OK"
+    },
+    providerRequests: {
+      mode: "minimum",
+      min: 1
+    }
+  };
+  const observations = {
+    schemaVersion: "kova.channelObservationSet.v1",
+    channelId: "selfcheck",
+    inbound: {
+      route: {
+        key: "room-1"
+      },
+      messageKey: "msg-1"
+    },
+    deliveries: [{
+      schemaVersion: "kova.channelObservation.v1",
+      channelId: "selfcheck",
+      actor: "bot",
+      visible: true,
+      kind: "media",
+      text: "KOVA_AGENT_MEDIA_OK",
+      caption: null,
+      route: {
+        kind: "direct",
+        key: "room-1",
+        parentKey: null
+      },
+      replyTo: {
+        present: false,
+        key: null
+      },
+      delivery: {
+        id: "native-1",
+        receiptPresent: true,
+        status: "sent"
+      },
+      media: [{
+        kind: "image",
+        present: true,
+        source: "upload"
+      }],
+      silent: false,
+      timestampMs: 1,
+      nativeMessages: [{
+        channelId: "selfcheck",
+        method: "sendMedia",
+        path: "/messages",
+        deliveryId: "native-1",
+        status: "sent",
+        visible: true,
+        timestampMs: 1,
+        raw: {}
+      }]
+    }],
+    unmatchedNativeMessages: [],
+    nativeCallSummary: {
+      count: 1,
+      nativeVisibleDeliveryCount: 1,
+      logicalDeliveryCount: 1,
+      byMethod: {
+        sendMedia: 1
+      },
+      byAction: {}
+    }
+  };
+  assertValidObservationSet(observations, { caseId: workflowCase.id });
+  const invariants = evaluateWorkflowCase({
+    workflowCase,
+    observations,
+    providerRequestsDelta: 1,
+    providerRequestsAfterEcho: 0
+  });
+  assertEqual(invariants.every((invariant) => invariant.status === "passed"), true, "logical channel delivery keeps native message proof without overrides");
+
+  const withUnmatchedNativeSend = {
+    ...observations,
+    unmatchedNativeMessages: [{
+      channelId: "selfcheck",
+      method: "sendMedia",
+      path: "/messages",
+      deliveryId: "native-extra",
+      status: "sent",
+      visible: true,
+      timestampMs: 2,
+      raw: {}
+    }]
+  };
+  assertValidObservationSet(withUnmatchedNativeSend, { caseId: workflowCase.id });
+  const unmatchedInvariant = evaluateWorkflowCase({
+    workflowCase,
+    observations: withUnmatchedNativeSend,
+    providerRequestsDelta: 1,
+    providerRequestsAfterEcho: 0
+  }).find((invariant) => invariant.id.endsWith(":unmatched-native-visible-sends"));
+  assertEqual(unmatchedInvariant?.status, "failed", "unmatched native visible sends fail generic channel evaluation");
 }
 
 function scenarioHealthScopeValidationCheck() {
