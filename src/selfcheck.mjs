@@ -9939,6 +9939,38 @@ function assertChannelObservationLogicalNativeBoundary() {
     providerRequestsAfterEcho: 0
   }).find((invariant) => invariant.id.endsWith(":media-source"));
   assertEqual(mediaSourceInvariant?.status, "failed", "wrong exact media source fails generic channel evaluation");
+
+  const fingerprintWorkflowCase = {
+    ...workflowCase,
+    id: "selfcheck.media-fingerprint-delivery",
+    expects: {
+      ...workflowCase.expects,
+      mediaSource: "/tmp/kova-fingerprint-source.png",
+      mediaSourceProofs: [{
+        source: "/tmp/kova-fingerprint-source.png",
+        fingerprint: "png:1x1:ct6:bd8:filter0:first=abcdef01"
+      }]
+    }
+  };
+  const withFingerprintSource = {
+    ...observations,
+    deliveries: observations.deliveries.map((delivery) => ({
+      ...delivery,
+      media: delivery.media.map((media) => ({
+        ...media,
+        sourceName: null,
+        sourceRef: "attach://kova-upload",
+        sourceFingerprint: "png:1x1:ct6:bd8:filter0:first=abcdef01"
+      }))
+    }))
+  };
+  const fingerprintInvariant = evaluateWorkflowCase({
+    workflowCase: fingerprintWorkflowCase,
+    observations: withFingerprintSource,
+    providerRequestsDelta: 1,
+    providerRequestsAfterEcho: 0
+  }).find((invariant) => invariant.id.endsWith(":media-source"));
+  assertEqual(fingerprintInvariant?.status, "passed", "exact media source can be proven by upload media fingerprint");
 }
 
 function scenarioHealthScopeValidationCheck() {

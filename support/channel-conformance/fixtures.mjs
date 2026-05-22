@@ -1,26 +1,34 @@
+import { createHash } from "node:crypto";
 import { mkdir, unlink, writeFile } from "node:fs/promises";
 import { spawnSync } from "node:child_process";
-import { dirname, isAbsolute, join } from "node:path";
-
-const PNG_1X1 = Buffer.from(
-  "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/p9sAAAAASUVORK5CYII=",
-  "base64"
-);
+import { basename, dirname, isAbsolute, join } from "node:path";
+import { deflateSync } from "node:zlib";
+import { mediaFingerprint } from "./media-fingerprint.mjs";
 
 export async function prepareWorkflowFixtures(workflowCase, { envName }) {
   const paths = mediaFixturePaths(workflowCase);
   const writtenPaths = [];
+  const sourceProofs = [];
   const replacements = {};
   for (const path of paths) {
     const writePath = fixtureWritePath(path, envName);
+    const content = fixtureContent(path);
     await mkdir(dirname(writePath), { recursive: true });
-    await writeFile(writePath, fixtureContent(path));
+    await writeFile(writePath, content);
     writtenPaths.push(writePath);
     replacements[path] = writePath;
+    sourceProofs.push({
+      source: path,
+      path: writePath,
+      name: basename(writePath),
+      sha256: sha256(content),
+      fingerprint: mediaFingerprint(content)
+    });
   }
   return {
     paths: writtenPaths,
     replacements,
+    sourceProofs,
     async cleanup() {
       await Promise.all(writtenPaths.map((path) =>
         unlink(path).catch((error) => {
@@ -75,7 +83,51 @@ function fixtureContent(path) {
   if (path.endsWith(".txt")) {
     return "Kova channel conformance attachment fixture\n";
   }
-  return PNG_1X1;
+  return pngFixture(path);
+}
+
+function sha256(value) {
+  return createHash("sha256").update(value).digest("hex");
+}
+
+function pngFixture(path) {
+  const hash = createHash("sha256").update(path).digest();
+  const rgba = Buffer.from([hash[0], hash[1], hash[2], 255]);
+  const scanline = Buffer.concat([Buffer.from([0]), rgba]);
+  return Buffer.concat([
+    Buffer.from("89504e470d0a1a0a", "hex"),
+    pngChunk("IHDR", Buffer.from([
+      0, 0, 0, 1,
+      0, 0, 0, 1,
+      8,
+      6,
+      0,
+      0,
+      0
+    ])),
+    pngChunk("IDAT", deflateSync(scanline)),
+    pngChunk("IEND", Buffer.alloc(0))
+  ]);
+}
+
+function pngChunk(type, data) {
+  const typeBuffer = Buffer.from(type, "ascii");
+  const length = Buffer.alloc(4);
+  length.writeUInt32BE(data.length, 0);
+  const crc = Buffer.alloc(4);
+  crc.writeUInt32BE(crc32(Buffer.concat([typeBuffer, data])), 0);
+  return Buffer.concat([length, typeBuffer, data, crc]);
+}
+
+function crc32(buffer) {
+  let crc = 0xffffffff;
+  for (const byte of buffer) {
+    crc ^= byte;
+    for (let bit = 0; bit < 8; bit += 1) {
+      crc = (crc >>> 1) ^ (0xedb88320 & -(crc & 1));
+    }
+  }
+  return (crc ^ 0xffffffff) >>> 0;
 }
 
 function objectOrEmpty(value) {

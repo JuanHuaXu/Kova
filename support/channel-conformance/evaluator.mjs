@@ -191,7 +191,7 @@ function mediaSourceMatches(expects, finalVisible) {
   const observed = observedMedia(finalVisible).filter((media) => media.present === true);
   if (policy === "exact") {
     return expectedSources.length > 0 &&
-      expectedSources.every((source) => observed.some((media) => mediaMatchesExpectedSource(media, source)));
+      expectedSources.every((source) => observed.some((media) => mediaMatchesExpectedSource(media, source, expects)));
   }
   return observed.length > 0;
 }
@@ -230,8 +230,9 @@ function observedMedia(finalVisible) {
   return finalVisible.flatMap((delivery) => Array.isArray(delivery.media) ? delivery.media : []);
 }
 
-function mediaMatchesExpectedSource(media, expectedSource) {
+function mediaMatchesExpectedSource(media, expectedSource, expects) {
   const expectedName = basename(expectedSource);
+  const expectedProof = expectedMediaSourceProof(expects, expectedSource);
   const candidates = [
     media.sourceRef,
     media.sourceName,
@@ -243,12 +244,23 @@ function mediaMatchesExpectedSource(media, expectedSource) {
     candidate === expectedName ||
     candidate.includes(expectedSource) ||
     candidate.includes(expectedName)
-  );
+  ) ||
+    (expectedProof?.sha256 && media.sourceSha256 === expectedProof.sha256) ||
+    (expectedProof?.fingerprint && media.sourceFingerprint === expectedProof.fingerprint);
 }
 
 function mediaSourceLabel(media) {
-  return [media.sourceName, media.sourceRef, media.sourceUrl, media.source]
+  return [media.sourceName, media.sourceRef, media.sourceUrl, media.sourceSha256, media.sourceFingerprint, media.source]
     .find((value) => typeof value === "string" && value.length > 0) ?? "";
+}
+
+function expectedMediaSourceProof(expects, expectedSource) {
+  const proofs = Array.isArray(expects.mediaSourceProofs) ? expects.mediaSourceProofs : [];
+  return proofs.find((proof) =>
+    proof?.source === expectedSource ||
+    proof?.path === expectedSource ||
+    proof?.name === basename(expectedSource)
+  ) ?? null;
 }
 
 function providerRequestsMatch(policy, observed) {

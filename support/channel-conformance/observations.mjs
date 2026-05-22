@@ -85,7 +85,7 @@ function hasExpectedNativeActions(workflowCase, observations) {
 
 function caseTimeoutMs(workflowCase, timeoutMs) {
   const value = workflowCase.expects?.asyncCompletionTimeoutMs;
-  return Number.isInteger(value) ? Math.min(timeoutMs, value) : Math.min(timeoutMs, 10000);
+  return Number.isInteger(value) ? Math.min(timeoutMs, value) : Math.min(timeoutMs, 30000);
 }
 
 function sleep(ms) {

@@ -138,7 +138,9 @@ function normalizeMedia(call) {
     source: source.kind,
     ...(source.ref ? { sourceRef: source.ref } : {}),
     ...(source.name ? { sourceName: source.name } : {}),
-    ...(source.url ? { sourceUrl: source.url } : {})
+    ...(source.url ? { sourceUrl: source.url } : {}),
+    ...(source.sha256 ? { sourceSha256: source.sha256 } : {}),
+    ...(source.fingerprint ? { sourceFingerprint: source.fingerprint } : {})
   }];
 }
 
@@ -154,11 +156,23 @@ function mediaSourceForBodyField(body, field) {
   }
   if (typeof value === "string" && value.startsWith("attach://")) {
     const attachName = value.slice("attach://".length);
-    const attachment = typeof body[attachName] === "string" ? body[attachName] : "";
+    const attachment = body[attachName];
+    if (attachment && typeof attachment === "object" && !Array.isArray(attachment)) {
+      return {
+        kind: "upload",
+        ref: typeof attachment.filename === "string" && attachment.filename.length > 0
+          ? attachment.filename
+          : value,
+        name: typeof attachment.filename === "string" ? attachment.filename : null,
+        sha256: typeof attachment.sha256 === "string" ? attachment.sha256 : null,
+        fingerprint: typeof attachment.fingerprint === "string" ? attachment.fingerprint : null
+      };
+    }
+    const attachmentText = typeof attachment === "string" ? attachment : "";
     return {
       kind: "upload",
-      ref: attachment || value,
-      name: fileNameFromUploadPlaceholder(attachment)
+      ref: attachmentText || value,
+      name: fileNameFromUploadPlaceholder(attachmentText)
     };
   }
   return {

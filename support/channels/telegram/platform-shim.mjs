@@ -1,7 +1,9 @@
 #!/usr/bin/env node
 import { createServer } from "node:http";
+import { createHash } from "node:crypto";
 import { appendFile, mkdir, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
+import { mediaFingerprint } from "../../channel-conformance/media-fingerprint.mjs";
 
 const args = parseArgs(process.argv.slice(2));
 const dir = requiredArg(args, "dir");
@@ -75,7 +77,7 @@ async function handleRequest(request, response) {
   }
   if (request.method === "POST" && url.pathname === "/__kova/enqueue-update") {
     const body = await readRequestBody(request);
-    const payload = parseJsonObject(body);
+    const payload = parseJsonObject(body.toString("utf8"));
     const incoming = Array.isArray(payload.updates) ? payload.updates : [payload.update];
     for (const update of incoming) {
       if (!update || typeof update !== "object" || !Number.isInteger(update.update_id)) {
@@ -319,21 +321,22 @@ function normalizePollOptions(value) {
 function parseTelegramBody(request, rawBody) {
   const contentType = String(request.headers["content-type"] ?? "");
   if (contentType.includes("application/json")) {
-    return parseJsonObject(rawBody);
+    return parseJsonObject(rawBody.toString("utf8"));
   }
   if (contentType.includes("application/x-www-form-urlencoded")) {
-    return Object.fromEntries(new URLSearchParams(rawBody));
+    return Object.fromEntries(new URLSearchParams(rawBody.toString("utf8")));
   }
   if (contentType.includes("multipart/form-data")) {
     return parseMultipartFields(rawBody, contentType);
   }
-  if (!rawBody.trim()) {
+  const text = rawBody.toString("utf8");
+  if (!text.trim()) {
     return {};
   }
   try {
-    return parseJsonObject(rawBody);
+    return parseJsonObject(text);
   } catch {
-    return { rawBody };
+    return { rawBody: text };
   }
 }
 
@@ -344,8 +347,9 @@ function parseMultipartFields(rawBody, contentType) {
     return { rawBody };
   }
   const fields = {};
+  const rawText = rawBody.toString("latin1");
   const marker = `--${boundary}`;
-  for (const part of rawBody.split(marker)) {
+  for (const part of rawText.split(marker)) {
     const trimmed = part.trim();
     if (!trimmed || trimmed === "--") {
       continue;
@@ -356,8 +360,20 @@ function parseMultipartFields(rawBody, contentType) {
     if (!name) {
       continue;
     }
-    const body = bodyParts.join("\n\n").replace(/\r?\n--$/u, "").trimEnd();
-    fields[name] = disposition?.[2] ? `[file:${disposition[2]}]` : body;
+    const body = stripMultipartPartTerminator(bodyParts.join("\n\n"));
+    const isFilePart = Boolean(disposition?.[2]) || /^content-type:\s*(?:image|audio|video|application\/octet-stream)/imu.test(rawHeaders);
+    if (isFilePart) {
+      const bodyBuffer = Buffer.from(body, "latin1");
+      fields[name] = {
+        file: true,
+        filename: disposition?.[2] ?? null,
+        sizeBytes: bodyBuffer.length,
+        sha256: sha256(bodyBuffer),
+        fingerprint: mediaFingerprint(bodyBuffer)
+      };
+    } else {
+      fields[name] = Buffer.from(body, "latin1").toString("utf8");
+    }
   }
   return fields;
 }
@@ -367,7 +383,15 @@ async function readRequestBody(request) {
   for await (const chunk of request) {
     chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
   }
-  return Buffer.concat(chunks).toString("utf8");
+  return Buffer.concat(chunks);
+}
+
+function stripMultipartPartTerminator(value) {
+  return value.endsWith("\r\n") ? value.slice(0, -2) : value.replace(/\n$/u, "");
+}
+
+function sha256(value) {
+  return createHash("sha256").update(value).digest("hex");
 }
 
 function parseJsonObject(text) {

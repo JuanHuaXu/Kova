@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { spawnSync } from "node:child_process";
 import { mkdir, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { pathToFileURL } from "node:url";
@@ -42,8 +43,12 @@ try {
   }
   const startupResult = await driver.startOpenClaw({ repoRoot, envName, artifactDir, platform, timeoutMs });
   const rows = [];
-  for (const workflowCase of selectedCases) {
-    rows.push(await runWorkflowCase({ driver, workflowCase, platform }));
+  for (let index = 0; index < selectedCases.length; index += 1) {
+    const row = await runWorkflowCase({ driver, workflowCase: selectedCases[index], platform });
+    rows.push(row);
+    if (row.status !== "passed" && index < selectedCases.length - 1) {
+      await restartOpenClawAfterFailedCase({ driver, platform, failedCaseId: row.id });
+    }
   }
   result = {
     ok: rows.every((row) => row.status === "passed"),
@@ -129,6 +134,7 @@ async function loadChannelDriver(id) {
 async function runWorkflowCase({ driver, workflowCase, platform }) {
   const startedAtEpochMs = Date.now();
   const fixtures = await prepareWorkflowFixtures(workflowCase, { envName });
+  const runnableWorkflowCase = withFixtureMediaSourceProof(workflowCase, fixtures);
   let row;
   try {
     const providerRequestCountBefore = await countProviderRequests({ artifactDir });
@@ -136,48 +142,48 @@ async function runWorkflowCase({ driver, workflowCase, platform }) {
     await resetProviderScriptForCase({
       repoRoot,
       artifactDir,
-      workflowCase,
+      workflowCase: runnableWorkflowCase,
       fixtureReplacements: fixtures.replacements
     });
-    const inbound = await driver.enqueueUserEvent({ workflowCase, platform });
+    const inbound = await driver.enqueueUserEvent({ workflowCase: runnableWorkflowCase, platform });
     let observations = await waitForCaseObservations({
-      workflowCase,
+      workflowCase: runnableWorkflowCase,
       platform,
       callCursor,
       readPlatformCalls: (params) => driver.readPlatformCalls(params),
       normalizeObservations: (params) => driver.normalizeObservations(params),
       timeoutMs
     });
-    assertValidObservationSet(observations, { caseId: workflowCase.id });
+    assertValidObservationSet(observations, { caseId: runnableWorkflowCase.id });
     const providerRequestsBeforeEcho = await countProviderRequests({ artifactDir });
-    if (workflowCase.expects?.noSelfTrigger === true) {
-      await driver.enqueueBotEcho({ workflowCase, platform, inbound, observations });
+    if (runnableWorkflowCase.expects?.noSelfTrigger === true) {
+      await driver.enqueueBotEcho({ workflowCase: runnableWorkflowCase, platform, inbound, observations });
       await sleep(1500);
       const calls = await driver.readPlatformCalls({ platform });
-      observations = await driver.normalizeObservations({ workflowCase, platform, inbound, calls: calls.slice(callCursor) });
-      assertValidObservationSet(observations, { caseId: workflowCase.id });
+      observations = await driver.normalizeObservations({ workflowCase: runnableWorkflowCase, platform, inbound, calls: calls.slice(callCursor) });
+      assertValidObservationSet(observations, { caseId: runnableWorkflowCase.id });
     }
     const providerRequestCountAfter = await countProviderRequests({ artifactDir });
     const providerRequestsDelta = providerRequestCountAfter - providerRequestCountBefore;
     const providerRequestsAfterEcho = providerRequestCountAfter - providerRequestsBeforeEcho;
     const invariants = evaluateWorkflowCase({
-      workflowCase,
+      workflowCase: runnableWorkflowCase,
       observations,
       providerRequestsDelta,
       providerRequestsAfterEcho
     });
     const failed = invariants.find((invariant) => invariant.status !== "passed") ?? null;
     row = {
-      id: workflowCase.id,
+      id: runnableWorkflowCase.id,
       status: failed ? "failed" : "passed",
-      summary: `${channelId} ${workflowCase.id} channel workflow ${failed ? "failed" : "passed"}`,
+      summary: `${channelId} ${runnableWorkflowCase.id} channel workflow ${failed ? "failed" : "passed"}`,
       reason: failed?.reason ?? null,
-      workflow: workflowCase.workflow,
-      inventoryWorkflow: workflowCase.inventoryWorkflow,
-      matrix: workflowCase.matrix,
-      userAction: workflowCase.userAction,
-      ownerArea: workflowCase.ownerArea ?? `${channelId} adapter/runtime`,
-      capabilities: workflowCase.atoms ?? [],
+      workflow: runnableWorkflowCase.workflow,
+      inventoryWorkflow: runnableWorkflowCase.inventoryWorkflow,
+      matrix: runnableWorkflowCase.matrix,
+      userAction: runnableWorkflowCase.userAction,
+      ownerArea: runnableWorkflowCase.ownerArea ?? `${channelId} adapter/runtime`,
+      capabilities: runnableWorkflowCase.atoms ?? [],
       providerRequestsDelta,
       providerRequestsAfterEcho,
       observations,
@@ -196,6 +202,31 @@ async function runWorkflowCase({ driver, workflowCase, platform }) {
     finishedAtEpochMs,
     durationMs: Math.max(0, finishedAtEpochMs - startedAtEpochMs)
   };
+}
+
+function withFixtureMediaSourceProof(workflowCase, fixtures) {
+  if (!Array.isArray(fixtures.sourceProofs) || fixtures.sourceProofs.length === 0) {
+    return workflowCase;
+  }
+  return {
+    ...workflowCase,
+    expects: {
+      ...(workflowCase.expects ?? {}),
+      mediaSourceProofs: fixtures.sourceProofs
+    }
+  };
+}
+
+async function restartOpenClawAfterFailedCase({ driver, platform, failedCaseId }) {
+  const stop = spawnSync("ocm", ["service", "stop", envName, "--json"], {
+    encoding: "utf8",
+    timeout: timeoutMs,
+    env: process.env
+  });
+  if (stop.status !== 0) {
+    throw new Error(`failed to stop OpenClaw after ${failedCaseId}: ${stop.stderr || stop.stdout}`);
+  }
+  await driver.startOpenClaw({ repoRoot, envName, artifactDir, platform, timeoutMs });
 }
 
 function failedRow(workflowCase, reason) {
