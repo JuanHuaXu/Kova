@@ -7,6 +7,7 @@ export function evaluateWorkflowCase({
   providerRequestsAfterEcho
 }) {
   const expects = objectOrEmpty(workflowCase.expects);
+  const visibleDeliveries = allVisibleDeliveries(observations);
   const finalVisible = expectedFinalDeliveries(workflowCase, observations);
   const expectedVisible = Number.isInteger(expects.visibleDeliveries) ? expects.visibleDeliveries : 1;
   const expectsVisibleDelivery = expectedVisible > 0;
@@ -17,10 +18,10 @@ export function evaluateWorkflowCase({
     invariant(`${workflowCase.id}:provider-work`, providerRequestsMatch(providerPolicy, providerRequestsDelta), providerRequestReason(workflowCase.id, providerPolicy, providerRequestsDelta)),
     invariant(`${workflowCase.id}:visible-delivery-count`, finalVisible.length === expectedVisible, `${workflowCase.id} produced ${expectedVisible} final visible delivery; observed ${finalVisible.length}`),
     invariant(`${workflowCase.id}:expected-kind`, expectedVisible === 0 || expectedKindMatches(expects.kind, finalVisible), `${workflowCase.id} produced ${expects.kind ?? "visible"} output`),
-    invariant(`${workflowCase.id}:expected-text`, !expectedText || finalVisible.some((delivery) => deliveryText(delivery).includes(expectedText)), `${workflowCase.id} preserved expected text or caption`),
+    invariant(`${workflowCase.id}:expected-text`, !expectedText || visibleDeliveries.some((delivery) => deliveryText(delivery).includes(expectedText)), `${workflowCase.id} preserved expected text or caption`),
     invariant(`${workflowCase.id}:native-actions`, nativeActionsMatch(nativeActions, observations), nativeActionsReason(workflowCase.id, nativeActions, observations)),
     invariant(`${workflowCase.id}:route`, !expectsVisibleDelivery || !requiresRoutePreservation(workflowCase) || finalVisible.every((delivery) => delivery.route?.key === observations.inbound?.route?.key), `${workflowCase.id} preserved the inbound route`),
-    invariant(`${workflowCase.id}:reply-target`, !expectsVisibleDelivery || !requiresReplyPreservation(workflowCase) || finalVisible.every((delivery) => delivery.replyTo?.key === observations.inbound?.messageKey), replyTargetReason(workflowCase.id, observations, finalVisible)),
+    invariant(`${workflowCase.id}:reply-target`, !expectsVisibleDelivery || !requiresReplyPreservation(workflowCase) || replyTargetMatches(workflowCase, observations, finalVisible, visibleDeliveries), replyTargetReason(workflowCase.id, workflowCase, observations, finalVisible, visibleDeliveries)),
     invariant(`${workflowCase.id}:silent`, expects.silent !== true || finalVisible.every((delivery) => delivery.silent === true), `${workflowCase.id} preserved silent delivery intent`),
     invariant(`${workflowCase.id}:media-present`, expects.kind !== "media" || finalVisible.some((delivery) => delivery.kind === "media" && delivery.media?.some((media) => media.present)), `${workflowCase.id} delivered media through a native media send`),
     invariant(`${workflowCase.id}:native-message-proof`, expectedVisible === 0 || finalVisible.every((delivery) => Array.isArray(delivery.nativeMessages) && delivery.nativeMessages.length > 0), `${workflowCase.id} linked logical delivery to native platform message proof`),
@@ -31,7 +32,7 @@ export function evaluateWorkflowCase({
 }
 
 function requiresRoutePreservation(workflowCase) {
-  return ["thread", "reply-thread"].includes(workflowCase.matrix?.route) ||
+  return ["thread", "reply", "reply-thread"].includes(workflowCase.matrix?.route) ||
     objectOrEmpty(workflowCase.expects).threadId != null;
 }
 
@@ -40,21 +41,50 @@ function requiresReplyPreservation(workflowCase) {
     objectOrEmpty(workflowCase.expects).replyTo === "inbound-message";
 }
 
-function replyTargetReason(caseId, observations, finalVisible) {
+function replyTargetMatches(workflowCase, observations, finalVisible, visibleDeliveries) {
   const expected = observations.inbound?.messageKey;
-  const observed = finalVisible
+  if (!expected) {
+    return false;
+  }
+  if (requiresEveryFinalReplyTarget(workflowCase)) {
+    return finalVisible.every((delivery) => delivery.replyTo?.key === expected);
+  }
+  return visibleDeliveries.some((delivery) => delivery.replyTo?.key === expected);
+}
+
+function requiresEveryFinalReplyTarget(workflowCase) {
+  const expects = objectOrEmpty(workflowCase.expects);
+  if (expects.replyTargetPolicy === "every-final-delivery") {
+    return true;
+  }
+  if (expects.replyTargetPolicy === "response-group-anchor") {
+    return false;
+  }
+  const expectedVisible = Number.isInteger(expects.visibleDeliveries) ? expects.visibleDeliveries : 1;
+  return expectedVisible <= 1 && expects.allowMultipleFinalSends !== true;
+}
+
+function allVisibleDeliveries(observations) {
+  return (Array.isArray(observations?.deliveries) ? observations.deliveries : [])
+    .filter((delivery) => delivery.visible === true);
+}
+
+function replyTargetReason(caseId, workflowCase, observations, finalVisible, visibleDeliveries) {
+  const expected = observations.inbound?.messageKey;
+  const scope = requiresEveryFinalReplyTarget(workflowCase) ? "final delivery" : "visible response group";
+  const observed = (requiresEveryFinalReplyTarget(workflowCase) ? finalVisible : visibleDeliveries)
     .map((delivery) => delivery.replyTo?.key)
     .filter((value) => typeof value === "string" && value.length > 0);
   if (!expected) {
     return `${caseId} has no inbound reply target to preserve`;
   }
   if (observed.length === 0) {
-    return `${caseId} expected reply target ${expected}; observed no reply target on final delivery`;
+    return `${caseId} expected reply target ${expected}; observed no reply target on ${scope}`;
   }
-  if (observed.length < finalVisible.length) {
+  if (requiresEveryFinalReplyTarget(workflowCase) && observed.length < finalVisible.length) {
     return `${caseId} expected reply target ${expected} on ${finalVisible.length} final deliveries; observed ${observed.join(", ")}`;
   }
-  return `${caseId} expected reply target ${expected}; observed ${observed.join(", ")}`;
+  return `${caseId} expected reply target ${expected} on ${scope}; observed ${observed.join(", ")}`;
 }
 
 function expectedKindMatches(expectedKind, visible) {
