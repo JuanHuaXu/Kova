@@ -9,6 +9,10 @@ import {
 } from "./channel-capability-catalog.mjs";
 import { loadChannelWorkflowCaseCatalog } from "./channel-workflow-cases.mjs";
 import {
+  buildChannelWorkflowCoverage,
+  workflowSupportedAtomKeysFromPlatformCapabilities
+} from "./channel-workflow-coverage.mjs";
+import {
   assertNoShapeErrors,
   requireArray,
   requireKebabId,
@@ -74,6 +78,11 @@ async function loadChannelProofPolicy() {
 
 function channelCapabilityFromPlatform(platform, catalogMap, proofPolicy, workflowCases) {
   const { adapter, capabilities: platformCapabilities, schemaVersion, sources, ...channel } = platform;
+  const workflowCoverage = buildChannelWorkflowCoverage({
+    channelId: platform.id,
+    supportedAtomKeys: workflowSupportedAtomKeysFromPlatformCapabilities(platformCapabilities),
+    workflowCases
+  });
   const capabilityRows = platformCapabilityEntries(platformCapabilities).map(({ group, id }) => {
     const catalogId = `${group}:${id}`;
     const catalogCapability = catalogMap.get(catalogId);
@@ -96,7 +105,8 @@ function channelCapabilityFromPlatform(platform, catalogMap, proofPolicy, workfl
     supportStatus: "supported",
     adapterDistribution: adapter,
     declarationSources: sources,
-    workflowCaseIds: deriveWorkflowCaseIds(platform.id, platformCapabilities, workflowCases),
+    workflowCoverage,
+    workflowCaseIds: workflowCoverage.selected.map((testCase) => testCase.id),
     capabilities: capabilityRows
   };
 }
@@ -362,25 +372,6 @@ function declarationSourceFor(platform, group) {
 
 function sourceIncluding(sources, segment) {
   return sources.find((source) => source.includes(segment));
-}
-
-function deriveWorkflowCaseIds(channelId, platformCapabilities, workflowCases) {
-  const supportedAtoms = new Set(platformCapabilityEntries(platformCapabilities).map(({ group, id }) => `${group}:${id}`));
-  return workflowCases
-    .filter((testCase) => workflowCaseSupportedByPlatform(channelId, supportedAtoms, testCase))
-    .map((testCase) => testCase.id);
-}
-
-function workflowCaseSupportedByPlatform(channelId, supportedAtoms, testCase) {
-  if (Array.isArray(testCase.adapterSupport) && !testCase.adapterSupport.includes(channelId)) {
-    return false;
-  }
-  return (testCase.atoms ?? []).every((atom) => {
-    if (atom.group === "workflow") {
-      return true;
-    }
-    return supportedAtoms.has(`${atom.group}:${atom.id}`);
-  });
 }
 
 function uniqueOrdered(values) {

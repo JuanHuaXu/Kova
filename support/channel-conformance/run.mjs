@@ -10,7 +10,7 @@ import { evaluateWorkflowCase } from "./evaluator.mjs";
 import { prepareWorkflowFixtures } from "./fixtures.mjs";
 import { validateChannelDriver } from "./driver-contract.mjs";
 import { assertValidObservationSet } from "./observation-schema.mjs";
-import { selectWorkflowCases } from "./planner.mjs";
+import { planWorkflowCases } from "./planner.mjs";
 import { loadChannelCapabilities } from "../../src/registries/channel-capabilities.mjs";
 import { loadChannelWorkflowCaseCatalog } from "../../src/registries/channel-workflow-cases.mjs";
 
@@ -32,7 +32,8 @@ try {
   driver = await loadChannelDriver(channelId);
   const [channelRegistry] = await loadChannelCapabilities(channelId);
   const [workflowCatalog] = await loadChannelWorkflowCaseCatalog();
-  const selectedCases = selectWorkflowCases({ channelRegistry, workflowCatalog, caseSet });
+  const workflowCoverage = planWorkflowCases({ channelRegistry, workflowCatalog, caseSet, driver });
+  const selectedCases = workflowCoverage.selected;
   platform = await driver.startPlatform({ repoRoot, artifactDir, timeoutMs });
   platform.driver = driver;
   const configureResult = await driver.configureOpenClaw({ repoRoot, envName, artifactDir, platform, timeoutMs });
@@ -54,6 +55,10 @@ try {
       caseSet,
       workflowCaseCatalogId: workflowCatalog.id,
       selectedCaseIds: selectedCases.map((workflowCase) => workflowCase.id),
+      workflowCoverage: {
+        ...workflowCoverage,
+        selected: workflowCoverage.selectedRows ?? workflowCoverage.selected
+      },
       driverContract: Object.keys(driver).sort(),
       platform: platformSummary(platform),
       setup: {

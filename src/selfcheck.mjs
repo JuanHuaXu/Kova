@@ -9467,6 +9467,10 @@ async function channelCapabilityRegistryCheck() {
       capability.catalogId === `${capability.group}:${capability.id}`
     ), true, "telegram capabilities reference OpenClaw catalog ids");
     assertEqual(telegram.workflowCaseIds?.includes("source-visible-delivery.media.message-tool-only"), true, "telegram maps to shared source media workflow case");
+    assertEqual(telegram.workflowCoverage?.schemaVersion, "kova.channelWorkflowCoverage.v1", "telegram exposes derived workflow coverage");
+    assertEqual(telegram.workflowCoverage?.selectedCount, telegram.workflowCaseIds?.length, "telegram workflow coverage selected count matches selected case ids");
+    assertEqual(telegram.workflowCoverage?.selected?.some((row) => row.id === "native-action.poll"), true, "telegram workflow coverage includes selected native poll flow");
+    assertEqual(telegram.workflowCoverage?.skipped?.every((row) => typeof row.reason === "string" && row.reason.length > 0), true, "telegram skipped workflow coverage explains every skipped flow");
     const workflowCasesById = new Map((workflowCatalog?.cases ?? []).map((testCase) => [testCase.id, testCase]));
     const telegramWorkflowAtoms = new Set((telegram.workflowCaseIds ?? []).flatMap((caseId) =>
       (workflowCasesById.get(caseId)?.atoms ?? [])
