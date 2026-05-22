@@ -23,6 +23,8 @@ export function evaluateWorkflowCase({
     invariant(`${workflowCase.id}:reply-target`, !expectsVisibleDelivery || !requiresReplyPreservation(workflowCase) || finalVisible.some((delivery) => delivery.replyTo?.key === observations.inbound?.messageKey), `${workflowCase.id} preserved the reply target`),
     invariant(`${workflowCase.id}:silent`, expects.silent !== true || finalVisible.every((delivery) => delivery.silent === true), `${workflowCase.id} preserved silent delivery intent`),
     invariant(`${workflowCase.id}:media-present`, expects.kind !== "media" || finalVisible.some((delivery) => delivery.kind === "media" && delivery.media?.some((media) => media.present)), `${workflowCase.id} delivered media through a native media send`),
+    invariant(`${workflowCase.id}:native-message-proof`, expectedVisible === 0 || finalVisible.every((delivery) => Array.isArray(delivery.nativeMessages) && delivery.nativeMessages.length > 0), `${workflowCase.id} linked logical delivery to native platform message proof`),
+    invariant(`${workflowCase.id}:unmatched-native-visible-sends`, unmatchedNativeVisibleSends(observations).length === 0, unmatchedNativeVisibleReason(workflowCase.id, observations)),
     invariant(`${workflowCase.id}:no-duplicate-final`, expects.allowMultipleFinalSends === true || finalVisible.length <= expectedVisible, `${workflowCase.id} did not duplicate visible final delivery`),
     invariant(`${workflowCase.id}:no-self-trigger`, expects.noSelfTrigger !== true || providerRequestsAfterEcho === 0, `${workflowCase.id} did not start provider work from bot-authored channel echo`)
   ];
@@ -81,6 +83,20 @@ function deliveryText(delivery) {
   return [delivery.text, delivery.caption]
     .filter((value) => typeof value === "string")
     .join("\n");
+}
+
+function unmatchedNativeVisibleSends(observations) {
+  return (Array.isArray(observations?.unmatchedNativeMessages) ? observations.unmatchedNativeMessages : [])
+    .filter((message) => message.visible === true);
+}
+
+function unmatchedNativeVisibleReason(caseId, observations) {
+  const unmatched = unmatchedNativeVisibleSends(observations);
+  if (unmatched.length === 0) {
+    return `${caseId} had no unmatched native visible platform sends`;
+  }
+  const methods = unmatched.map((message) => message.method).join(", ");
+  return `${caseId} had unmatched native visible platform sends: ${methods}`;
 }
 
 function providerRequestsMatch(policy, observed) {

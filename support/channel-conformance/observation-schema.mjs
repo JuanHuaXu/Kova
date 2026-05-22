@@ -32,6 +32,13 @@ function observationSetErrors(observations) {
       errors.push(...deliveryErrors(delivery, observations.channelId, index));
     });
   }
+  if (!Array.isArray(observations.unmatchedNativeMessages)) {
+    errors.push("unmatchedNativeMessages must be an array");
+  } else {
+    observations.unmatchedNativeMessages.forEach((message, index) => {
+      errors.push(...nativeMessageErrors(message, observations.channelId, `unmatchedNativeMessages[${index}]`));
+    });
+  }
   errors.push(...nativeCallSummaryErrors(observations.nativeCallSummary));
   return errors;
 }
@@ -47,9 +54,6 @@ function deliveryErrors(delivery, expectedChannelId, index) {
   }
   if (delivery.channelId !== expectedChannelId) {
     errors.push(`${prefix}.channelId must match observation set channelId`);
-  }
-  if (!isObject(delivery.native)) {
-    errors.push(`${prefix}.native must be an object`);
   }
   if (!isNonEmptyString(delivery.actor)) {
     errors.push(`${prefix}.actor must be a non-empty string`);
@@ -75,6 +79,45 @@ function deliveryErrors(delivery, expectedChannelId, index) {
   }
   if (!Number.isFinite(delivery.timestampMs)) {
     errors.push(`${prefix}.timestampMs must be a finite number`);
+  }
+  if (!Array.isArray(delivery.nativeMessages)) {
+    errors.push(`${prefix}.nativeMessages must be an array`);
+  } else {
+    delivery.nativeMessages.forEach((message, nativeIndex) => {
+      errors.push(...nativeMessageErrors(message, expectedChannelId, `${prefix}.nativeMessages[${nativeIndex}]`));
+    });
+  }
+  return errors;
+}
+
+function nativeMessageErrors(message, expectedChannelId, prefix) {
+  const errors = [];
+  if (!isObject(message)) {
+    return [`${prefix} must be an object`];
+  }
+  if (message.channelId !== expectedChannelId) {
+    errors.push(`${prefix}.channelId must match observation set channelId`);
+  }
+  if (!isNonEmptyString(message.method)) {
+    errors.push(`${prefix}.method must be a non-empty string`);
+  }
+  if (!isNullableString(message.path)) {
+    errors.push(`${prefix}.path must be string or null`);
+  }
+  if (!isNullableString(message.deliveryId)) {
+    errors.push(`${prefix}.deliveryId must be string or null`);
+  }
+  if (!DELIVERY_STATUSES.has(message.status)) {
+    errors.push(`${prefix}.status must be one of ${Array.from(DELIVERY_STATUSES).join(", ")}`);
+  }
+  if (typeof message.visible !== "boolean") {
+    errors.push(`${prefix}.visible must be boolean`);
+  }
+  if (!Number.isFinite(message.timestampMs)) {
+    errors.push(`${prefix}.timestampMs must be a finite number`);
+  }
+  if (!isObject(message.raw)) {
+    errors.push(`${prefix}.raw must be an object`);
   }
   return errors;
 }
@@ -159,8 +202,11 @@ function nativeCallSummaryErrors(summary) {
   if (!Number.isInteger(summary.count) || summary.count < 0) {
     errors.push("nativeCallSummary.count must be a non-negative integer");
   }
-  if (!Number.isInteger(summary.deliveryCount) || summary.deliveryCount < 0) {
-    errors.push("nativeCallSummary.deliveryCount must be a non-negative integer");
+  if (!Number.isInteger(summary.nativeVisibleDeliveryCount) || summary.nativeVisibleDeliveryCount < 0) {
+    errors.push("nativeCallSummary.nativeVisibleDeliveryCount must be a non-negative integer");
+  }
+  if (!Number.isInteger(summary.logicalDeliveryCount) || summary.logicalDeliveryCount < 0) {
+    errors.push("nativeCallSummary.logicalDeliveryCount must be a non-negative integer");
   }
   if (!isObject(summary.byMethod)) {
     errors.push("nativeCallSummary.byMethod must be an object");

@@ -11,19 +11,20 @@ const VISIBLE_SEND_METHODS = new Set([
 ]);
 
 export function normalizeTelegramObservations({ inbound, calls }) {
-  const deliveries = calls
-    .filter((call) => VISIBLE_SEND_METHODS.has(call.method))
+  const visibleCalls = calls.filter((call) => VISIBLE_SEND_METHODS.has(call.method));
+  const deliveries = visibleCalls
     .map(normalizeDelivery);
   return {
     schemaVersion: "kova.channelObservationSet.v1",
     channelId: "telegram",
     inbound,
     deliveries,
-    nativeCallSummary: summarizeNativeCalls(calls, deliveries.length)
+    unmatchedNativeMessages: [],
+    nativeCallSummary: summarizeNativeCalls(calls, visibleCalls.length, deliveries.length)
   };
 }
 
-function summarizeNativeCalls(calls, deliveryCount) {
+function summarizeNativeCalls(calls, nativeVisibleDeliveryCount, logicalDeliveryCount) {
   const byMethod = {};
   const byAction = {};
   for (const call of calls) {
@@ -34,7 +35,8 @@ function summarizeNativeCalls(calls, deliveryCount) {
   }
   return {
     count: calls.length,
-    deliveryCount,
+    nativeVisibleDeliveryCount,
+    logicalDeliveryCount,
     byMethod,
     byAction
   };
@@ -71,11 +73,6 @@ function normalizeDelivery(call) {
   return {
     schemaVersion: "kova.channelObservation.v1",
     channelId: "telegram",
-    native: {
-      method: call.method,
-      path: call.path,
-      raw: call
-    },
     actor: "bot",
     visible: !isTransientStatusText(text),
     kind: call.method === "sendPoll" ? "poll" : media.length > 0 ? "media" : "text",
@@ -97,7 +94,21 @@ function normalizeDelivery(call) {
       status: call.responseOk === true ? "sent" : "failed"
     },
     silent: body.disable_notification === true || body.disable_notification === "true",
-    timestampMs: Date.parse(call.receivedAt) || 0
+    timestampMs: Date.parse(call.receivedAt) || 0,
+    nativeMessages: [nativeMessageForCall(call)]
+  };
+}
+
+function nativeMessageForCall(call) {
+  return {
+    channelId: "telegram",
+    method: call.method,
+    path: typeof call.path === "string" ? call.path : null,
+    deliveryId: call.result?.message_id == null ? null : String(call.result.message_id),
+    status: call.responseOk === true ? "sent" : "failed",
+    visible: VISIBLE_SEND_METHODS.has(call.method),
+    timestampMs: Date.parse(call.receivedAt) || 0,
+    raw: call
   };
 }
 
