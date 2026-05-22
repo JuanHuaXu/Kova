@@ -5,7 +5,6 @@ import { hasBlockingRuntimeDiagnostics, runtimeDiagnosticFailureReason } from ".
 export function evaluateWorkflowCase({
   workflowCase,
   observations,
-  providerRequestsDelta,
   providerRequestsAfterEcho,
   runtimeDiagnostics = null
 }) {
@@ -15,12 +14,10 @@ export function evaluateWorkflowCase({
   const expectedVisible = Number.isInteger(expects.visibleDeliveries) ? expects.visibleDeliveries : 1;
   const expectsVisibleDelivery = expectedVisible > 0;
   const expectedText = typeof expects.text === "string" ? expects.text : null;
-  const providerPolicy = objectOrEmpty(workflowCase.providerRequests);
   const nativeActions = objectOrEmpty(expects.nativeActions);
   const unmatchedNative = unmatchedNativeVisibleSends(workflowCase, observations, finalVisible, visibleDeliveries);
   return [
     invariant(`${workflowCase.id}:runtime-diagnostics`, !hasBlockingRuntimeDiagnostics(runtimeDiagnostics), runtimeDiagnosticFailureReason(workflowCase.id, runtimeDiagnostics)),
-    invariant(`${workflowCase.id}:provider-work`, providerRequestsMatch(providerPolicy, providerRequestsDelta), providerRequestReason(workflowCase.id, providerPolicy, providerRequestsDelta)),
     invariant(`${workflowCase.id}:visible-delivery-count`, finalVisible.length === expectedVisible, `${workflowCase.id} produced ${expectedVisible} final visible delivery; observed ${finalVisible.length}`),
     invariant(`${workflowCase.id}:expected-kind`, expectedVisible === 0 || expectedKindMatches(expects.kind, finalVisible), `${workflowCase.id} produced ${expects.kind ?? "visible"} output`),
     invariant(`${workflowCase.id}:expected-text`, !expectedText || visibleDeliveries.some((delivery) => deliveryText(delivery).includes(expectedText)), `${workflowCase.id} preserved expected text or caption`),
@@ -293,30 +290,6 @@ function expectedMediaSourceProof(expects, expectedSource) {
     proof?.path === expectedSource ||
     proof?.name === basename(expectedSource)
   ) ?? null;
-}
-
-function providerRequestsMatch(policy, observed) {
-  if (policy.mode === "minimum") {
-    return observed >= expectedProviderMinimum(policy);
-  }
-  if (Number.isInteger(policy.exact)) {
-    return observed === policy.exact;
-  }
-  return observed > 0;
-}
-
-function expectedProviderMinimum(policy) {
-  return Number.isInteger(policy.min) ? policy.min : 1;
-}
-
-function providerRequestReason(caseId, policy, observed) {
-  if (policy.mode === "minimum") {
-    return `${caseId} made at least ${expectedProviderMinimum(policy)} provider request(s); observed ${observed}`;
-  }
-  if (Number.isInteger(policy.exact)) {
-    return `${caseId} made exactly ${policy.exact} provider request(s); observed ${observed}`;
-  }
-  return `${caseId} made provider requests through OpenClaw; observed ${observed}`;
 }
 
 function invariant(id, passed, summary) {

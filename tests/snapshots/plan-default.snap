@@ -63,6 +63,11 @@
   ◆ workspace-runtime  1 surface · 1 scenario
     • workspace-scan  1 scenario
 
+─── channel user flows ─────────────────────────────────────────────────────────
+  channel     selected  skipped  first skip reason
+  discord           18       12  missing atoms: durable-final:after-send-succes…
+  telegram          27        3  missing atoms: durable-final:after-send-succes…
+
 ─── scenarios ──────────────────────────────────────────────────────────────────
   id                  surface             states  phases  title
   agent-auth-missing  agent-cli-local-t…       1       3  Agent Auth Missing

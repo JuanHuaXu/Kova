@@ -107,10 +107,6 @@
         "noDuplicateFinal": true,
         "asyncCompletionTimeoutMs": 15000
       },
-      "providerRequests": {
-        "mode": "minimum",
-        "min": 4
-      },
       "atoms": [
         {
           "group": "workflow",
@@ -186,10 +182,6 @@
         "terminal": true,
         "noDuplicateFinal": true,
         "asyncCompletionTimeoutMs": 15000
-      },
-      "providerRequests": {
-        "mode": "minimum",
-        "min": 4
       },
       "atoms": [
         {

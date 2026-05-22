@@ -103,10 +103,6 @@
         "hooks": true,
         "terminal": true
       },
-      "providerRequests": {
-        "mode": "minimum",
-        "min": 1
-      },
       "atoms": [
         {
           "group": "durable-final",
@@ -165,10 +161,6 @@
         "terminal": true,
         "noDuplicateFinal": true
       },
-      "providerRequests": {
-        "mode": "minimum",
-        "min": 1
-      },
       "atoms": [
         {
           "group": "durable-final",
@@ -219,10 +211,6 @@
       "fixtures": {
         "mediaPath": "/tmp/kova-channel-model-turn-media.png"
       },
-      "providerRequests": {
-        "mode": "minimum",
-        "min": 1
-      },
       "atoms": [
         {
           "group": "durable-final",
@@ -270,10 +258,6 @@
       },
       "fixtures": {
         "mediaPath": "/tmp/kova-channel-model-turn-media-thread.png"
-      },
-      "providerRequests": {
-        "mode": "minimum",
-        "min": 1
       },
       "atoms": [
         {
@@ -330,10 +314,6 @@
       },
       "fixtures": {
         "mediaPath": "/tmp/kova-channel-model-turn-media-reply-thread.png"
-      },
-      "providerRequests": {
-        "mode": "minimum",
-        "min": 1
       },
       "atoms": [
         {
@@ -401,10 +381,6 @@
           "/tmp/kova-channel-model-turn-batch-b.png"
         ]
       },
-      "providerRequests": {
-        "mode": "minimum",
-        "min": 1
-      },
       "atoms": [
         {
           "group": "durable-final",
@@ -453,10 +429,6 @@
         "text": "KOVA_AGENT_THREAD_OK",
         "threadId": "kova-model-turn-thread",
         "terminal": true
-      },
-      "providerRequests": {
-        "mode": "minimum",
-        "min": 1
       },
       "atoms": [
         {

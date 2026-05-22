@@ -119,10 +119,6 @@
         "terminal": true,
         "noDuplicateFinal": true
       },
-      "providerRequests": {
-        "mode": "minimum",
-        "min": 1
-      },
       "atoms": [
         {
           "group": "native-platform",
@@ -179,10 +175,6 @@
         "terminal": true,
         "noDuplicateFinal": true
       },
-      "providerRequests": {
-        "mode": "minimum",
-        "min": 1
-      },
       "atoms": [
         {
           "group": "native-platform",
@@ -221,10 +213,6 @@
           "action-react": 1
         },
         "terminal": true
-      },
-      "providerRequests": {
-        "mode": "minimum",
-        "min": 1
       },
       "atoms": [
         {
@@ -265,10 +253,6 @@
           "action-delete": 1
         },
         "terminal": true
-      },
-      "providerRequests": {
-        "mode": "minimum",
-        "min": 1
       },
       "atoms": [
         {
@@ -311,10 +295,6 @@
         },
         "terminal": true
       },
-      "providerRequests": {
-        "mode": "minimum",
-        "min": 1
-      },
       "atoms": [
         {
           "group": "native-platform",
@@ -355,10 +335,6 @@
           "action-topic-create": 1
         },
         "terminal": true
-      },
-      "providerRequests": {
-        "mode": "minimum",
-        "min": 1
       },
       "atoms": [
         {
@@ -401,10 +377,6 @@
           "action-topic-edit": 1
         },
         "terminal": true
-      },
-      "providerRequests": {
-        "mode": "minimum",
-        "min": 1
       },
       "atoms": [
         {

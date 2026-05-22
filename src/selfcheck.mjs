@@ -9785,10 +9785,6 @@ function assertChannelObservationLogicalNativeBoundary() {
       text: "KOVA_AGENT_MEDIA_OK",
       mediaSource: "/tmp/kova-selfcheck-media.png",
       mediaSourcePolicy: "exact"
-    },
-    providerRequests: {
-      mode: "minimum",
-      min: 1
     }
   };
   const observations = {

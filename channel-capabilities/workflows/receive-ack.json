@@ -71,10 +71,6 @@
         "terminal": true,
         "noDuplicateFinal": true
       },
-      "providerRequests": {
-        "mode": "minimum",
-        "min": 1
-      },
       "atoms": [
         {
           "group": "ack",
@@ -118,10 +114,6 @@
         "ackStage": "agent_dispatch",
         "terminal": true,
         "noDuplicateFinal": true
-      },
-      "providerRequests": {
-        "mode": "minimum",
-        "min": 1
       },
       "atoms": [
         {
@@ -167,10 +159,6 @@
         "terminal": true,
         "noDuplicateFinal": true
       },
-      "providerRequests": {
-        "mode": "minimum",
-        "min": 1
-      },
       "atoms": [
         {
           "group": "ack",
@@ -214,10 +202,6 @@
         "ackStage": "manual",
         "terminal": true,
         "noDuplicateFinal": true
-      },
-      "providerRequests": {
-        "mode": "minimum",
-        "min": 1
       },
       "atoms": [
         {

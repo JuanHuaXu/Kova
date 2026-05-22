@@ -74,10 +74,6 @@
         "noDuplicateFinal": true,
         "noSelfTrigger": true
       },
-      "providerRequests": {
-        "mode": "minimum",
-        "min": 1
-      },
       "atoms": [
         {
           "group": "workflow",

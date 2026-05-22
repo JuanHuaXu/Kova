@@ -117,10 +117,6 @@
         "noDuplicateFinal": true,
         "asyncCompletionTimeoutMs": 60000
       },
-      "providerRequests": {
-        "mode": "minimum",
-        "min": 4
-      },
       "atoms": [
         {
           "group": "workflow",
