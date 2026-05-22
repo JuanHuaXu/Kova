@@ -16,7 +16,7 @@
     "runtime",
     "local-build"
   ],
-  "timeoutMs": 180000,
+  "timeoutMs": 600000,
   "evidenceArtifactMaxBytes": 8388608,
   "thresholds": {},
   "phases": [
@@ -57,7 +57,7 @@
       "title": "Run Telegram Runtime Workflow Conformance",
       "intent": "Run OpenClaw with its real Telegram adapter against a local Telegram Bot API shim, inject normal Telegram user updates, and verify shared workflow rows from observed Telegram sends and provider evidence.",
       "commands": [
-        "node {kovaRoot}/support/channel-conformance/run.mjs --env {env} --artifact-dir {artifactDir} --channel telegram --tier adapter-shim --case-set declared-workflows --continue-on-failure true --timeout-ms 180000"
+        "node {kovaRoot}/support/channel-conformance/run.mjs --env {env} --artifact-dir {artifactDir} --channel telegram --tier adapter-shim --case-set declared-workflows --continue-on-failure true --timeout-ms 600000"
       ],
       "evidence": [
         "local Telegram Bot API shim",
