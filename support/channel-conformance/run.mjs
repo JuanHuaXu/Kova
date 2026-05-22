@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { fileURLToPath } from "node:url";
@@ -230,10 +230,6 @@ function platformSummary(value) {
     artifactDir: value?.artifactDir ?? null,
     callsPath: value?.callsPath ?? null
   };
-}
-
-async function readJson(path) {
-  return JSON.parse(await readFile(path, "utf8"));
 }
 
 function requiredArg(parsed, key) {
