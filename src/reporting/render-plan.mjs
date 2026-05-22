@@ -18,6 +18,9 @@ export function renderPlan(planJson, flags = {}, env = process.env, stream = pro
   const surfaces = renderSurfacesByOwner(planJson, ui);
   if (surfaces) { sections.push(""); sections.push(surfaces); }
 
+  const channelFlows = renderChannelWorkflowCoverage(planJson, ui);
+  if (channelFlows) { sections.push(""); sections.push(channelFlows); }
+
   const scenarios = renderScenarioList(planJson, ui);
   if (scenarios) { sections.push(""); sections.push(scenarios); }
 
@@ -83,6 +86,42 @@ function renderSurfacesByOwner(planJson, ui) {
     lines.push(`  ${c.warn(ui.g.warn)} ${c.bold("surfaces without scenarios:")} ${c.dim(orphans.map((s) => s.id ?? s).join(", "))}`);
   }
   return lines.join("\n");
+}
+
+function renderChannelWorkflowCoverage(planJson, ui) {
+  const { c } = ui;
+  const channels = planJson.channelCapabilities ?? [];
+  const rows = channels
+    .filter((channel) => channel.workflowCoverage)
+    .map((channel) => {
+      const coverage = channel.workflowCoverage ?? {};
+      const skipped = coverage.skippedCount ?? 0;
+      const firstReason = skipped > 0
+        ? coverage.skipped?.[0]?.reason ?? "see --json"
+        : "none";
+      return {
+        channel: c.bold(channel.id ?? "?"),
+        selected: c.ok(String(coverage.selectedCount ?? 0)),
+        skipped: skipped > 0 ? c.warn(String(skipped)) : c.dim("0"),
+        reason: c.dim(firstReason)
+      };
+    });
+  if (rows.length === 0) return null;
+  const table = renderTable({
+    columns: [
+      { key: "channel", header: c.dim("channel"), align: "left", minWidth: 10 },
+      { key: "selected", header: c.dim("selected"), align: "right", minWidth: 8 },
+      { key: "skipped", header: c.dim("skipped"), align: "right", minWidth: 7 },
+      { key: "reason", header: c.dim("first skip reason"), align: "left", minWidth: 24 }
+    ],
+    rows,
+    gap: 2,
+    maxWidth: ui.width ? Math.max(40, ui.width - 2) : null
+  });
+  return [
+    ruleSection("channel user flows", ui.width, ui),
+    indentBlock(table, 2)
+  ].join("\n");
 }
 
 function renderScenarioList(planJson, ui) {
