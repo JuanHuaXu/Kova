@@ -65,7 +65,8 @@
         "kind": "text",
         "errorFinal": true,
         "terminal": true,
-        "noDuplicateFinal": true
+        "noDuplicateFinal": true,
+        "asyncCompletionTimeoutMs": 30000
       },
       "providerRequests": {
         "mode": "minimum",
