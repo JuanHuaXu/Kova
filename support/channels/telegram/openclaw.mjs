@@ -20,7 +20,8 @@ export function configureTelegramOpenClaw({ repoRoot, envName, platform, timeout
   ], timeoutMs);
 }
 
-export function startTelegramOpenClaw({ repoRoot, envName, artifactDir, timeoutMs }) {
+export async function startTelegramOpenClaw({ repoRoot, envName, artifactDir, timeoutMs }) {
+  const providerAuthPrewarmMarkersBefore = countProviderAuthPrewarmMarkers(envName, timeoutMs);
   const commandResults = [
     runCommand("ocm", ["service", "install", envName, "--json"], timeoutMs),
     runCommand("ocm", ["service", "start", envName, "--json"], timeoutMs),
@@ -38,7 +39,15 @@ export function startTelegramOpenClaw({ repoRoot, envName, artifactDir, timeoutM
   if (failed) {
     throw new Error(`telegram OpenClaw startup command failed: ${failed.command}`);
   }
-  return { commandResults };
+  const providerAuthPrewarm = await waitForProviderAuthPrewarm({
+    envName,
+    timeoutMs: Math.min(timeoutMs, 120000),
+    previousCount: providerAuthPrewarmMarkersBefore.count
+  });
+  if (providerAuthPrewarm.status !== 0) {
+    throw new Error(providerAuthPrewarm.error ?? `telegram OpenClaw provider auth prewarm did not finish: ${providerAuthPrewarm.command}`);
+  }
+  return { commandResults, providerAuthPrewarm };
 }
 
 function runCommand(command, args, timeoutMs) {
@@ -55,4 +64,49 @@ function runCommand(command, args, timeoutMs) {
     stderr: result.stderr ?? "",
     error: result.error?.message ?? null
   };
+}
+
+async function waitForProviderAuthPrewarm({ envName, timeoutMs, previousCount }) {
+  const startedAtEpochMs = Date.now();
+  const deadline = startedAtEpochMs + timeoutMs;
+  let last = null;
+  while (Date.now() <= deadline) {
+    last = countProviderAuthPrewarmMarkers(envName, Math.min(timeoutMs, 10000));
+    if (last.status !== 0) {
+      return last;
+    }
+    if (last.count > previousCount) {
+      return {
+        ...last,
+        startedAtEpochMs,
+        finishedAtEpochMs: Date.now(),
+        durationMs: Date.now() - startedAtEpochMs
+      };
+    }
+    await sleep(250);
+  }
+  return {
+    command: last?.command ?? `ocm logs ${envName} --raw --tail 1000`,
+    status: 1,
+    signal: null,
+    stdout: last?.stdout ?? "",
+    stderr: last?.stderr ?? "",
+    error: `provider auth prewarm marker did not appear after ${timeoutMs}ms`,
+    startedAtEpochMs,
+    finishedAtEpochMs: Date.now(),
+    durationMs: Date.now() - startedAtEpochMs
+  };
+}
+
+function countProviderAuthPrewarmMarkers(envName, timeoutMs) {
+  const result = runCommand("ocm", ["logs", envName, "--raw", "--tail", "1000"], timeoutMs);
+  if (result.status !== 0) {
+    return { ...result, count: 0 };
+  }
+  const matches = result.stdout.match(/provider auth state pre-warmed in \d+ms/g);
+  return { ...result, count: matches?.length ?? 0 };
+}
+
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
