@@ -5,6 +5,7 @@ export async function waitForCaseObservations({
   platform,
   callCursor,
   readPlatformCalls,
+  readProviderRequestCount,
   normalizeObservations,
   timeoutMs
 }) {
@@ -20,17 +21,19 @@ export async function waitForCaseObservations({
       calls: calls.slice(callCursor)
     });
     if (hasExpectedFinalDeliveries(workflowCase, latest) && hasExpectedNativeActions(workflowCase, latest)) {
-      const finalCalls = await waitForQuietPlatformCalls({
+      const finalCalls = await waitForQuietEvidence({
         platform,
         readPlatformCalls,
+        readProviderRequestCount,
         callCursor,
-        deadline
+        deadline,
+        quietMs: caseQuietMs(workflowCase)
       });
       return await normalizeObservations({
         workflowCase,
         platform,
         inbound: platform.currentInbound,
-        calls: finalCalls
+        calls: finalCalls.calls
       });
     }
     await sleep(150);
@@ -43,23 +46,33 @@ export async function waitForCaseObservations({
   });
 }
 
-async function waitForQuietPlatformCalls({ platform, readPlatformCalls, callCursor, deadline }) {
+async function waitForQuietEvidence({
+  platform,
+  readPlatformCalls,
+  readProviderRequestCount,
+  callCursor,
+  deadline,
+  quietMs
+}) {
   let latest = (await readPlatformCalls({ platform })).slice(callCursor);
   let latestCount = latest.length;
+  let latestProviderCount = await optionalProviderRequestCount(readProviderRequestCount);
   let quietSince = Date.now();
   while (Date.now() < deadline) {
     await sleep(150);
     latest = (await readPlatformCalls({ platform })).slice(callCursor);
-    if (latest.length !== latestCount) {
+    const providerCount = await optionalProviderRequestCount(readProviderRequestCount);
+    if (latest.length !== latestCount || providerCount !== latestProviderCount) {
       latestCount = latest.length;
+      latestProviderCount = providerCount;
       quietSince = Date.now();
       continue;
     }
-    if (Date.now() - quietSince >= 1000) {
-      return latest;
+    if (Date.now() - quietSince >= quietMs) {
+      return { calls: latest, providerRequestCount: providerCount };
     }
   }
-  return latest;
+  return { calls: latest, providerRequestCount: latestProviderCount };
 }
 
 function expectedVisibleDeliveryCount(workflowCase) {
@@ -86,6 +99,25 @@ function hasExpectedNativeActions(workflowCase, observations) {
 function caseTimeoutMs(workflowCase, timeoutMs) {
   const value = workflowCase.expects?.asyncCompletionTimeoutMs;
   return Number.isInteger(value) ? Math.min(timeoutMs, value) : Math.min(timeoutMs, 30000);
+}
+
+function caseQuietMs(workflowCase) {
+  const value = workflowCase.expects?.quietMs;
+  if (Number.isInteger(value) && value >= 0) {
+    return value;
+  }
+  return hasAsyncCompletionToolCalls(workflowCase) ? 3000 : 1000;
+}
+
+function hasAsyncCompletionToolCalls(workflowCase) {
+  return Array.isArray(workflowCase.providerScript?.completionToolCalls) &&
+    workflowCase.providerScript.completionToolCalls.length > 0;
+}
+
+async function optionalProviderRequestCount(readProviderRequestCount) {
+  return typeof readProviderRequestCount === "function"
+    ? await readProviderRequestCount()
+    : null;
 }
 
 function sleep(ms) {

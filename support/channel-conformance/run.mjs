@@ -152,6 +152,7 @@ async function runWorkflowCase({ driver, workflowCase, platform }) {
       platform,
       callCursor,
       readPlatformCalls: (params) => driver.readPlatformCalls(params),
+      readProviderRequestCount: () => countProviderRequests({ artifactDir }),
       normalizeObservations: (params) => driver.normalizeObservations(params),
       timeoutMs
     });

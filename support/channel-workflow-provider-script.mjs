@@ -121,6 +121,7 @@ function primaryScriptStepsForWorkflowCase(testCase, options = {}) {
     }];
   }
   if (Array.isArray(script.toolCalls) && script.toolCalls.length > 0) {
+    const hasCompletionToolCalls = Array.isArray(script.completionToolCalls) && script.completionToolCalls.length > 0;
     const steps = [
       {
         id: `${testCase.id}:tool-calls`,
@@ -131,15 +132,17 @@ function primaryScriptStepsForWorkflowCase(testCase, options = {}) {
           )
         }
       },
-      {
+    ];
+    if (!hasCompletionToolCalls) {
+      steps.push({
         id: `${testCase.id}:final`,
         respond: {
           type: "final-text",
           text: replaceScriptString(typeof script.finalText === "string" ? script.finalText : "NO_REPLY", options.replacements)
         }
-      }
-    ];
-    if (Array.isArray(script.completionToolCalls) && script.completionToolCalls.length > 0) {
+      });
+    }
+    if (hasCompletionToolCalls) {
       steps.push(
         {
           id: `${testCase.id}:completion-tool-calls`,
