@@ -46,6 +46,10 @@ export function runtimeDiagnosticFailureReason(caseId, diagnostics) {
   return `${caseId} hit OpenClaw runtime diagnostic: ${event.summary}`;
 }
 
+export function runtimeDiagnosticOwnerArea(diagnostics) {
+  return firstBlockingDiagnostic(diagnostics)?.ownerArea ?? null;
+}
+
 export function hasBlockingRuntimeDiagnostics(diagnostics) {
   return firstBlockingDiagnostic(diagnostics) !== null;
 }

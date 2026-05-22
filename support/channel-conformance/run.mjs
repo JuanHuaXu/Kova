@@ -12,7 +12,7 @@ import { prepareWorkflowFixtures } from "./fixtures.mjs";
 import { validateChannelDriver } from "./driver-contract.mjs";
 import { assertValidObservationSet } from "./observation-schema.mjs";
 import { planWorkflowCases } from "./planner.mjs";
-import { collectRuntimeDiagnostics } from "./runtime-diagnostics.mjs";
+import { collectRuntimeDiagnostics, runtimeDiagnosticOwnerArea } from "./runtime-diagnostics.mjs";
 import { loadChannelCapabilities } from "../../src/registries/channel-capabilities.mjs";
 import { loadChannelWorkflowCaseCatalog } from "../../src/registries/channel-workflow-cases.mjs";
 
@@ -199,7 +199,7 @@ async function runWorkflowCase({ driver, workflowCase, platform }) {
       inventoryWorkflow: runnableWorkflowCase.inventoryWorkflow,
       matrix: runnableWorkflowCase.matrix,
       userAction: runnableWorkflowCase.userAction,
-      ownerArea: runnableWorkflowCase.ownerArea ?? `${channelId} adapter/runtime`,
+      ownerArea: runtimeDiagnosticOwnerArea(runtimeDiagnostics) ?? runnableWorkflowCase.ownerArea ?? `${channelId} adapter/runtime`,
       capabilities: runnableWorkflowCase.atoms ?? [],
       providerRequestsDelta,
       providerRequestsAfterEcho,
