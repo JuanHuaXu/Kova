@@ -96,7 +96,7 @@ async function applyTimelineProviderEvidence(evidence, timelinePath, summaryPath
 }
 
 export function parseProviderRequestLog(text) {
-  const requests = [];
+  const logRequests = [];
   const parseErrors = [];
   const lines = String(text ?? "").split(/\r?\n/);
 
@@ -107,7 +107,7 @@ export function parseProviderRequestLog(text) {
     }
     try {
       const raw = JSON.parse(line);
-      requests.push(normalizeProviderRequest(raw, index + 1));
+      logRequests.push(normalizeProviderRequest(raw, index + 1));
     } catch (error) {
       parseErrors.push({
         kind: "parse",
@@ -117,6 +117,7 @@ export function parseProviderRequestLog(text) {
     }
   }
 
+  const requests = logRequests.filter(isProviderApiRequest);
   const sorted = requests
     .filter((request) => typeof request.receivedAtEpochMs === "number")
     .toSorted((left, right) => left.receivedAtEpochMs - right.receivedAtEpochMs);
@@ -151,6 +152,14 @@ export function parseProviderRequestLog(text) {
     errors: [...parseErrors, ...requestErrors(requests)],
     requests
   };
+}
+
+function isProviderApiRequest(request) {
+  if (request.provider || request.apiSurface) {
+    return true;
+  }
+  const path = request.path ?? request.route;
+  return typeof path === "string" && /^\/(?:(?:[a-z0-9-]+)\/)?v\d+(?:beta\d*)?(?:\/|$)/i.test(path);
 }
 
 export function parseTimelineProviderRequestLog(text) {

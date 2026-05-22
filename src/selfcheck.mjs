@@ -3116,7 +3116,21 @@ async function heapProfileParserCheck() {
 
 async function providerEvidenceParserCheck() {
   try {
-    const text = await readFile("fixtures/provider/mock-requests.jsonl", "utf8");
+    const text = [
+      JSON.stringify({
+        schemaVersion: "mock-ai-provider.request.v1",
+        requestId: "req_health",
+        receivedAt: "2026-04-30T10:00:00.000Z",
+        receivedAtEpochMs: 1777543200000,
+        respondedAt: "2026-04-30T10:00:00.001Z",
+        respondedAtEpochMs: 1777543200001,
+        method: "GET",
+        route: "/health",
+        path: "/health",
+        status: 200
+      }),
+      await readFile("fixtures/provider/mock-requests.jsonl", "utf8")
+    ].join("\n");
     const evidence = parseProviderRequestLog(text);
     assertEqual(evidence.requestCount, 2, "provider request count");
     assertEqual(evidence.providerDurationMs, 6700, "provider duration includes first through last response");
