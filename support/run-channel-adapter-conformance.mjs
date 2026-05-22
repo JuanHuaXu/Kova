@@ -22,6 +22,7 @@ const continueOnFailure = args["continue-on-failure"] === "true";
 const artifactPath = join(artifactDir, `channel-adapter-conformance-${safeArtifactSegment(channelId)}.json`);
 const openClawCatalog = (await loadChannelCapabilityCatalog("openclaw-message"))[0];
 const channelRegistry = (await loadChannelCapabilities(channelId))[0];
+const channelFixture = await loadChannelFixture(channelId);
 
 let result;
 try {
@@ -97,6 +98,13 @@ async function loadAdapterContext({ channelId: requestedChannelId, packageRoot }
     throw new Error(`packaged ${requestedChannelId} plugin does not expose a message adapter`);
   }
   return { modulePath, plugin, adapter, distribution };
+}
+
+async function loadChannelFixture(requestedChannelId) {
+  const modulePath = join(repoRoot, "support", "channels", requestedChannelId, "fixture.mjs");
+  const mod = await import(pathToFileURL(modulePath).href);
+  assert(mod.deterministicShim, `${requestedChannelId} channel fixture does not export deterministicShim`);
+  return mod;
 }
 
 function resolveAdapterModulePath({ distribution, packageRoot }) {
@@ -433,11 +441,11 @@ function shimReplyToId() {
 }
 
 function shimAccountId() {
-  return channelRegistry.deterministicShim?.accountId ?? null;
+  return channelFixture.deterministicShim?.accountId ?? null;
 }
 
 function channelShimConfig() {
-  const config = channelRegistry.deterministicShim?.config;
+  const config = channelFixture.deterministicShim?.config;
   if (config && typeof config === "object" && !Array.isArray(config)) {
     return config;
   }
@@ -445,7 +453,7 @@ function channelShimConfig() {
 }
 
 function requiredShimValue(key) {
-  const value = channelRegistry.deterministicShim?.[key];
+  const value = channelFixture.deterministicShim?.[key];
   if (typeof value !== "string" || value.length === 0) {
     throw new Error(`${channelId} deterministicShim.${key} must be declared`);
   }
@@ -453,7 +461,7 @@ function requiredShimValue(key) {
 }
 
 function platformSendResult(sendIndex) {
-  const platform = channelRegistry.deterministicShim?.platform ?? {};
+  const platform = channelFixture.deterministicShim?.platform ?? {};
   const resultMessageIdPrefix = platform.resultMessageIdPrefix;
   const resultTargetField = platform.resultTargetField;
   if (typeof resultMessageIdPrefix !== "string" || resultMessageIdPrefix.length === 0) {
