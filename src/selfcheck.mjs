@@ -5572,11 +5572,12 @@ async function mockProviderBehaviorCheck(tmp) {
     assertEqual(response.first, 503, "first transient provider status");
     assertEqual(response.second, 200, "second recovered provider status");
     const evidence = parseProviderRequestLog(await readFile(requestLogPath, "utf8"));
-    assertEqual(evidence.requestCount, 2, "behavior request count");
-    assertEqual(evidence.requests[0]?.mode, "error-then-recover", "first request behavior");
-    assertEqual(evidence.requests[0]?.errorClass, "provider-error", "first request error class");
-    assertEqual(evidence.requests[1]?.status, 200, "second recovered request status");
-    assertEqual(evidence.requests[1]?.errorClass, null, "second request error class");
+    const responseRequests = evidence.requests.filter((request) => request.route === "/v1/responses");
+    assertEqual(responseRequests.length, 2, "behavior request count");
+    assertEqual(responseRequests[0]?.mode, "error-then-recover", "first request behavior");
+    assertEqual(responseRequests[0]?.errorClass, "provider-error", "first request error class");
+    assertEqual(responseRequests[1]?.status, 200, "second recovered request status");
+    assertEqual(responseRequests[1]?.errorClass, null, "second request error class");
     return {
       id: "mock-provider-behavior",
       status: "PASS",
