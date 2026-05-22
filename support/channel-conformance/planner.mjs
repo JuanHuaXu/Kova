@@ -38,9 +38,7 @@ export function planWorkflowCases({ channelRegistry, workflowCatalog, caseSet: r
     channelId: channelRegistry.id,
     supportedAtomKeys: workflowSupportedAtomKeysFromCapabilities(channelRegistry.capabilities),
     workflowCases: cases,
-    driverSupport: typeof driver?.canDriveWorkflowCase === "function"
-      ? ({ workflowCase }) => driver.canDriveWorkflowCase({ workflowCase })
-      : null
+    driverSupport: ({ workflowCase }) => driver.canDriveWorkflowCase({ workflowCase })
   });
   const selectedById = new Map(cases.map((workflowCase) => [workflowCase.id, workflowCase]));
   return {

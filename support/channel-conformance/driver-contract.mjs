@@ -2,6 +2,7 @@ export const CHANNEL_DRIVER_CONTRACT = Object.freeze([
   "startPlatform",
   "configureOpenClaw",
   "startOpenClaw",
+  "canDriveWorkflowCase",
   "enqueueUserEvent",
   "enqueueBotEcho",
   "readPlatformCalls",

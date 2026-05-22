@@ -18,6 +18,10 @@ export const startPlatform = startTelegramPlatform;
 export const configureOpenClaw = configureTelegramOpenClaw;
 export const startOpenClaw = startTelegramOpenClaw;
 
+export function canDriveWorkflowCase() {
+  return { supported: true, reason: null };
+}
+
 export async function enqueueUserEvent({ workflowCase, platform }) {
   const inbound = telegramInboundForCase(workflowCase);
   platform.currentInbound = inbound;

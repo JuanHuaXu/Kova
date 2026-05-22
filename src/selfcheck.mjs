@@ -13,6 +13,7 @@ import { collectEnvMetrics } from "./metrics.mjs";
 import { evaluateRecord } from "./evaluator.mjs";
 import { evaluateWorkflowCase } from "../support/channel-conformance/evaluator.mjs";
 import { assertValidObservationSet } from "../support/channel-conformance/observation-schema.mjs";
+import { planWorkflowCases } from "../support/channel-conformance/planner.mjs";
 import { evaluateGate } from "./matrix/gate.mjs";
 import {
   comparePerformanceToBaseline,
@@ -9472,6 +9473,21 @@ async function channelCapabilityRegistryCheck() {
     assertEqual(telegram.workflowCoverage?.selected?.some((row) => row.id === "native-action.poll"), true, "telegram workflow coverage includes selected native poll flow");
     assertEqual(telegram.workflowCoverage?.skipped?.every((row) => typeof row.reason === "string" && row.reason.length > 0), true, "telegram skipped workflow coverage explains every skipped flow");
     const workflowCasesById = new Map((workflowCatalog?.cases ?? []).map((testCase) => [testCase.id, testCase]));
+    const telegramCoverageWithDriverSkip = planWorkflowCases({
+      channelRegistry: telegram,
+      workflowCatalog,
+      caseSet: "declared-workflows",
+      driver: {
+        canDriveWorkflowCase({ workflowCase }) {
+          return workflowCase.id === "native-action.poll"
+            ? { supported: false, reason: "poll enqueue is not implemented by this driver" }
+            : { supported: true, reason: null };
+        }
+      }
+    });
+    assertEqual(telegramCoverageWithDriverSkip.skipped.some((row) =>
+      row.id === "native-action.poll" && row.reason === "driver support: poll enqueue is not implemented by this driver"
+    ), true, "workflow coverage reports driver support skips");
     const telegramWorkflowAtoms = new Set((telegram.workflowCaseIds ?? []).flatMap((caseId) =>
       (workflowCasesById.get(caseId)?.atoms ?? [])
         .filter((atom) => atom.group !== "workflow")
