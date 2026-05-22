@@ -10,10 +10,10 @@ const VISIBLE_SEND_METHODS = new Set([
   "sendPoll"
 ]);
 
-export function normalizeTelegramObservations({ inbound, calls }) {
-  const visibleCalls = calls.filter((call) => VISIBLE_SEND_METHODS.has(call.method));
+export function normalizeTelegramObservations({ workflowCase, inbound, calls }) {
+  const visibleCalls = calls.filter((call) => isVisibleDeliveryCall(call, workflowCase));
   const deliveries = visibleCalls
-    .map(normalizeDelivery);
+    .map((call) => normalizeDelivery(call, workflowCase));
   return {
     schemaVersion: "kova.channelObservationSet.v1",
     channelId: "telegram",
@@ -62,7 +62,16 @@ function nativeActionsForMethod(method) {
   }[method] ?? [];
 }
 
-function normalizeDelivery(call) {
+function isVisibleDeliveryCall(call, workflowCase) {
+  if (VISIBLE_SEND_METHODS.has(call.method)) {
+    return true;
+  }
+  return workflowCase?.expects?.errorFinal === true &&
+    call.method === "editMessageText" &&
+    !isTransientStatusText(typeof call.body?.text === "string" ? call.body.text : null);
+}
+
+function normalizeDelivery(call, workflowCase) {
   const body = objectOrEmpty(call.body);
   const threadId = body.message_thread_id ?? null;
   const chatId = body.chat_id ?? body.chatId ?? call.result?.chat?.id ?? null;
@@ -95,18 +104,18 @@ function normalizeDelivery(call) {
     },
     silent: body.disable_notification === true || body.disable_notification === "true",
     timestampMs: Date.parse(call.receivedAt) || 0,
-    nativeMessages: [nativeMessageForCall(call)]
+    nativeMessages: [nativeMessageForCall(call, workflowCase)]
   };
 }
 
-function nativeMessageForCall(call) {
+function nativeMessageForCall(call, workflowCase) {
   return {
     channelId: "telegram",
     method: call.method,
     path: typeof call.path === "string" ? call.path : null,
     deliveryId: call.result?.message_id == null ? null : String(call.result.message_id),
     status: call.responseOk === true ? "sent" : "failed",
-    visible: VISIBLE_SEND_METHODS.has(call.method),
+    visible: isVisibleDeliveryCall(call, workflowCase),
     timestampMs: Date.parse(call.receivedAt) || 0,
     raw: call
   };
