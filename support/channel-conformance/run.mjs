@@ -117,7 +117,8 @@ process.stdout.write(`${JSON.stringify({
   }))
 }, null, 2)}\n`);
 
-process.exit(result.ok || continueOnFailure ? 0 : 1);
+const setupFailedBeforeAnyWorkflow = !result.ok && result.rows.length === 0;
+process.exit(result.ok || (continueOnFailure && !setupFailedBeforeAnyWorkflow) ? 0 : 1);
 
 async function loadChannelDriver(id) {
   if (!/^[a-z0-9-]+$/u.test(id)) {
