@@ -180,8 +180,33 @@ function unmatchedNativeVisibleReason(caseId, unmatched) {
   if (unmatched.length === 0) {
     return `${caseId} had no unmatched native visible platform sends`;
   }
+  const conflictingFailures = unmatched
+    .map((message) => ({
+      method: message.method,
+      text: nativeMessageText(message)
+    }))
+    .filter((message) => isVisibleFailureText(message.text));
+  if (conflictingFailures.length > 0) {
+    return `${caseId} delivered the expected response but also sent visible failure/error text: ${conflictingFailures.map((message) => `${message.method} "${message.text}"`).join(", ")}`;
+  }
   const methods = unmatched.map((message) => message.method).join(", ");
   return `${caseId} had unmatched native visible platform sends: ${methods}`;
+}
+
+function nativeMessageText(message) {
+  const raw = objectOrEmpty(message?.raw);
+  const rawBody = objectOrEmpty(raw.body);
+  const rawResult = objectOrEmpty(raw.result);
+  return [
+    rawBody.text,
+    rawBody.caption,
+    rawResult.text,
+    rawResult.caption
+  ].find((value) => typeof value === "string" && value.length > 0) ?? "";
+}
+
+function isVisibleFailureText(text) {
+  return /\b(failed|failure|error|errored|unable|could not|cannot)\b/i.test(text);
 }
 
 function unexpectedVisibleDeliveries(workflowCase, finalVisible, visibleDeliveries) {
