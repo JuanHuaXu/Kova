@@ -1723,6 +1723,13 @@ async function channelGeneratedMediaProviderScriptCheck() {
     const caseId = "completion-handoff.image.generated-direct";
     const generatedPath = "/tmp/kova-media/tool-image-generation/kova-completion-handoff-direct---self-check.png";
     const script = channelWorkflowScript([caseId], process.cwd());
+    const stepIds = script.steps.map((step) => step.id);
+    assertEqual(stepIds.includes(`${caseId}:final`), true, "completion handoff provider script finalizes the initial generator turn");
+    assertEqual(
+      stepIds.indexOf(`${caseId}:final`) < stepIds.indexOf(`${caseId}:completion-tool-calls`),
+      true,
+      "completion handoff provider script sends completion tool calls after the initial turn final"
+    );
     const completionStep = script.steps.find((step) => step.id === `${caseId}:completion-tool-calls`);
     assertEqual(Boolean(completionStep), true, "completion handoff provider script has completion tool-call step");
     const rendered = await resolveScriptStep(completionStep, {
