@@ -41,12 +41,9 @@ export async function startTelegramOpenClaw({ repoRoot, envName, artifactDir, ti
   }
   const providerAuthPrewarm = await waitForProviderAuthPrewarm({
     envName,
-    timeoutMs: Math.min(timeoutMs, 120000),
+    timeoutMs: providerAuthPrewarmTimeoutMs(timeoutMs),
     previousCount: providerAuthPrewarmMarkersBefore.count
   });
-  if (providerAuthPrewarm.status !== 0) {
-    throw new Error(providerAuthPrewarm.error ?? `telegram OpenClaw provider auth prewarm did not finish: ${providerAuthPrewarm.command}`);
-  }
   return { commandResults, providerAuthPrewarm };
 }
 
@@ -105,6 +102,12 @@ function countProviderAuthPrewarmMarkers(envName, timeoutMs) {
   }
   const matches = result.stdout.match(/provider auth state pre-warmed in \d+ms/g);
   return { ...result, count: matches?.length ?? 0 };
+}
+
+function providerAuthPrewarmTimeoutMs(timeoutMs) {
+  const configured = Number.parseInt(process.env.KOVA_PROVIDER_PREWARM_TIMEOUT_MS ?? "", 10);
+  const requested = Number.isFinite(configured) && configured > 0 ? configured : 5000;
+  return Math.min(timeoutMs, requested);
 }
 
 function sleep(ms) {
