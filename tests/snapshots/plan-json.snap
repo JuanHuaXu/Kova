@@ -4798,7 +4798,7 @@
           "ownerArea": "OpenClaw live channel runtime and adapter",
           "prompt": "React to this launch note, then tell me when it is done.",
           "livePreview": {
-            "mode": "progress"
+            "mode": "partial"
           },
           "providerScript": {
             "toolCalls": [
@@ -4854,6 +4854,62 @@
             {
               "group": "native-platform",
               "id": "action-react"
+            }
+          ],
+          "inventoryWorkflow": "live-preview-finalization"
+        },
+        {
+          "id": "live-preview.partial-final-edit",
+          "workflow": "live-preview-finalization",
+          "matrix": {
+            "content": "text",
+            "route": "direct",
+            "delivery": "live-finalizer",
+            "lifecycle": "success"
+          },
+          "userAction": "user asks OpenClaw for a streamed text answer and sees the preview become the final answer",
+          "openclawSurface": "channel inbound direct message with partial live preview finalized in place",
+          "ownerArea": "OpenClaw live channel runtime and adapter",
+          "prompt": "Give me a short launch checklist.",
+          "livePreview": {
+            "mode": "partial"
+          },
+          "providerScript": {
+            "finalText": "KOVA_LIVE_PREVIEW_FINAL_EDIT_OK Prepare the announcement, confirm media delivery, check the topic route, and post one final answer."
+          },
+          "expects": {
+            "visibleDeliveries": 1,
+            "kind": "text",
+            "text": "KOVA_LIVE_PREVIEW_FINAL_EDIT_OK",
+            "livePreview": {
+              "draftPreview": true,
+              "previewFinalization": true,
+              "previewReceipt": true,
+              "finalizer": "final-edit"
+            },
+            "terminal": true,
+            "noDuplicateFinal": true
+          },
+          "atoms": [
+            {
+              "group": "live-preview",
+              "id": "draft-preview"
+            },
+            {
+              "group": "live-preview",
+              "id": "preview-finalization"
+            },
+            {
+              "group": "live-finalizer",
+              "id": "final-edit"
+            },
+            {
+              "group": "live-finalizer",
+              "id": "preview-receipt"
+            },
+            {
+              "group": "durable-final",
+              "id": "text"
             }
           ],
           "inventoryWorkflow": "live-preview-finalization"
@@ -5905,7 +5961,7 @@
         "schemaVersion": "kova.channelWorkflowCoverage.v1",
         "channelId": "discord",
         "selectedCount": 18,
-        "skippedCount": 13,
+        "skippedCount": 14,
         "selected": [
           {
             "id": "completion-handoff.image.generated-direct",
@@ -6621,6 +6677,45 @@
             "driverReason": null
           },
           {
+            "id": "live-preview.partial-final-edit",
+            "workflow": "live-preview-finalization",
+            "inventoryWorkflow": "live-preview-finalization",
+            "userAction": "user asks OpenClaw for a streamed text answer and sees the preview become the final answer",
+            "matrix": {
+              "content": "text",
+              "route": "direct",
+              "delivery": "live-finalizer",
+              "lifecycle": "success"
+            },
+            "atoms": [
+              {
+                "group": "live-preview",
+                "id": "draft-preview"
+              },
+              {
+                "group": "live-preview",
+                "id": "preview-finalization"
+              },
+              {
+                "group": "live-finalizer",
+                "id": "final-edit"
+              },
+              {
+                "group": "live-finalizer",
+                "id": "preview-receipt"
+              },
+              {
+                "group": "durable-final",
+                "id": "text"
+              }
+            ],
+            "reason": "missing atoms: live-finalizer:preview-receipt",
+            "missingAtoms": [
+              "live-finalizer:preview-receipt"
+            ],
+            "driverReason": null
+          },
+          {
             "id": "native-action.send.presentation-pin",
             "workflow": "native-platform-action",
             "inventoryWorkflow": "native-platform-action",
@@ -7097,7 +7192,7 @@
       "workflowCoverage": {
         "schemaVersion": "kova.channelWorkflowCoverage.v1",
         "channelId": "telegram",
-        "selectedCount": 28,
+        "selectedCount": 29,
         "skippedCount": 3,
         "selected": [
           {
@@ -7449,6 +7544,40 @@
               {
                 "group": "native-platform",
                 "id": "action-react"
+              }
+            ]
+          },
+          {
+            "id": "live-preview.partial-final-edit",
+            "workflow": "live-preview-finalization",
+            "inventoryWorkflow": "live-preview-finalization",
+            "userAction": "user asks OpenClaw for a streamed text answer and sees the preview become the final answer",
+            "matrix": {
+              "content": "text",
+              "route": "direct",
+              "delivery": "live-finalizer",
+              "lifecycle": "success"
+            },
+            "atoms": [
+              {
+                "group": "live-preview",
+                "id": "draft-preview"
+              },
+              {
+                "group": "live-preview",
+                "id": "preview-finalization"
+              },
+              {
+                "group": "live-finalizer",
+                "id": "final-edit"
+              },
+              {
+                "group": "live-finalizer",
+                "id": "preview-receipt"
+              },
+              {
+                "group": "durable-final",
+                "id": "text"
               }
             ]
           },
@@ -8049,6 +8178,7 @@
         "media-batch-final",
         "thread-final",
         "live-preview.progress-normal-fallback",
+        "live-preview.partial-final-edit",
         "media-transformation.image-to-video",
         "native-action.send.presentation-pin",
         "native-action.poll",

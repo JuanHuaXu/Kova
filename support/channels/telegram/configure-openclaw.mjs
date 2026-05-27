@@ -6,6 +6,7 @@ const args = parseArgs(process.argv.slice(2));
 const portFile = requiredArg(args, "port-file");
 const token = args.token ?? "999001:kova-telegram-token";
 const streamingMode = optionalString(args["streaming-mode"]);
+const replyToMode = optionalString(args["reply-to-mode"]) ?? "all";
 const port = fs.readFileSync(portFile, "utf8").trim();
 if (!/^\d+$/u.test(port)) {
   throw new Error(`invalid Telegram shim port in ${portFile}`);
@@ -82,7 +83,7 @@ config.channels = {
       }
     } : {}),
     reactionLevel: "minimal",
-    replyToMode: "all"
+    replyToMode
   }
 };
 config.messages = {

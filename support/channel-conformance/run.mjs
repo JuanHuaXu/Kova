@@ -153,14 +153,17 @@ async function runWorkflowCase({ driver, workflowCase, platform }) {
   const runnableWorkflowCase = withFixtureMediaSourceProof(workflowCase, fixtures);
   let row;
   try {
-    const providerRequestCountBefore = await countProviderRequests({ artifactDir });
-    const callCursor = (await driver.readPlatformCalls({ platform })).length;
     if (typeof driver.configureWorkflowCase === "function") {
       const configureCaseResult = await driver.configureWorkflowCase({ workflowCase: runnableWorkflowCase, platform });
       if (configureCaseResult?.status !== 0) {
         throw new Error(`channel ${channelId} workflow case configuration failed for ${runnableWorkflowCase.id}: ${configureCaseResult?.command ?? "unknown command"}`);
       }
+      if (configureCaseResult?.restartRequired === true) {
+        await restartOpenClawAfterWorkflowConfigChange({ driver, platform, workflowCaseId: runnableWorkflowCase.id });
+      }
     }
+    const providerRequestCountBefore = await countProviderRequests({ artifactDir });
+    const callCursor = (await driver.readPlatformCalls({ platform })).length;
     await resetProviderScriptForCase({
       repoRoot,
       artifactDir,
@@ -266,15 +269,24 @@ function withFixtureMediaSourceProof(workflowCase, fixtures) {
 }
 
 async function restartOpenClawAfterFailedCase({ driver, platform, failedCaseId }) {
+  stopOpenClawService(`failed case ${failedCaseId}`);
+  await driver.startOpenClaw({ repoRoot, envName, artifactDir, platform, timeoutMs });
+}
+
+async function restartOpenClawAfterWorkflowConfigChange({ driver, platform, workflowCaseId }) {
+  stopOpenClawService(`config change for ${workflowCaseId}`);
+  await driver.startOpenClaw({ repoRoot, envName, artifactDir, platform, timeoutMs });
+}
+
+function stopOpenClawService(reason) {
   const stop = spawnSync("ocm", ["service", "stop", envName, "--json"], {
     encoding: "utf8",
     timeout: timeoutMs,
     env: process.env
   });
   if (stop.status !== 0) {
-    throw new Error(`failed to stop OpenClaw after ${failedCaseId}: ${stop.stderr || stop.stdout}`);
+    throw new Error(`failed to stop OpenClaw after ${reason}: ${stop.stderr || stop.stdout}`);
   }
-  await driver.startOpenClaw({ repoRoot, envName, artifactDir, platform, timeoutMs });
 }
 
 function failedRow(workflowCase, reason) {

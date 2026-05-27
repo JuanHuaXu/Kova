@@ -6,11 +6,17 @@ export function configureTelegramOpenClaw({ repoRoot, envName, platform, timeout
   platform.repoRoot = repoRoot;
   platform.envName = envName;
   platform.timeoutMs = timeoutMs;
+  platform.telegramOpenClawConfig = {
+    replyToMode: "all",
+    streamingMode: "partial"
+  };
   return runTelegramConfigure({
     repoRoot,
     envName,
     platform,
-    timeoutMs
+    timeoutMs,
+    streamingMode: "partial",
+    replyToMode: "all"
   });
 }
 
@@ -21,16 +27,29 @@ export function configureTelegramWorkflowCase({ workflowCase, platform }) {
   const mode = typeof livePreview?.mode === "string" && livePreview.mode.length > 0
     ? livePreview.mode
     : "partial";
-  return runTelegramConfigure({
+  const replyToMode = workflowCaseNeedsLivePreviewWithoutReply(workflowCase) ? "off" : "all";
+  const previousConfig = platform.telegramOpenClawConfig ?? {};
+  const restartRequired =
+    previousConfig.replyToMode !== replyToMode ||
+    previousConfig.streamingMode !== mode;
+  const result = runTelegramConfigure({
     repoRoot: platform.repoRoot,
     envName: platform.envName,
     platform,
     timeoutMs: platform.timeoutMs,
-    streamingMode: mode
+    streamingMode: mode,
+    replyToMode
   });
+  if (result.status === 0) {
+    platform.telegramOpenClawConfig = { replyToMode, streamingMode: mode };
+  }
+  return {
+    ...result,
+    restartRequired
+  };
 }
 
-function runTelegramConfigure({ repoRoot, envName, platform, timeoutMs, streamingMode = null }) {
+function runTelegramConfigure({ repoRoot, envName, platform, timeoutMs, streamingMode = null, replyToMode = null }) {
   const args = [
     "env",
     "exec",
@@ -46,7 +65,20 @@ function runTelegramConfigure({ repoRoot, envName, platform, timeoutMs, streamin
   if (streamingMode) {
     args.push("--streaming-mode", streamingMode);
   }
+  if (replyToMode) {
+    args.push("--reply-to-mode", replyToMode);
+  }
   return runCommand("ocm", args, timeoutMs);
+}
+
+function workflowCaseNeedsLivePreviewWithoutReply(workflowCase) {
+  const expects = workflowCase?.expects && typeof workflowCase.expects === "object" && !Array.isArray(workflowCase.expects)
+    ? workflowCase.expects
+    : {};
+  const expectedLivePreview = expects.livePreview && typeof expects.livePreview === "object" && !Array.isArray(expects.livePreview)
+    ? expects.livePreview
+    : {};
+  return Object.keys(expectedLivePreview).length > 0;
 }
 
 export async function startTelegramOpenClaw({ repoRoot, envName, artifactDir, timeoutMs }) {
