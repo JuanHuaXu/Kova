@@ -132,13 +132,6 @@ function primaryScriptStepsForWorkflowCase(testCase, options = {}) {
           )
         }
       },
-      {
-        id: `${testCase.id}:final`,
-        respond: {
-          type: "final-text",
-          text: replaceScriptString(typeof script.finalText === "string" ? script.finalText : "NO_REPLY", options.replacements)
-        }
-      },
     ];
     if (hasCompletionToolCalls) {
       steps.push(
@@ -159,6 +152,14 @@ function primaryScriptStepsForWorkflowCase(testCase, options = {}) {
           }
         }
       );
+    } else {
+      steps.push({
+        id: `${testCase.id}:final`,
+        respond: {
+          type: "final-text",
+          text: replaceScriptString(typeof script.finalText === "string" ? script.finalText : "NO_REPLY", options.replacements)
+        }
+      });
     }
     return steps;
   }

@@ -1831,7 +1831,7 @@ async function channelGeneratedMediaProviderScriptCheck() {
     const completionCaseId = "completion-handoff.image.generated-direct";
     const completionScript = channelWorkflowScript([completionCaseId], process.cwd());
     const completionStepIds = completionScript.steps.map((step) => step.id);
-    assertEqual(completionStepIds.includes(`${completionCaseId}:final`), true, "completion handoff provider script finalizes the initial generator turn");
+    assertEqual(completionStepIds.includes(`${completionCaseId}:final`), false, "completion handoff provider script does not force a final before the OpenClaw completion delivery turn");
     assertEqual(completionStepIds.includes(`${completionCaseId}:completion-tool-calls`), true, "completion handoff provider script models the OpenClaw completion delivery turn");
     const completionStep = completionScript.steps.find((step) => step.id === `${completionCaseId}:completion-tool-calls`);
     const completionRendered = await resolveScriptStep(completionStep, {
