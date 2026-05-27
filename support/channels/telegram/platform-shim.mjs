@@ -21,6 +21,7 @@ let nextMessageId = 10_000;
 let updates = [];
 let calls = [];
 let polls = [];
+let faultRules = [];
 
 await mkdir(dir, { recursive: true });
 
@@ -117,9 +118,17 @@ async function handleRequest(request, response) {
     updates = [];
     calls = [];
     polls = [];
+    faultRules = [];
     await writeFile(callsPath, "", "utf8");
     await writeFile(pollsPath, "", "utf8");
     writeJson(response, 200, { ok: true });
+    return;
+  }
+  if (request.method === "POST" && url.pathname === "/__kova/config") {
+    const body = await readRequestBody(request);
+    const payload = parseJsonObject(body.toString("utf8"));
+    faultRules = normalizeFaultRules(payload.faults);
+    writeJson(response, 200, { ok: true, faultRules });
     return;
   }
   if (request.method === "GET" && url.pathname === "/__kova/calls") {
@@ -160,6 +169,12 @@ async function handleRequest(request, response) {
   const result = telegramResult(method, body);
   call.responseOk = result.ok === true;
   call.result = result.result ?? null;
+  if (result.description) {
+    call.description = result.description;
+  }
+  if (result.error_code) {
+    call.errorCode = result.error_code;
+  }
   if (method === "getUpdates") {
     const returnedUpdates = Array.isArray(result.result) ? result.result : [];
     if (returnedUpdates.length === 0) {
@@ -187,7 +202,7 @@ async function handleRequest(request, response) {
     calls.push(call);
     await appendJsonLine(callsPath, call);
   }
-  writeJson(response, 200, result);
+  writeJson(response, result.statusCode ?? 200, publicTelegramResult(result));
 }
 
 function compactGetUpdatesBody(body) {
@@ -215,6 +230,10 @@ function delay(ms) {
 }
 
 function telegramResult(method, body) {
+  const fault = takeMatchingFault(method, body);
+  if (fault) {
+    return telegramFaultResult(fault);
+  }
   if (method === "getMe") {
     return {
       ok: true,
@@ -323,6 +342,67 @@ function telegramResult(method, body) {
     return { ok: true, result: true };
   }
   return { ok: true, result: true };
+}
+
+function normalizeFaultRules(value) {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+  return value
+    .map((rule) => {
+      if (!rule || typeof rule !== "object" || Array.isArray(rule)) {
+        return null;
+      }
+      const target = typeof rule.target === "string" ? rule.target : "";
+      const kind = typeof rule.kind === "string" ? rule.kind : "";
+      const times = Number.isInteger(rule.times) && rule.times > 0 ? rule.times : 1;
+      if (target !== "live-preview-draft" || kind !== "ambiguous-send") {
+        return null;
+      }
+      return { target, kind, remaining: times };
+    })
+    .filter(Boolean);
+}
+
+function takeMatchingFault(method, body) {
+  const index = faultRules.findIndex((rule) => faultRuleMatches(rule, method, body));
+  if (index < 0) {
+    return null;
+  }
+  const [rule] = faultRules.splice(index, 1);
+  if (rule.remaining > 1) {
+    faultRules.splice(index, 0, { ...rule, remaining: rule.remaining - 1 });
+  }
+  return rule;
+}
+
+function faultRuleMatches(rule, method, body) {
+  if (rule.target === "live-preview-draft") {
+    return method === "sendMessage" && typeof body.text === "string" && body.text.trim().length > 0;
+  }
+  return false;
+}
+
+function telegramFaultResult(rule) {
+  if (rule.kind === "ambiguous-send") {
+    return {
+      ok: false,
+      statusCode: 504,
+      error_code: 504,
+      description: "Gateway Timeout: timeout after Telegram accepted send"
+    };
+  }
+  return {
+    ok: false,
+    statusCode: 500,
+    error_code: 500,
+    description: "Internal Server Error"
+  };
+}
+
+function publicTelegramResult(result) {
+  const { statusCode: _statusCode, ...publicResult } = result;
+  return publicResult;
 }
 
 function isSendMethod(method) {

@@ -1828,46 +1828,37 @@ function channelDeclaredCapabilityProofRowsCheck() {
 
 async function channelGeneratedMediaProviderScriptCheck() {
   try {
-    const caseId = "completion-handoff.image.generated-direct";
-    const generatedPath = "/tmp/kova-media/tool-image-generation/kova-completion-handoff-direct---self-check.png";
-    const script = channelWorkflowScript([caseId], process.cwd());
-    const stepIds = script.steps.map((step) => step.id);
-    assertEqual(stepIds.includes(`${caseId}:final`), true, "completion handoff provider script finalizes the initial generator turn");
-    assertEqual(
-      stepIds.indexOf(`${caseId}:final`) < stepIds.indexOf(`${caseId}:completion-tool-calls`),
-      true,
-      "completion handoff provider script sends completion tool calls after the initial turn final"
-    );
-    const completionStep = script.steps.find((step) => step.id === `${caseId}:completion-tool-calls`);
-    assertEqual(Boolean(completionStep), true, "completion handoff provider script has completion tool-call step");
-    const rendered = await resolveScriptStep(completionStep, {
-      requestBody: {
-        input: [{
-          type: "message",
-          role: "tool",
-          content: [{
-            type: "output_text",
-            text: `Generated media exists at path="${generatedPath}".`
-          }]
-        }]
-      }
+    const completionCaseId = "completion-handoff.image.generated-direct";
+    const completionScript = channelWorkflowScript([completionCaseId], process.cwd());
+    const completionStepIds = completionScript.steps.map((step) => step.id);
+    assertEqual(completionStepIds.includes(`${completionCaseId}:final`), true, "completion handoff provider script finalizes the initial generator turn");
+    assertEqual(completionStepIds.includes(`${completionCaseId}:completion-tool-calls`), false, "completion handoff provider script does not manufacture a second source-delivery turn");
+
+    const sourceCaseId = "source-visible-delivery.media.message-tool-only";
+    const sourceScript = channelWorkflowScript([sourceCaseId], process.cwd());
+    const sourceStepIds = sourceScript.steps.map((step) => step.id);
+    assertEqual(sourceStepIds.includes(`${sourceCaseId}:tool-calls`), true, "source media provider script sends media through message tool");
+    assertEqual(sourceStepIds.includes(`${sourceCaseId}:final`), true, "source media provider script finalizes after message tool delivery");
+    const sourceStep = sourceScript.steps.find((step) => step.id === `${sourceCaseId}:tool-calls`);
+    const rendered = await resolveScriptStep(sourceStep, {
+      requestBody: {}
     });
     const toolCall = rendered?.respond?.toolCalls?.[0];
     const args = JSON.parse(toolCall?.arguments ?? "{}");
-    assertEqual(args.media, generatedPath, "generated media provider script preserves the generated media path");
-    assertEqual(args.action, "send", "completion handoff sends generated media through message tool");
+    assertEqual(args.media, "kova-source-delivery-media.mp4", "source media provider script preserves the declared media path");
+    assertEqual(args.action, "send", "source media provider script sends generated media through message tool");
 
     return {
       id: "channel-generated-media-provider-script",
       status: "PASS",
-      command: "render generated media channel workflow script through mock provider templating",
+      command: "render generated media channel workflow scripts through mock provider templating",
       durationMs: 0
     };
   } catch (error) {
     return {
       id: "channel-generated-media-provider-script",
       status: "FAIL",
-      command: "render generated media channel workflow script through mock provider templating",
+      command: "render generated media channel workflow scripts through mock provider templating",
       durationMs: 0,
       message: error.message
     };

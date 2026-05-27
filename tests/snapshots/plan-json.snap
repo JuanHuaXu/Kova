@@ -4891,6 +4891,56 @@
           "inventoryWorkflow": "live-preview-finalization"
         },
         {
+          "id": "live-preview.ambiguous-send-retained",
+          "workflow": "live-preview-finalization",
+          "matrix": {
+            "content": "text",
+            "route": "direct",
+            "delivery": "live-finalizer",
+            "lifecycle": "ambiguous-send"
+          },
+          "userAction": "user asks OpenClaw for a streamed answer while the channel send acknowledgement is lost, and OpenClaw does not send a duplicate fallback response",
+          "openclawSurface": "channel inbound direct message with ambiguous live preview send acknowledgement",
+          "ownerArea": "OpenClaw live channel runtime and adapter",
+          "prompt": "Give me a short status update for the launch.",
+          "livePreview": {
+            "mode": "partial"
+          },
+          "channelFault": {
+            "target": "live-preview-draft",
+            "kind": "ambiguous-send",
+            "times": 1
+          },
+          "providerScript": {
+            "finalText": "KOVA_LIVE_PREVIEW_RETAIN_OK The launch is still on track, media delivery is checked, and the channel route is ready."
+          },
+          "expects": {
+            "visibleDeliveries": 0,
+            "kind": "text",
+            "livePreview": {
+              "draftPreview": true,
+              "retainOnAmbiguousFailure": true
+            },
+            "terminal": true,
+            "noDuplicateFinal": true
+          },
+          "atoms": [
+            {
+              "group": "live-preview",
+              "id": "draft-preview"
+            },
+            {
+              "group": "live-finalizer",
+              "id": "retain-on-ambiguous-failure"
+            },
+            {
+              "group": "durable-final",
+              "id": "text"
+            }
+          ],
+          "inventoryWorkflow": "live-preview-finalization"
+        },
+        {
           "id": "media-transformation.image-to-video",
           "workflow": "media-transformation",
           "matrix": {
@@ -5925,7 +5975,7 @@
         "schemaVersion": "kova.channelWorkflowCoverage.v1",
         "channelId": "discord",
         "selectedCount": 18,
-        "skippedCount": 14,
+        "skippedCount": 15,
         "selected": [
           {
             "id": "completion-handoff.image.generated-direct",
@@ -6680,6 +6730,37 @@
             "driverReason": null
           },
           {
+            "id": "live-preview.ambiguous-send-retained",
+            "workflow": "live-preview-finalization",
+            "inventoryWorkflow": "live-preview-finalization",
+            "userAction": "user asks OpenClaw for a streamed answer while the channel send acknowledgement is lost, and OpenClaw does not send a duplicate fallback response",
+            "matrix": {
+              "content": "text",
+              "route": "direct",
+              "delivery": "live-finalizer",
+              "lifecycle": "ambiguous-send"
+            },
+            "atoms": [
+              {
+                "group": "live-preview",
+                "id": "draft-preview"
+              },
+              {
+                "group": "live-finalizer",
+                "id": "retain-on-ambiguous-failure"
+              },
+              {
+                "group": "durable-final",
+                "id": "text"
+              }
+            ],
+            "reason": "missing atoms: live-finalizer:retain-on-ambiguous-failure",
+            "missingAtoms": [
+              "live-finalizer:retain-on-ambiguous-failure"
+            ],
+            "driverReason": null
+          },
+          {
             "id": "native-action.send.presentation-pin",
             "workflow": "native-platform-action",
             "inventoryWorkflow": "native-platform-action",
@@ -7156,7 +7237,7 @@
       "workflowCoverage": {
         "schemaVersion": "kova.channelWorkflowCoverage.v1",
         "channelId": "telegram",
-        "selectedCount": 29,
+        "selectedCount": 30,
         "skippedCount": 3,
         "selected": [
           {
@@ -7538,6 +7619,32 @@
               {
                 "group": "live-finalizer",
                 "id": "preview-receipt"
+              },
+              {
+                "group": "durable-final",
+                "id": "text"
+              }
+            ]
+          },
+          {
+            "id": "live-preview.ambiguous-send-retained",
+            "workflow": "live-preview-finalization",
+            "inventoryWorkflow": "live-preview-finalization",
+            "userAction": "user asks OpenClaw for a streamed answer while the channel send acknowledgement is lost, and OpenClaw does not send a duplicate fallback response",
+            "matrix": {
+              "content": "text",
+              "route": "direct",
+              "delivery": "live-finalizer",
+              "lifecycle": "ambiguous-send"
+            },
+            "atoms": [
+              {
+                "group": "live-preview",
+                "id": "draft-preview"
+              },
+              {
+                "group": "live-finalizer",
+                "id": "retain-on-ambiguous-failure"
               },
               {
                 "group": "durable-final",
@@ -8143,6 +8250,7 @@
         "thread-final",
         "live-preview.progress-normal-fallback",
         "live-preview.partial-final-edit",
+        "live-preview.ambiguous-send-retained",
         "media-transformation.image-to-video",
         "native-action.send.presentation-pin",
         "native-action.poll",

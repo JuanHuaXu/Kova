@@ -20,7 +20,11 @@ export async function waitForCaseObservations({
       inbound: platform.currentInbound,
       calls: calls.slice(callCursor)
     });
-    if (hasExpectedFinalDeliveries(workflowCase, latest) && hasExpectedNativeActions(workflowCase, latest)) {
+    if (
+      hasExpectedFinalDeliveries(workflowCase, latest) &&
+      hasExpectedNativeActions(workflowCase, latest) &&
+      hasExpectedLivePreviewProof(workflowCase, latest)
+    ) {
       const finalCalls = await waitForQuietEvidence({
         platform,
         readPlatformCalls,
@@ -73,6 +77,35 @@ async function waitForQuietEvidence({
     }
   }
   return { calls: latest, providerRequestCount: latestProviderCount };
+}
+
+function hasExpectedLivePreviewProof(workflowCase, observations) {
+  const expected = workflowCase.expects?.livePreview;
+  if (!expected || typeof expected !== "object" || Array.isArray(expected)) {
+    return true;
+  }
+  const proof = observations?.livePreview && typeof observations.livePreview === "object" && !Array.isArray(observations.livePreview)
+    ? observations.livePreview
+    : {};
+  if (expected.retainOnAmbiguousFailure === true && proof.retainedOnAmbiguousFailure !== true) {
+    return false;
+  }
+  if (expected.finalizer === "final-edit" && Number(proof.finalEditCount ?? 0) <= 0) {
+    return false;
+  }
+  if (expected.finalizer === "normal-fallback" && Number(proof.normalFallbackCount ?? 0) <= 0) {
+    return false;
+  }
+  if (expected.previewFinalization === true && proof.previewFinalized !== true) {
+    return false;
+  }
+  if (expected.progressUpdates === true && Number(proof.progressUpdateCount ?? 0) <= 0) {
+    return false;
+  }
+  if (expected.draftPreview === true && Number(proof.draftPreviewCount ?? 0) <= 0) {
+    return false;
+  }
+  return true;
 }
 
 function expectedVisibleDeliveryCount(workflowCase) {

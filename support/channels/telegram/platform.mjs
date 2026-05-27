@@ -52,9 +52,37 @@ export async function enqueueTelegramUpdate({ platform, update }) {
   await postJson(`${platform.apiRoot}/__kova/enqueue-update`, { update });
 }
 
+export async function configureTelegramPlatformWorkflowCase({ workflowCase, platform }) {
+  const faults = telegramFaultsForWorkflowCase(workflowCase);
+  await postJson(`${platform.apiRoot}/__kova/config`, { faults });
+  return {
+    command: `POST ${platform.apiRoot}/__kova/config`,
+    status: 0,
+    signal: null,
+    stdout: "",
+    stderr: "",
+    error: null
+  };
+}
+
 export async function readTelegramPlatformCalls({ platform }) {
   const result = await getJson(`${platform.apiRoot}/__kova/calls`);
   return Array.isArray(result.result) ? result.result : [];
+}
+
+function telegramFaultsForWorkflowCase(workflowCase) {
+  const fault = workflowCase?.channelFault;
+  if (!fault || typeof fault !== "object" || Array.isArray(fault)) {
+    return [];
+  }
+  if (fault.target !== "live-preview-draft" || fault.kind !== "ambiguous-send") {
+    return [];
+  }
+  return [{
+    target: "live-preview-draft",
+    kind: "ambiguous-send",
+    times: Number.isInteger(fault.times) && fault.times > 0 ? fault.times : 1
+  }];
 }
 
 async function waitForPortFile(path, waitMs) {

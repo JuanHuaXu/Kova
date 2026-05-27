@@ -199,6 +199,55 @@
           "id": "text"
         }
       ]
+    },
+    {
+      "id": "live-preview.ambiguous-send-retained",
+      "workflow": "live-preview-finalization",
+      "matrix": {
+        "content": "text",
+        "route": "direct",
+        "delivery": "live-finalizer",
+        "lifecycle": "ambiguous-send"
+      },
+      "userAction": "user asks OpenClaw for a streamed answer while the channel send acknowledgement is lost, and OpenClaw does not send a duplicate fallback response",
+      "openclawSurface": "channel inbound direct message with ambiguous live preview send acknowledgement",
+      "ownerArea": "OpenClaw live channel runtime and adapter",
+      "prompt": "Give me a short status update for the launch.",
+      "livePreview": {
+        "mode": "partial"
+      },
+      "channelFault": {
+        "target": "live-preview-draft",
+        "kind": "ambiguous-send",
+        "times": 1
+      },
+      "providerScript": {
+        "finalText": "KOVA_LIVE_PREVIEW_RETAIN_OK The launch is still on track, media delivery is checked, and the channel route is ready."
+      },
+      "expects": {
+        "visibleDeliveries": 0,
+        "kind": "text",
+        "livePreview": {
+          "draftPreview": true,
+          "retainOnAmbiguousFailure": true
+        },
+        "terminal": true,
+        "noDuplicateFinal": true
+      },
+      "atoms": [
+        {
+          "group": "live-preview",
+          "id": "draft-preview"
+        },
+        {
+          "group": "live-finalizer",
+          "id": "retain-on-ambiguous-failure"
+        },
+        {
+          "group": "durable-final",
+          "id": "text"
+        }
+      ]
     }
   ]
 }

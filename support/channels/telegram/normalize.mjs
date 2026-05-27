@@ -44,6 +44,10 @@ function normalizeLivePreview({ workflowCase, calls }) {
   const previewCalls = calls.filter((call) => isLivePreviewDraftCall(call, workflowCase, calls));
   const finalEditCalls = calls.filter((call) => isLivePreviewFinalEditCall(call, workflowCase));
   const normalFallbackCalls = calls.filter((call) => isLivePreviewNormalFallbackCall(call, workflowCase));
+  const retainedOnAmbiguousFailure = expected.retainOnAmbiguousFailure === true &&
+    previewCalls.some((call) => call.responseOk !== true && isAmbiguousSendFailure(call)) &&
+    finalEditCalls.length === 0 &&
+    normalFallbackCalls.length === 0;
   const previewMessageIds = new Set(previewCalls
     .map((call) => call.result?.message_id)
     .filter((messageId) => messageId != null)
@@ -60,8 +64,8 @@ function normalizeLivePreview({ workflowCase, calls }) {
     finalEditCount: finalEditCalls.length,
     normalFallbackCount: normalFallbackCalls.length,
     previewReceiptPresent: previewCalls.some((call) => call.result?.message_id != null),
-    previewFinalized: finalEditCalls.length > 0 || previewDeleteCalls.length > 0,
-    retainedOnAmbiguousFailure: false,
+    previewFinalized: finalEditCalls.length > 0 || previewDeleteCalls.length > 0 || retainedOnAmbiguousFailure,
+    retainedOnAmbiguousFailure,
     methods: [...new Set([...previewCalls, ...finalEditCalls, ...normalFallbackCalls].map((call) => call.method))]
   };
 }
@@ -169,6 +173,14 @@ function isLivePreviewDraftCall(call, workflowCase, calls = []) {
     return false;
   }
   if (
+    expected.retainOnAmbiguousFailure === true &&
+    call.method === "sendMessage" &&
+    call.responseOk !== true &&
+    isAmbiguousSendFailure(call)
+  ) {
+    return true;
+  }
+  if (
     expected.finalizer === "final-edit" &&
     call.method === "sendMessage" &&
     call.result?.message_id != null &&
@@ -188,6 +200,11 @@ function isLivePreviewDraftCall(call, workflowCase, calls = []) {
     return true;
   }
   return workflowCase?.livePreview?.mode !== "progress";
+}
+
+function isAmbiguousSendFailure(call) {
+  const description = typeof call.description === "string" ? call.description : "";
+  return call.errorCode === 504 || /\btimeout after Telegram accepted send\b/iu.test(description);
 }
 
 function finalEditMessageIds(workflowCase, calls) {

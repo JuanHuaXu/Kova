@@ -9,6 +9,7 @@ import {
   startTelegramOpenClaw
 } from "./openclaw.mjs";
 import {
+  configureTelegramPlatformWorkflowCase,
   enqueueTelegramUpdate,
   readTelegramPlatformCalls,
   startTelegramPlatform,
@@ -17,8 +18,21 @@ import {
 
 export const startPlatform = startTelegramPlatform;
 export const configureOpenClaw = configureTelegramOpenClaw;
-export const configureWorkflowCase = configureTelegramWorkflowCase;
 export const startOpenClaw = startTelegramOpenClaw;
+
+export async function configureWorkflowCase({ workflowCase, platform }) {
+  const [openClaw, telegramPlatform] = await Promise.all([
+    configureTelegramWorkflowCase({ workflowCase, platform }),
+    configureTelegramPlatformWorkflowCase({ workflowCase, platform })
+  ]);
+  if (openClaw.status !== 0) {
+    return openClaw;
+  }
+  return {
+    ...telegramPlatform,
+    restartRequired: openClaw.restartRequired === true
+  };
+}
 
 const SUPPORTED_ROUTES = new Set([
   "direct",
