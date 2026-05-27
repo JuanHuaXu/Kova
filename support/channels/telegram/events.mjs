@@ -21,16 +21,17 @@ export function telegramInboundForCase(workflowCase) {
   const chat = grouped
     ? { id: route.chatId, type: "supergroup", title: "Kova Telegram Shim", is_forum: true }
     : { id: route.chatId, type: "private", first_name: "Kova User" };
+  const sender = telegramSenderForRoute(route);
   const text = grouped && !roomEvent ? `@${BOT_USERNAME} ${workflowCase.prompt}` : workflowCase.prompt;
   const message = {
     message_id: messageId,
     date: Math.floor(Date.now() / 1000),
     chat,
     from: {
-      id: USER_ID,
+      id: sender.id,
       is_bot: false,
-      first_name: "Kova User",
-      username: "kova_user"
+      first_name: sender.firstName,
+      username: sender.username
     },
     ...(media ? { caption: text, ...media.telegramFields } : { text }),
     ...(threaded ? { message_thread_id: route.threadId, is_topic_message: true } : {}),
@@ -75,15 +76,27 @@ function telegramRouteForCase(workflowCase, { threaded, roomEvent }) {
     return {
       chatId,
       threadId: null,
+      senderId: chatId,
       key: String(chatId)
     };
   }
   const chatId = GROUP_CHAT_ID_BASE - (scopeHash % 1_000_000);
   const threadId = threaded ? THREAD_ID_BASE + (scopeHash % 10_000) : null;
+  const senderId = USER_ID + (scopeHash % 1_000_000);
   return {
     chatId,
     threadId,
+    senderId,
     key: threadId == null ? String(chatId) : `${chatId}:topic:${threadId}`
+  };
+}
+
+function telegramSenderForRoute(route) {
+  const id = route.senderId ?? USER_ID;
+  return {
+    id,
+    firstName: `Kova User ${id}`,
+    username: `kova_user_${id}`
   };
 }
 
