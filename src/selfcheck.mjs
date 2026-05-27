@@ -18,6 +18,7 @@ import { planWorkflowCases } from "../support/channel-conformance/planner.mjs";
 import { channelWorkflowScript } from "../support/channel-workflow-provider-script.mjs";
 import { evaluateGate } from "./matrix/gate.mjs";
 import { extractAssistantVisibleText } from "../support/openclaw-runtime.mjs";
+import { declaredCapabilityProofRows } from "../support/channel-conformance/capability-proof.mjs";
 import {
   comparePerformanceToBaseline,
   loadBaselineStore,
@@ -194,6 +195,7 @@ export async function runSelfCheck(flags = {}) {
     checks.push(evidenceLedgerGatingCheck());
     checks.push(channelCapabilityReportSummaryCheck());
     checks.push(channelCapabilityResultIngestionCheck());
+    checks.push(channelDeclaredCapabilityProofRowsCheck());
     checks.push(await channelGeneratedMediaProviderScriptCheck());
     checks.push(channelModelTurnMultiInvariantEvaluationCheck());
     checks.push(optionalDiagnosticGapCheck());
@@ -1718,6 +1720,84 @@ function channelCapabilityResultIngestionCheck() {
       id: "channel-capability-result-ingestion",
       status: "FAIL",
       command: "evaluate channel capability helper result ingestion",
+      durationMs: 0,
+      message: error.message
+    };
+  }
+}
+
+function channelDeclaredCapabilityProofRowsCheck() {
+  try {
+    const channelRegistry = {
+      id: "telegram",
+      capabilities: [
+        { group: "durable-final", id: "text" },
+        { group: "durable-final", id: "media" },
+        { group: "live-preview", id: "draft-preview" }
+      ]
+    };
+    const workflowCoverage = {
+      selectedRows: [{
+        id: "basic-conversation.text",
+        atoms: [{ group: "durable-final", id: "text" }]
+      }, {
+        id: "media-generation.image",
+        atoms: [{ group: "durable-final", id: "media" }]
+      }]
+    };
+    const rows = declaredCapabilityProofRows({
+      channelId: "telegram",
+      channelRegistry,
+      workflowCoverage,
+      rows: [
+        { id: "basic-conversation.text", status: "passed" },
+        {
+          id: "media-generation.image",
+          status: "failed",
+          failureOwner: "openclaw-runtime",
+          ownerArea: "OpenClaw media runtime"
+        }
+      ],
+      artifactPath: "/tmp/kova/channel-conformance.json"
+    });
+    assertEqual(rows.length, 3, "declared capability proof row count");
+    assertEqual(rows.find((row) => row.capabilityId === "text")?.status, "passed", "passed capability proof");
+    assertEqual(rows.find((row) => row.capabilityId === "media")?.status, "failed", "failed capability proof");
+    const missing = rows.find((row) => row.capabilityId === "draft-preview");
+    assertEqual(missing?.status, "missing", "missing declared capability proof");
+    assertEqual(missing?.required, true, "missing declared capability proof is required");
+
+    const record = {
+      scenario: "channel-telegram-capability-conformance",
+      surface: "channel-telegram-capability-conformance",
+      status: "PASS",
+      phases: [],
+      channelCapabilityEvidence: rows
+    };
+    attachEvidenceLedger(record);
+    applyEvidenceLedgerGating(record);
+    assertEqual(record.status, "FAIL", "failed declared capability proof fails record");
+
+    const missingOnlyRecord = {
+      ...record,
+      status: "PASS",
+      channelCapabilityEvidence: rows.filter((row) => row.status !== "failed")
+    };
+    attachEvidenceLedger(missingOnlyRecord);
+    applyEvidenceLedgerGating(missingOnlyRecord);
+    assertEqual(missingOnlyRecord.status, "INCOMPLETE", "missing declared capability proof gates record incomplete");
+
+    return {
+      id: "channel-declared-capability-proof-rows",
+      status: "PASS",
+      command: "evaluate declared channel capability proof rows",
+      durationMs: 0
+    };
+  } catch (error) {
+    return {
+      id: "channel-declared-capability-proof-rows",
+      status: "FAIL",
+      command: "evaluate declared channel capability proof rows",
       durationMs: 0,
       message: error.message
     };

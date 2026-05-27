@@ -12,6 +12,7 @@ import { prepareWorkflowFixtures } from "./fixtures.mjs";
 import { validateChannelDriver } from "./driver-contract.mjs";
 import { assertValidObservationSet } from "./observation-schema.mjs";
 import { planWorkflowCases } from "./planner.mjs";
+import { declaredCapabilityProofRows } from "./capability-proof.mjs";
 import { collectRuntimeDiagnostics, runtimeDiagnosticOwnerArea } from "./runtime-diagnostics.mjs";
 import { loadChannelCapabilities } from "../../src/registries/channel-capabilities.mjs";
 import { loadChannelWorkflowCaseCatalog } from "../../src/registries/channel-workflow-cases.mjs";
@@ -51,9 +52,18 @@ try {
       await restartOpenClawAfterFailedCase({ driver, platform, failedCaseId: row.id });
     }
   }
-  result = {
-    ok: rows.every((row) => row.status === "passed"),
+  const capabilityProofRows = declaredCapabilityProofRows({
+    channelId,
+    channelRegistry,
+    workflowCoverage,
     rows,
+    artifactPath
+  });
+  result = {
+    ok: rows.every((row) => row.status === "passed") &&
+      capabilityProofRows.every((row) => row.status === "passed"),
+    rows,
+    capabilityProofRows,
     artifact: {
       schemaVersion: "kova.channelConformanceArtifact.v1",
       channelId,
@@ -71,7 +81,8 @@ try {
         configureOpenClaw: configureResult,
         startOpenClaw: startupResult
       },
-      rows
+      rows,
+      capabilityProofRows
     }
   };
 } catch (error) {
@@ -102,19 +113,22 @@ process.stdout.write(`${JSON.stringify({
   artifactPath,
   ownerArea: `${channelId} adapter/runtime`,
   channelId,
-  capabilities: result.rows.map((row) => ({
-    channelId,
-    group: "workflow",
-    capabilityId: row.id,
-    required: true,
-    status: row.status,
-    proofMode: "channel-platform-conformance",
-    summary: row.summary,
-    reason: row.reason,
-    failureOwner: row.failureOwner ?? null,
-    ownerArea: row.ownerArea,
-    artifactPath
-  }))
+  capabilities: [
+    ...result.rows.map((row) => ({
+      channelId,
+      group: "workflow",
+      capabilityId: row.id,
+      required: true,
+      status: row.status,
+      proofMode: "channel-platform-conformance",
+      summary: row.summary,
+      reason: row.reason,
+      failureOwner: row.failureOwner ?? null,
+      ownerArea: row.ownerArea,
+      artifactPath
+    })),
+    ...(result.capabilityProofRows ?? [])
+  ]
 }, null, 2)}\n`);
 
 const setupFailedBeforeAnyWorkflow = !result.ok && result.rows.length === 0;
