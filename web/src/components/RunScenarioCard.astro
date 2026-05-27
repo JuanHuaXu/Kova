@@ -1,0 +1,61 @@
+---
+import type { RunScenario } from "../content.config";
+import { fmtVal } from "../lib/format";
+import MetricsTable from "./MetricsTable.astro";
+import PhasesTimeline from "./PhasesTimeline.astro";
+import FindingsList from "./FindingsList.astro";
+import ProvesList from "./ProvesList.astro";
+
+interface Props {
+  scenario: RunScenario;
+}
+
+const { scenario: rs } = Astro.props;
+
+const stateLabel = rs.state.toUpperCase();
+const verdictCls =
+  rs.state === "pass" ? "verdict-pass" : rs.state === "fail" ? "verdict-fail" : "verdict-warn";
+
+const sampleStr = `${rs.sampleCount} sample${rs.sampleCount === 1 ? "" : "s"}` +
+  (rs.sampleValue != null && rs.sampleUnit
+    ? ` · ${fmtVal(rs.sampleValue, rs.sampleUnit)} ${rs.sampleUnit}`
+    : "");
+---
+
+<div class="run-scenario" id={`scenario-${rs.id}`}>
+  <div class="run-scenario-head">
+    <span class="run-scenario-id">{rs.id}</span>
+    <span class:list={["verdict", verdictCls]}>
+      <span class="verdict-dot"></span>{stateLabel}
+    </span>
+    <span class="run-scenario-sample">{sampleStr}</span>
+  </div>
+
+  {rs.metrics && rs.metrics.length > 0 && (
+    <>
+      <div class="sub">Metrics</div>
+      <MetricsTable metrics={rs.metrics} />
+    </>
+  )}
+
+  {rs.phases && rs.phases.length > 0 && (
+    <>
+      <div class="sub">Phases</div>
+      <PhasesTimeline phases={rs.phases} />
+    </>
+  )}
+
+  {rs.findings && rs.findings.length > 0 && (
+    <>
+      <div class="sub">Findings</div>
+      <FindingsList items={rs.findings} />
+    </>
+  )}
+
+  {rs.proves && rs.proves.length > 0 && (
+    <>
+      <div class="sub">Proves</div>
+      <ProvesList items={rs.proves} />
+    </>
+  )}
+</div>
