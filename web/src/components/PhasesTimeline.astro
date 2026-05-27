@@ -1,0 +1,31 @@
+---
+import type { Phase } from "../content.config";
+import { fmtMs } from "../lib/release-format";
+
+interface Props {
+  phases: Phase[];
+}
+
+const { phases } = Astro.props;
+const maxElapsed = Math.max(...phases.map((p) => p.elapsedMs), 1);
+const total = phases.reduce((s, p) => s + p.elapsedMs, 0);
+---
+
+<div class="phases-timeline" role="table" aria-label="Phase timings">
+  <div class="phases-axis" role="presentation">
+    <span>0</span>
+    <span class="phases-total">total {fmtMs(total)}</span>
+  </div>
+  {phases.map((p) => {
+    const widthPct = (p.elapsedMs / maxElapsed) * 100;
+    return (
+      <div class="phase-row" role="row">
+        <span class="phase-name" role="cell">{p.name}</span>
+        <span class="phase-track" role="cell" aria-hidden="true">
+          <span class:list={["phase-bar", `bar-${p.state}`]} style={`width: ${widthPct.toFixed(2)}%`}></span>
+        </span>
+        <span class="phase-elapsed" role="cell">{fmtMs(p.elapsedMs)}</span>
+      </div>
+    );
+  })}
+</div>
