@@ -85,6 +85,9 @@ import {
   buildUpgradeStateSnapshotInvariants
 } from "./evidence/invariants.mjs";
 import {
+  attachCommandResultInterpretation,
+  commandFailureRecordStatus,
+  interpretCommandResult,
   isNoLogsOutput,
   normalizeOptionalCommandResult
 } from "./command-results.mjs";
@@ -182,6 +185,7 @@ export async function runSelfCheck(flags = {}) {
     checks.push(logSnippetBudgetCheck());
     checks.push(expectedMockProviderFailureTimeoutLogCheck());
     checks.push(optionalNoLogsCommandCheck());
+    checks.push(commandResultInterpretationCheck());
     checks.push(missingCollectorProofCheck());
     checks.push(ocmCommandBuildersCheck());
     checks.push(envNameLengthCheck());
@@ -10889,6 +10893,51 @@ function optionalNoLogsCommandCheck() {
       id: "optional-no-logs-command",
       status: "FAIL",
       command: "evaluate optional empty log collection",
+      durationMs: 0,
+      message: error.message
+    };
+  }
+}
+
+function commandResultInterpretationCheck() {
+  try {
+    const blocked = {
+      command: "node support/example.mjs",
+      status: 1,
+      stdout: JSON.stringify({
+        ok: false,
+        failureDomain: "kova-harness",
+        recordStatus: "BLOCKED",
+        error: "fixture setup failed"
+      }),
+      stderr: ""
+    };
+    const interpreted = attachCommandResultInterpretation(blocked);
+    assertEqual(interpreted.interpretation.schemaVersion, "kova.commandResultInterpretation.v1", "interpretation schema");
+    assertEqual(interpreted.interpretation.structured, true, "structured helper result detected");
+    assertEqual(interpreted.interpretation.failureDomain, "kova-harness", "failure domain preserved");
+    assertEqual(commandFailureRecordStatus(interpreted), "BLOCKED", "structured record status honored");
+
+    const unstructured = interpretCommandResult({
+      command: "node support/example.mjs",
+      status: 1,
+      stdout: "plain failure",
+      stderr: ""
+    });
+    assertEqual(unstructured.structured, false, "plain stdout is not structured evidence");
+    assertEqual(unstructured.recordStatus, null, "plain stdout does not override default classification");
+
+    return {
+      id: "command-result-interpretation",
+      status: "PASS",
+      command: "evaluate structured helper failure interpretation",
+      durationMs: 0
+    };
+  } catch (error) {
+    return {
+      id: "command-result-interpretation",
+      status: "FAIL",
+      command: "evaluate structured helper failure interpretation",
       durationMs: 0,
       message: error.message
     };

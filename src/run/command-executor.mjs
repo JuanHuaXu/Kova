@@ -1,6 +1,9 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
-import { normalizeOptionalCommandResult } from "../command-results.mjs";
+import {
+  attachCommandResultInterpretation,
+  normalizeOptionalCommandResult
+} from "../command-results.mjs";
 import { runCommand } from "../commands.mjs";
 import { collectorArtifactDirs } from "../collectors/artifacts.mjs";
 import { captureProcessSnapshot, diffProcessSnapshots } from "../collectors/resources.mjs";
@@ -40,6 +43,7 @@ export async function runScenarioCommand(command, context, envName, artifactDir,
   });
   normalizeOptionalCommandResult(result);
   tagCommandResult(result, phaseId);
+  attachCommandResultInterpretation(result);
   if (agentCommand) {
     await sleep(1000);
     const afterSnapshot = captureProcessSnapshot(snapshotOptions);

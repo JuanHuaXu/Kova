@@ -8,6 +8,7 @@ import { runCleanupCommand } from "./cleanup.mjs";
 import { attachEvidenceLedger } from "./evidence-ledger.mjs";
 import { ocmEnvDestroy } from "./ocm/commands.mjs";
 import { runScenarioCommand } from "./run/command-executor.mjs";
+import { commandFailureRecordStatus } from "./command-results.mjs";
 import {
   executeStateLifecycleSteps,
   executeStateSetupAfterPhase
@@ -335,6 +336,11 @@ function summarizeOfficialPlugins(plugins) {
 }
 
 function classifyCommandFailure(result) {
+  const structuredStatus = commandFailureRecordStatus(result);
+  if (structuredStatus) {
+    return structuredStatus;
+  }
+
   if (result.timedOut) {
     return "FAIL";
   }
