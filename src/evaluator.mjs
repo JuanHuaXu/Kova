@@ -3773,10 +3773,6 @@ function extractAgentResponse(result) {
   const text = `${result.stdout ?? ""}\n${result.stderr ?? ""}`;
   try {
     const parsed = JSON.parse(result.stdout);
-    const payloadText = findPayloadText(parsed);
-    if (typeof payloadText === "string" && payloadText.trim().length > 0 && payloadText.trim() !== "NO_REPLY") {
-      return { usable: true, text: payloadText.trim() };
-    }
     const finalText = findFirstString(parsed, [
       "finalAssistantVisibleText",
       "finalAssistantRawText",
@@ -3806,19 +3802,6 @@ function responseMatchesExpectedText(response, expectedText) {
 
 function textEquals(actual, expected) {
   return typeof actual === "string" && typeof expected === "string" && actual.trim() === expected.trim();
-}
-
-function findPayloadText(value) {
-  const payloads = value?.payloads;
-  if (!Array.isArray(payloads)) {
-    return null;
-  }
-  for (const payload of payloads) {
-    if (typeof payload?.text === "string") {
-      return payload.text;
-    }
-  }
-  return null;
 }
 
 function findFirstString(value, keys) {
