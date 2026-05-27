@@ -1,0 +1,22 @@
+{
+  "ver": "2026.5.16-beta",
+  "releaseDate": "2026-05-18",
+  "date": "May 18, 2026",
+  "sha": "7e3a2f1",
+  "passed": false,
+  "runs": 2,
+  "host": "m3-max-01",
+  "coldReadyDeltaPct": 21.3,
+  "scenarios": [
+    { "id": "release-runtime-startup", "value": 1.82, "unit": "s",  "threshold": 1.50, "state": "fail",  "spark": [1.35, 1.75, 1.55, 1.60, 1.50, 1.82] },
+    { "id": "fresh-install",           "value": 1.18, "unit": "s",  "threshold": 1.00, "state": "fail",  "spark": [0.99, 1.08, 0.96, 0.95, 0.92, 1.18] },
+    { "id": "gateway-performance",     "value": 305,  "unit": "ms", "threshold": 290,  "state": "fail",  "spark": [285,  302,  289,  288,  285,  305 ] },
+    { "id": "agent-gateway-rpc-turn",  "value": 2963, "unit": "ms", "threshold": 2500, "state": "fail",  "spark": [2370, 2480, 2390, 2380, 2400, 2963] },
+    { "id": "dashboard-first-paint",   "value": 480,  "unit": "ms", "threshold": 600,  "state": "pass",  "spark": [510,  495,  488,  484,  482,  480 ] },
+    { "id": "tui-cold-start",          "value": 950,  "unit": "ms", "threshold": 1200, "state": "pass",  "spark": [980,  970,  965,  958,  952,  950 ] },
+    { "id": "plugin-load-burst",       "value": 312,  "unit": "ms", "threshold": 400,  "state": "pass",  "spark": [325,  320,  318,  316,  314,  312 ] },
+    { "id": "provider-failover",       "value": 187,  "unit": "ms", "threshold": 250,  "state": "pass",  "spark": [195,  192,  190,  189,  188,  187 ] },
+    { "id": "ocm-env-clone",           "value": 4.20, "unit": "s",  "threshold": 6.00, "state": "pass",  "spark": [4.35, 4.30, 4.28, 4.25, 4.22, 4.20] },
+    { "id": "memory-soak-1h",          "value": null, "unit": "MB", "threshold": 900,  "state": "block", "spark": null }
+  ]
+}
