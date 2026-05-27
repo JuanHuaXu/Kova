@@ -10244,6 +10244,30 @@ function assertChannelObservationLogicalNativeBoundary() {
   }).find((invariant) => invariant.id.endsWith(":unmatched-native-visible-sends"));
   assertEqual(companionTextInvariant?.status, "passed", "media workflows allow one native companion text send matching the expected response text");
 
+  const messageToolTextWorkflowCase = {
+    ...workflowCase,
+    expects: {
+      ...workflowCase.expects,
+      text: undefined
+    },
+    providerScript: {
+      completionToolCalls: [{
+        name: "message",
+        arguments: {
+          action: "send",
+          message: "KOVA_AGENT_MEDIA_OK"
+        }
+      }]
+    }
+  };
+  const derivedCompanionTextInvariant = evaluateWorkflowCase({
+    workflowCase: messageToolTextWorkflowCase,
+    observations: withNativeCompanionText,
+    providerRequestsDelta: 1,
+    providerRequestsAfterEcho: 0
+  }).find((invariant) => invariant.id.endsWith(":unmatched-native-visible-sends"));
+  assertEqual(derivedCompanionTextInvariant?.status, "passed", "media workflows derive companion text proof from scripted message-tool sends");
+
   const withUnexpectedCompanion = {
     ...observations,
     deliveries: [

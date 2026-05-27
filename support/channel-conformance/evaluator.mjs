@@ -13,7 +13,7 @@ export function evaluateWorkflowCase({
   const finalVisible = expectedFinalDeliveries(workflowCase, observations);
   const expectedVisible = Number.isInteger(expects.visibleDeliveries) ? expects.visibleDeliveries : 1;
   const expectsVisibleDelivery = expectedVisible > 0;
-  const expectedText = typeof expects.text === "string" ? expects.text : null;
+  const expectedText = expectedVisibleText(workflowCase);
   const nativeActions = objectOrEmpty(expects.nativeActions);
   const unmatchedNative = unmatchedNativeVisibleSends(workflowCase, observations, finalVisible, visibleDeliveries);
   return [
@@ -242,7 +242,7 @@ function filterAllowedCompanionNativeMessages(workflowCase, messages) {
 }
 
 function isCompanionNativeVisibleMessage(workflowCase, message) {
-  const expectedText = objectOrEmpty(workflowCase.expects).text;
+  const expectedText = expectedVisibleText(workflowCase);
   return typeof expectedText === "string" &&
     expectedText.length > 0 &&
     nativeMessageText(message).includes(expectedText);
@@ -269,14 +269,46 @@ function unexpectedVisibleDeliveries(workflowCase, finalVisible, visibleDeliveri
 
 function allowsCompanionTextDelivery(workflowCase) {
   const expects = objectOrEmpty(workflowCase.expects);
-  return expects.kind === "media" && typeof expects.text === "string" && expects.text.length > 0;
+  return expects.kind === "media" && Boolean(expectedVisibleText(workflowCase));
 }
 
 function isCompanionTextDelivery(workflowCase, delivery) {
-  const expectedText = objectOrEmpty(workflowCase.expects).text;
+  const expectedText = expectedVisibleText(workflowCase);
   return delivery?.kind === "text" &&
     typeof expectedText === "string" &&
     deliveryText(delivery).includes(expectedText);
+}
+
+function expectedVisibleText(workflowCase) {
+  const expects = objectOrEmpty(workflowCase.expects);
+  if (typeof expects.text === "string" && expects.text.length > 0) {
+    return expects.text;
+  }
+  return expectedMessageToolText(workflowCase);
+}
+
+function expectedMessageToolText(workflowCase) {
+  const providerScript = objectOrEmpty(workflowCase.providerScript);
+  for (const key of ["toolCalls", "completionToolCalls"]) {
+    const toolCalls = Array.isArray(providerScript[key]) ? providerScript[key] : [];
+    for (const toolCall of toolCalls) {
+      const record = objectOrEmpty(toolCall);
+      if (record.name !== "message") {
+        continue;
+      }
+      const args = objectOrEmpty(record.arguments);
+      if (args.action !== "send") {
+        continue;
+      }
+      for (const field of ["message", "text", "caption"]) {
+        const value = args[field];
+        if (typeof value === "string" && value.length > 0) {
+          return value;
+        }
+      }
+    }
+  }
+  return null;
 }
 
 function mediaSourceMatches(expects, finalVisible) {
