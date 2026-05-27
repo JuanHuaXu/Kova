@@ -1,0 +1,89 @@
+---
+import Base from "../../layouts/Base.astro";
+import { scenarioHistories } from "../../lib/scenarios";
+import { allReleases } from "../../lib/releases";
+import { fmtMetric, deltaClass } from "../../lib/release-format";
+import TrendChart from "../../components/TrendChart.astro";
+
+export async function getStaticPaths() {
+  const histories = await scenarioHistories();
+  return [...histories.values()].map((h) => ({
+    params: { id: h.id },
+    props: { history: h },
+  }));
+}
+
+const { history } = Astro.props;
+const releases = await allReleases();
+const releaseByVer = new Map(releases.map((r) => [r.ver, r]));
+
+const latest = history.points[history.points.length - 1];
+const latestThreshold = latest?.threshold;
+const hasTrend = history.points.filter((p) => p.value != null).length >= 2;
+---
+
+<Base title={`kova — ${history.id}`} active="scenarios">
+  <div class="container">
+
+    <div class="release-header">
+      <a class="release-back" href="/">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M15 18 L9 12 L15 6" />
+        </svg>
+        home
+      </a>
+      <h1 class="release-title">{history.id}</h1>
+      <div class="release-tags">
+        <span class="release-tag">{history.unit}</span>
+        <span class="release-tag">{history.lowerIsBetter ? "lower is better" : "higher is better"}</span>
+        {latestThreshold != null && <span class="release-tag">threshold {fmtMetric(latestThreshold, history.unit)}</span>}
+      </div>
+    </div>
+
+    <section>
+      <div class="section-rule"><h2>Trend</h2></div>
+      {hasTrend ? (
+        <TrendChart
+          points={history.points}
+          unit={history.unit}
+          threshold={latestThreshold}
+          lowerIsBetter={history.lowerIsBetter}
+        />
+      ) : (
+        <p style="font-family:var(--font-mono);font-size:var(--text-2);color:var(--text-3c);max-width:60ch;">
+          History starts here — {history.points.length} datapoint{history.points.length === 1 ? "" : "s"} recorded.
+          The trend line appears after the next release runs this scenario.
+        </p>
+      )}
+    </section>
+
+    <section>
+      <div class="section-rule"><h2>Releases</h2></div>
+      <div class="recent">
+        {[...history.points].reverse().map((p, idx, arr) => {
+          const prev = arr[idx + 1];
+          let deltaEl: unknown = null;
+          if (prev && prev.value != null && p.value != null) {
+            const deltaPct = ((p.value - prev.value) / prev.value) * 100;
+            const d = deltaClass(deltaPct, history.lowerIsBetter);
+            deltaEl = (
+              <span class:list={["chip", d.cls.replace("delta-", "")]}>
+                {d.arrow} {deltaPct > 0 ? "+" : ""}{deltaPct.toFixed(1)}% vs {prev.ver}
+              </span>
+            );
+          }
+          const rel = releaseByVer.get(p.ver);
+          return (
+            <a class="recent-row" href={`/releases/${p.ver}`}>
+              <span class="rel">{p.ver}</span>
+              <span class="info">{rel?.date ?? ""} · <span class:list={["sha", `st-${p.state}`]}>{p.value == null ? "blocked" : `${fmtMetric(p.value, history.unit)}`}</span></span>
+              <span class="delta">{deltaEl}</span>
+              <span class="arrow">→</span>
+            </a>
+          );
+        })}
+      </div>
+    </section>
+
+  </div>
+</Base>

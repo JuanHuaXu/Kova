@@ -94,7 +94,7 @@ const hasRuns = runsList.length > 0;
           <div class="section-rule"><h2>Scenarios</h2></div>
           <div class="scenario-grid">
             {release.scenarios!.map((s: Scenario) => (
-              <a class="scenario-tile" href={`#scenario-${s.id}`}>
+              <a class="scenario-tile" href={`/scenarios/${s.id}`}>
                 <div class="scenario-tile-head">
                   <span class="scenario-id">{s.id}</span>
                   <span class:list={["verdict", s.state === "pass" ? "verdict-pass" : s.state === "fail" ? "verdict-fail" : "verdict-warn"]}>
