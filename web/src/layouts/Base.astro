@@ -1,0 +1,118 @@
+---
+import "../styles/globals.css";
+import { Font } from "astro:assets";
+
+export interface Props {
+  title: string;
+  /** Active nav item: "home" | "releases" | "scenarios" | "methodology". */
+  active?: "home" | "releases" | "scenarios" | "methodology";
+}
+
+const { title, active = "home" } = Astro.props;
+---
+
+<!doctype html>
+<html lang="en" data-theme="dark">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="generator" content={Astro.generator} />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    {/*
+      Block-rendering inline script: read theme preference BEFORE first paint
+      to prevent flash-of-wrong-theme. Must be in <head> and synchronous.
+    */}
+    <script is:inline>
+      (function () {
+        try {
+          var saved = localStorage.getItem("kova-theme");
+          if (saved === "light" || saved === "dark") {
+            document.documentElement.dataset.theme = saved;
+          }
+        } catch (_) { /* localStorage may throw in some sandboxes */ }
+      })();
+    </script>
+    {/*
+      Self-hosted fonts via Astro Fonts API. Preload the body font (Geist
+      Sans) only; mono loads non-blocking. Variables --font-sans / --font-mono
+      are injected and used by globals.css.
+    */}
+    <Font cssVariable="--font-sans" preload />
+    <Font cssVariable="--font-mono" />
+    <title>{title}</title>
+  </head>
+  <body>
+    <div class="app">
+      <header class="header">
+        <div class="container header-inner">
+          <a class="brand" href="/">
+            <svg
+              class="brand-mark"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M3 12 L7 12 L10 4 L14 20 L17 12 L21 12"></path>
+            </svg>
+            kova
+          </a>
+          <nav class="nav">
+            <a href="/releases" aria-current={active === "releases" ? "page" : undefined}>
+              Releases
+            </a>
+            <a href="#" aria-current={active === "scenarios" ? "page" : undefined}>
+              Scenarios
+            </a>
+            <a href="#" aria-current={active === "methodology" ? "page" : undefined}>
+              Methodology
+            </a>
+          </nav>
+          <span class="header-spacer"></span>
+          <button class="theme-toggle" id="theme-toggle" type="button" aria-label="Toggle theme">
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+            </svg>
+          </button>
+        </div>
+      </header>
+
+      <main class="main">
+        <slot />
+      </main>
+
+      <footer class="footer">
+        <div class="container footer-inner">
+          <span>measured by kova on bare-metal m3-max-01</span>
+          <span>continuous · reproducible · public</span>
+        </div>
+      </footer>
+    </div>
+
+    <script>
+      // Theme toggle handler. Theme is bootstrapped in <head> to avoid FOUC.
+      const btn = document.getElementById("theme-toggle");
+      if (btn) {
+        btn.addEventListener("click", () => {
+          const root = document.documentElement;
+          const next = root.dataset.theme === "light" ? "dark" : "light";
+          root.dataset.theme = next;
+          try { localStorage.setItem("kova-theme", next); } catch { /* noop */ }
+        });
+      }
+    </script>
+  </body>
+</html>
