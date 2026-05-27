@@ -4,19 +4,191 @@
   "date": "May 18, 2026",
   "sha": "7e3a2f1",
   "passed": false,
-  "runs": 2,
+  "runCount": 3,
   "host": "m3-max-01",
   "coldReadyDeltaPct": 21.3,
+  "runtimeTargets": ["npm:2026.5.16-beta", "local-build:7e3a2f1"],
+
+  "headline": [
+    {
+      "label": "cold-ready",
+      "value": 1.82,
+      "unit": "s",
+      "vsVer": "2026.5.10",
+      "deltaPct": 21.3,
+      "lowerIsBetter": true,
+      "scenarioId": "release-runtime-startup",
+      "metric": "cold.ready.s"
+    },
+    {
+      "label": "peak.rss (worst)",
+      "value": 1074,
+      "unit": "MB",
+      "vsVer": "2026.5.10",
+      "deltaPct": 13.4,
+      "lowerIsBetter": true,
+      "scenarioId": "fresh-install",
+      "metric": "peak.rss.mb"
+    }
+  ],
+
   "scenarios": [
-    { "id": "release-runtime-startup", "value": 1.82, "unit": "s",  "threshold": 1.50, "state": "fail",  "spark": [1.35, 1.75, 1.55, 1.60, 1.50, 1.82] },
-    { "id": "fresh-install",           "value": 1.18, "unit": "s",  "threshold": 1.00, "state": "fail",  "spark": [0.99, 1.08, 0.96, 0.95, 0.92, 1.18] },
-    { "id": "gateway-performance",     "value": 305,  "unit": "ms", "threshold": 290,  "state": "fail",  "spark": [285,  302,  289,  288,  285,  305 ] },
-    { "id": "agent-gateway-rpc-turn",  "value": 2963, "unit": "ms", "threshold": 2500, "state": "fail",  "spark": [2370, 2480, 2390, 2380, 2400, 2963] },
-    { "id": "dashboard-first-paint",   "value": 480,  "unit": "ms", "threshold": 600,  "state": "pass",  "spark": [510,  495,  488,  484,  482,  480 ] },
-    { "id": "tui-cold-start",          "value": 950,  "unit": "ms", "threshold": 1200, "state": "pass",  "spark": [980,  970,  965,  958,  952,  950 ] },
-    { "id": "plugin-load-burst",       "value": 312,  "unit": "ms", "threshold": 400,  "state": "pass",  "spark": [325,  320,  318,  316,  314,  312 ] },
-    { "id": "provider-failover",       "value": 187,  "unit": "ms", "threshold": 250,  "state": "pass",  "spark": [195,  192,  190,  189,  188,  187 ] },
-    { "id": "ocm-env-clone",           "value": 4.20, "unit": "s",  "threshold": 6.00, "state": "pass",  "spark": [4.35, 4.30, 4.28, 4.25, 4.22, 4.20] },
-    { "id": "memory-soak-1h",          "value": null, "unit": "MB", "threshold": 900,  "state": "block", "spark": null }
-  ]
+    {
+      "id": "release-runtime-startup",
+      "value": 1.82, "unit": "s", "threshold": 1.50, "state": "fail",
+      "spark": [1.35, 1.75, 1.55, 1.60, 1.50, 1.82],
+      "worstMetric": { "name": "runtime-mgmt RSS", "value": 1053, "unit": "MB" }
+    },
+    {
+      "id": "fresh-install",
+      "value": 1.18, "unit": "s", "threshold": 1.00, "state": "fail",
+      "spark": [0.99, 1.08, 0.96, 0.95, 0.92, 1.18],
+      "worstMetric": { "name": "peak.rss.mb", "value": 1074, "unit": "MB" }
+    },
+    {
+      "id": "gateway-performance",
+      "value": 305, "unit": "ms", "threshold": 290, "state": "fail",
+      "spark": [285, 302, 289, 288, 285, 305],
+      "worstMetric": { "name": "health.p95.ms", "value": 305, "unit": "ms" }
+    },
+    {
+      "id": "agent-gateway-rpc-turn",
+      "value": 2963, "unit": "ms", "threshold": 2500, "state": "fail",
+      "spark": [2370, 2480, 2390, 2380, 2400, 2963],
+      "worstMetric": { "name": "preProvider share", "value": 96, "unit": "%" }
+    },
+    {
+      "id": "dashboard-first-paint",
+      "value": 480, "unit": "ms", "threshold": 600, "state": "pass",
+      "spark": [510, 495, 488, 484, 482, 480]
+    },
+    {
+      "id": "tui-cold-start",
+      "value": 950, "unit": "ms", "threshold": 1200, "state": "pass",
+      "spark": [980, 970, 965, 958, 952, 950]
+    },
+    {
+      "id": "plugin-load-burst",
+      "value": 312, "unit": "ms", "threshold": 400, "state": "pass",
+      "spark": [325, 320, 318, 316, 314, 312]
+    },
+    {
+      "id": "provider-failover",
+      "value": 187, "unit": "ms", "threshold": 250, "state": "pass",
+      "spark": [195, 192, 190, 189, 188, 187]
+    },
+    {
+      "id": "ocm-env-clone",
+      "value": 4.20, "unit": "s", "threshold": 6.00, "state": "pass",
+      "spark": [4.35, 4.30, 4.28, 4.25, 4.22, 4.20]
+    },
+    {
+      "id": "memory-soak-1h",
+      "value": null, "unit": "MB", "threshold": 900, "state": "block",
+      "spark": null
+    }
+  ],
+
+  "runs": [
+    {
+      "id": "r-094832",
+      "runtime": "npm:2026.5.16-beta",
+      "profile": "smoke",
+      "startedAt": "2026-05-18T09:48:00Z",
+      "durationMs": 252000,
+      "entryCount": 10,
+      "state": "fail",
+      "host": "m3-max-01",
+      "command": "kova run --target npm:2026.5.16-beta --profile smoke --execute",
+      "bundle": { "name": "kova-2026-05-18T094832Z-bundle.tar.gz", "bytes": 2516582, "href": "#" }
+    },
+    {
+      "id": "r-101511",
+      "runtime": "npm:2026.5.16-beta",
+      "profile": "gate",
+      "startedAt": "2026-05-18T10:15:00Z",
+      "durationMs": 524000,
+      "entryCount": 10,
+      "state": "fail",
+      "host": "m3-max-01",
+      "command": "kova run --target npm:2026.5.16-beta --profile gate --execute",
+      "expandedByDefault": true,
+      "bundle": { "name": "kova-2026-05-18T101511Z-bundle.tar.gz", "bytes": 3250585, "href": "#" },
+      "scenarios": [
+        {
+          "id": "release-runtime-startup",
+          "state": "fail",
+          "sampleCount": 1,
+          "sampleValue": 1.06,
+          "sampleUnit": "s",
+          "phases": [
+            { "name": "provision",    "elapsedMs": 13000, "state": "pass" },
+            { "name": "post-start",   "elapsedMs": 1660,  "state": "pass" },
+            { "name": "startup-logs", "elapsedMs": 58,    "state": "pass" }
+          ],
+          "metrics": [
+            { "name": "peak.rss.mb",          "value": 590,   "unit": "MB", "threshold": null, "state": "pass" },
+            { "name": "↳ runtime-management", "value": 1053,  "unit": "MB", "threshold": 900,  "state": "fail", "child": true },
+            { "name": "↳ package-manager",    "value": 1053,  "unit": "MB", "threshold": 900,  "state": "fail", "child": true },
+            { "name": "cold.ready.ms",        "value": 13030, "unit": "ms", "threshold": null, "state": "pass" },
+            { "name": "cpu.max.%",            "value": 93.5,  "unit": "%",  "threshold": null, "state": "pass" },
+            { "name": "event-loop.max.ms",    "value": 0,     "unit": "ms", "threshold": null, "state": "pass" }
+          ],
+          "findings": [
+            { "kind": "fail", "scenarioId": "release-runtime-startup", "metric": "peak.rss.mb", "text": "runtime-management peak RSS 1053.3 MB exceeded threshold 900 MB" },
+            { "kind": "fail", "scenarioId": "release-runtime-startup", "metric": "peak.rss.mb", "text": "package-manager peak RSS 1053.3 MB exceeded threshold 900 MB" }
+          ],
+          "proves": [
+            { "state": "fail", "scenarioId": "release-runtime-startup", "text": "Start a release-shaped OpenClaw runtime, measure cold readiness and bundled runtime dependency staging, and fail on degraded plugin startup." }
+          ]
+        },
+        {
+          "id": "fresh-install",
+          "state": "fail",
+          "sampleCount": 1,
+          "sampleValue": 1.18,
+          "sampleUnit": "s",
+          "phases": [
+            { "name": "auth-prepare", "elapsedMs": 156,  "state": "pass" },
+            { "name": "provision",    "elapsedMs": 451,  "state": "pass" },
+            { "name": "readiness",    "elapsedMs": 1180, "state": "pass" },
+            { "name": "plugins",      "elapsedMs": 1460, "state": "pass" },
+            { "name": "models",       "elapsedMs": 2600, "state": "pass" }
+          ],
+          "metrics": [
+            { "name": "peak.rss.mb",   "value": 1074, "unit": "MB", "threshold": 900,  "state": "fail" },
+            { "name": "cold.ready.ms", "value": 1805, "unit": "ms", "threshold": null, "state": "pass" },
+            { "name": "cpu.max.%",     "value": 87.2, "unit": "%",  "threshold": null, "state": "pass" }
+          ],
+          "findings": [
+            { "kind": "fail", "scenarioId": "fresh-install", "metric": "peak.rss.mb", "text": "peak RSS 1074.1 MB exceeded threshold 900 MB" },
+            { "kind": "warn", "scenarioId": "fresh-install",                            "text": "3 expected OpenClaw diagnostics span(s) were not observed; user-path verdict is based on functional and performance checks" }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "r-110204",
+      "runtime": "local-build:7e3a2f1",
+      "profile": "smoke",
+      "startedAt": "2026-05-18T11:02:00Z",
+      "durationMs": 238000,
+      "entryCount": 10,
+      "state": "fail",
+      "host": "m3-max-01",
+      "command": "kova run --target local-build:7e3a2f1 --profile smoke --execute",
+      "bundle": { "name": "kova-2026-05-18T110204Z-bundle.tar.gz", "bytes": 2831155, "href": "#" }
+    }
+  ],
+
+  "comparison": {
+    "vsVer": "2026.5.10",
+    "rows": [
+      { "scenarioId": "fresh-install",           "metric": "peak.rss.mb",                                     "before": 947,    "after": 1074,   "unit": "MB", "deltaPct":  13.4, "lowerIsBetter": true },
+      { "scenarioId": "release-runtime-startup", "metric": "resourceByRole.runtime-management.peakRssMb",      "before": 872,    "after": 1053,   "unit": "MB", "deltaPct":  20.8, "lowerIsBetter": true },
+      { "scenarioId": "gateway-performance",     "metric": "health.p95.ms",                                   "before": 285,    "after":  305,   "unit": "ms", "deltaPct":   7.0, "lowerIsBetter": true },
+      { "scenarioId": "agent-gateway-rpc-turn",  "metric": "preProviderShareMs",                              "before": 2400,   "after": 2963,   "unit": "ms", "deltaPct":  23.5, "lowerIsBetter": true },
+      { "scenarioId": "bundled-runtime-deps",    "metric": "install.elapsed.ms",                              "before": 14200,  "after": 13950,  "unit": "ms", "deltaPct":  -1.8, "lowerIsBetter": true }
+    ]
+  }
 }

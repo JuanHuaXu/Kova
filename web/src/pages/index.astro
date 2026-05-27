@@ -28,7 +28,7 @@ const coldDeltaText =
       <div class="v2-status-version">
         <strong>OpenClaw {release.ver}</strong>
         <span class="meta">
-          {release.date} · {release.sha} · {release.runs} runs · {release.host}
+          {release.date} · {release.sha}{release.runCount ? ` · ${release.runCount} runs` : ""}{release.host ? ` · ${release.host}` : ""}
         </span>
       </div>
       <div class="v2-status-counts">
