@@ -1,0 +1,364 @@
+---
+/**
+ * /matrix — every tracked scenario × every published release.
+ *
+ * Three views in one SSR-rendered page (Table / Heatmap / Cards). A small
+ * inline script toggles which `<section class="matrix-view">` is visible
+ * and persists the choice under `localStorage["kova-matrix-view"]` so
+ * return visits land on the same view. No client-side rendering — all
+ * cells are baked at build time.
+ *
+ * Honest data: where a release has no scenario sample, the cell shows
+ * "not measured" (gap). When a release ran the scenario but produced no
+ * sample, the cell shows "blocked".
+ */
+
+import Base from "../layouts/Base.astro";
+import { matrixData, pctDelta } from "../lib/matrix";
+import { fmtMetric, deltaClass } from "../lib/release-format";
+
+const data = await matrixData();
+const lastIdx = data.releases.length - 1;
+const latest = data.releases[lastIdx];
+
+// per-release column verdict for heatmap aggregate header row
+const verdicts = data.releases.map((r) => {
+  const { fail, block, total } = r.counts;
+  if (total === 0) return { text: "no data", cls: "block", counts: r.counts };
+  if (fail > 0) return { text: "fail", cls: "fail", counts: r.counts };
+  if (block > 0) return { text: "blocked", cls: "block", counts: r.counts };
+  return { text: "pass", cls: "pass", counts: r.counts };
+});
+
+// Aggregate table: walk newest → oldest with deltas vs the previous (older) release.
+const tableRows = [...data.releases].reverse().map((rel, ti) => {
+  const idxAsc = lastIdx - ti;            // index in oldest-first arrays
+  const prevAsc = idxAsc - 1;             // previous chronological release
+  const h = data.headlines[idxAsc];
+  const ph = prevAsc >= 0 ? data.headlines[prevAsc] : null;
+  return { rel, h, ph };
+});
+
+// Small multiples chart geometry
+function chartSvg(row: typeof data.rows[number]): string {
+  const W = 320, H = 70, padL = 4, padR = 4, padT = 4, padB = 4;
+  const innerW = W - padL - padR;
+  const innerH = H - padT - padB;
+  const vals = row.cells.map((c) => c.value);
+  const nonNull = vals.filter((v): v is number => v != null);
+  if (nonNull.length === 0) {
+    return `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none"><text x="${W / 2}" y="${H / 2}" text-anchor="middle" font-family="var(--font-mono)" font-size="9" fill="var(--text-3c)" letter-spacing="0.04em">no measurements yet</text></svg>`;
+  }
+  const all = [...nonNull, row.threshold];
+  const yMin = Math.min(...all);
+  const yMax = Math.max(...all);
+  const r = Math.max(yMax - yMin, 1e-9);
+  const xAt = (i: number) => padL + (innerW * (vals.length === 1 ? 0.5 : i / (vals.length - 1)));
+  const yAt = (v: number) => padT + (1 - (v - yMin) / r) * innerH;
+  const ty = yAt(row.threshold);
+
+  let path = "";
+  let started = false;
+  vals.forEach((v, i) => {
+    if (v == null) { started = false; return; }
+    const cx = xAt(i), cy = yAt(v);
+    path += (started ? "L" : "M") + cx.toFixed(1) + "," + cy.toFixed(1) + " ";
+    started = true;
+  });
+  const last = vals[vals.length - 1];
+  const lineCls = last != null && last > row.threshold ? "fail" : "pass";
+  const dots = vals.map((v, i) => {
+    if (v == null) return "";
+    const cls = v > row.threshold ? "fail" : "pass";
+    const r2 = i === vals.length - 1 ? 2.6 : 1.6;
+    return `<circle class="dot ${cls}" cx="${xAt(i).toFixed(1)}" cy="${yAt(v).toFixed(1)}" r="${r2}" />`;
+  }).join("");
+
+  return `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">
+    <g class="thr">
+      <line x1="${padL}" x2="${W - padR}" y1="${ty.toFixed(1)}" y2="${ty.toFixed(1)}" />
+      <text x="${W - padR - 1}" y="${(ty - 2).toFixed(1)}" text-anchor="end">≤ ${fmtMetric(row.threshold, row.unit)}</text>
+    </g>
+    <path class="line ${lineCls}" d="${path.trim()}" />
+    ${dots}
+  </svg>`;
+}
+
+function deltaSpan(curr: number | null | undefined, prev: number | null | undefined, lowerIsBetter = true): string {
+  const dp = pctDelta(curr ?? null, prev ?? null);
+  if (dp == null) return "";
+  if (Math.abs(dp) < 0.5) return `<span class="matrix-delta flat">— flat</span>`;
+  const d = deltaClass(dp, lowerIsBetter);
+  const cls = d.cls === "delta-up" ? "up" : d.cls === "delta-down" ? "down" : "flat";
+  const sign = dp > 0 ? "+" : "";
+  return `<span class="matrix-delta ${cls}">${d.arrow} ${sign}${dp.toFixed(1)}%</span>`;
+}
+---
+
+<Base title="kova — matrix" active="matrix">
+  <div class="container">
+    <div class="section-head" style="margin-top: var(--space-6)">
+      <h1 class="section-title">Matrix · all releases</h1>
+      <span class="section-meta">
+        {data.rows.length} scenario{data.rows.length === 1 ? "" : "s"} · {data.releases.length} release{data.releases.length === 1 ? "" : "s"} · measured by kova on m3-max-01
+      </span>
+    </div>
+
+    <div class="matrix-bar" role="toolbar" aria-label="Matrix view">
+      <div class="seg" role="tablist" id="matrix-view-switcher">
+        <button type="button" role="tab" data-view="table" aria-pressed="true">
+          <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true">
+            <path d="M1 2h10M1 6h10M1 10h10" stroke-linecap="round"></path>
+          </svg>
+          Table
+        </button>
+        <button type="button" role="tab" data-view="heatmap" aria-pressed="false">
+          <svg viewBox="0 0 12 12" fill="currentColor" aria-hidden="true">
+            <rect x="0" y="0" width="3" height="3"></rect><rect x="4.5" y="0" width="3" height="3"></rect><rect x="9" y="0" width="3" height="3" fill-opacity="0.5"></rect>
+            <rect x="0" y="4.5" width="3" height="3" fill-opacity="0.5"></rect><rect x="4.5" y="4.5" width="3" height="3"></rect><rect x="9" y="4.5" width="3" height="3"></rect>
+            <rect x="0" y="9" width="3" height="3"></rect><rect x="4.5" y="9" width="3" height="3" fill-opacity="0.5"></rect><rect x="9" y="9" width="3" height="3"></rect>
+          </svg>
+          Heatmap
+        </button>
+        <button type="button" role="tab" data-view="cards" aria-pressed="false">
+          <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true">
+            <rect x="0.5" y="0.5" width="4.5" height="4.5" rx="1"></rect>
+            <rect x="7" y="0.5" width="4.5" height="4.5" rx="1"></rect>
+            <rect x="0.5" y="7" width="4.5" height="4.5" rx="1"></rect>
+            <rect x="7" y="7" width="4.5" height="4.5" rx="1"></rect>
+          </svg>
+          Cards
+        </button>
+      </div>
+      <span class="matrix-meta">
+        showing <strong id="matrix-view-name">table</strong>
+      </span>
+    </div>
+
+    <div class="matrix-legend">
+      <span class="it"><span class="sw pass"></span>pass</span>
+      <span class="it"><span class="sw fail"></span>fail (over threshold)</span>
+      <span class="it"><span class="sw block"></span>blocked</span>
+      <span class="it"><span class="sw gap"></span>not measured</span>
+    </div>
+
+    {/* ───────── Table (default) ───────── */}
+    <section class="matrix-view" id="matrix-view-table" data-active="true">
+      <div class="matrix-table-wrap">
+        <table class="matrix-agg">
+          <thead>
+            <tr>
+              <th>release</th>
+              <th>counts (p/f/b)</th>
+              <th class="num">cold-ready</th>
+              <th class="num">peak.rss (worst)</th>
+              <th class="num">gw.p95</th>
+            </tr>
+          </thead>
+          <tbody>
+            {tableRows.map(({ rel, h, ph }) => {
+              const measured = rel.counts.total > 0;
+              return (
+                <tr>
+                  <td class="ver-cell">
+                    <a href={`/releases/${rel.ver}`}>{rel.ver}</a>
+                    <span class="date">{rel.date}</span>
+                    <span class="sha">{rel.sha}</span>
+                  </td>
+                  <td>
+                    {measured ? (
+                      <span class="matrix-cnt">
+                        <span class="p">{rel.counts.pass}</span>/
+                        <span class="f">{rel.counts.fail}</span>/
+                        <span class="b">{rel.counts.block}</span>
+                      </span>
+                    ) : (
+                      <span class="matrix-cnt"><span class="dash">— not measured</span></span>
+                    )}
+                  </td>
+                  <td class="num">
+                    {h.cold && h.cold.value != null ? (
+                      <Fragment>
+                        <span class:list={[h.cold.breach && "matrix-breach"]}>{fmtMetric(h.cold.value, "s")}</span>
+                        <Fragment set:html={deltaSpan(h.cold.value, ph?.cold?.value, true)} />
+                      </Fragment>
+                    ) : (
+                      <span style="color: var(--text-3c)">—</span>
+                    )}
+                  </td>
+                  <td class="num">
+                    {h.rss && h.rss.value != null ? (
+                      <Fragment>
+                        <span class:list={[h.rss.breach && "matrix-breach"]}>{fmtMetric(h.rss.value, "MB")}</span>
+                        <Fragment set:html={deltaSpan(h.rss.value, ph?.rss?.value, true)} />
+                      </Fragment>
+                    ) : (
+                      <span style="color: var(--text-3c)">—</span>
+                    )}
+                  </td>
+                  <td class="num">
+                    {h.gw && h.gw.value != null ? (
+                      <Fragment>
+                        <span class:list={[h.gw.breach && "matrix-breach"]}>{fmtMetric(h.gw.value, "ms")}</span>
+                        <Fragment set:html={deltaSpan(h.gw.value, ph?.gw?.value, true)} />
+                      </Fragment>
+                    ) : (
+                      <span style="color: var(--text-3c)">—</span>
+                    )}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+      <p class="matrix-note">
+        cold-ready = release-runtime-startup · peak.rss = worst RSS across scenarios · gw.p95 = gateway-performance · deltas vs immediate previous release
+      </p>
+    </section>
+
+    {/* ───────── Heatmap ───────── */}
+    <section class="matrix-view" id="matrix-view-heatmap" data-active="false">
+      <div class="matrix-heatmap-wrap">
+        <table class="matrix-heatmap">
+          <thead>
+            <tr>
+              <th class="scenario-col">scenario · threshold</th>
+              {data.releases.map((r, i) => (
+                <th class:list={[i === lastIdx && "matrix-latest"]}>{r.ver.replace(/^2026\./, "")}</th>
+              ))}
+            </tr>
+            <tr class="matrix-agg-row">
+              <th class="scenario-col">verdict · counts</th>
+              {verdicts.map((v, i) => (
+                <td class:list={[i === lastIdx && "matrix-latest"]}>
+                  <div class="matrix-agg-block">
+                    <span class="verdict-text">{v.text}</span>
+                    {v.counts.total > 0 && (
+                      <span class="matrix-agg-counts">
+                        <span class="p">{v.counts.pass}</span>/
+                        <span class="f">{v.counts.fail}</span>/
+                        <span class="b">{v.counts.block}</span>
+                      </span>
+                    )}
+                  </div>
+                </td>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {data.rows.map((row) => (
+              <tr>
+                <th>
+                  {row.id}<br/>
+                  <span style="color: var(--text-3c)">≤ {fmtMetric(row.threshold, row.unit)}</span>
+                </th>
+                {row.cells.map((cell, ci) => {
+                  const last = ci === lastIdx;
+                  const cellCls =
+                    cell.state == null ? "gap"
+                    : cell.blocked ? "block"
+                    : cell.state === "fail" ? "fail"
+                    : cell.state === "block" ? "block"
+                    : "pass";
+                  const label =
+                    cell.state == null ? "—"
+                    : cell.blocked ? "blocked"
+                    : null;
+                  return (
+                    <td class:list={[last && "matrix-latest"]}>
+                      <a class:list={["matrix-cell", cellCls]} href={`/releases/${data.releases[ci].ver}`}>
+                        {label != null ? (
+                          <span>{label}</span>
+                        ) : (
+                          <Fragment>
+                            <span class="v">{fmtMetric(cell.value, "")}</span>
+                            <span class="u">{row.unit}</span>
+                            {cell.deltaPct != null && Math.abs(cell.deltaPct) >= 0.5 && (
+                              <span class="d">{cell.deltaPct > 0 ? "+" : ""}{cell.deltaPct.toFixed(1)}%</span>
+                            )}
+                          </Fragment>
+                        )}
+                      </a>
+                    </td>
+                  );
+                })}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    {/* ───────── Cards ───────── */}
+    <section class="matrix-view" id="matrix-view-cards" data-active="false">
+      <div class="matrix-sm-grid">
+        {data.rows.map((row) => {
+          const latestCell = row.cells[lastIdx];
+          const latestVal = latestCell?.value ?? null;
+          const breach = latestCell?.state === "fail";
+          return (
+            <a class="matrix-sm-card" href={`/scenarios/${row.id}`}>
+              <div class="matrix-sm-head">
+                <span class="matrix-sm-id">{row.id}</span>
+                <span class="matrix-sm-meta">{data.releases.length} releases</span>
+              </div>
+              <div class:list={["matrix-sm-headline", breach && "breach"]}>
+                <span class="v">{latestVal != null ? fmtMetric(latestVal, "") : "—"}</span>
+                <span class="u">{row.unit}</span>
+                <span class="lbl">latest · {latest.ver.replace(/^2026\./, "")}</span>
+              </div>
+              <div class="matrix-sm-chart" set:html={chartSvg(row)}></div>
+              <div class="matrix-sm-foot">
+                <span>≤ {fmtMetric(row.threshold, row.unit)} threshold</span>
+                <span>
+                  {row.breaches > 0 ? (
+                    <span class="breaches">{row.breaches} breach{row.breaches === 1 ? "" : "es"}</span>
+                  ) : (
+                    <span class="clean">no breaches</span>
+                  )}
+                  {row.blocks > 0 && <Fragment> · <span class="blocked">{row.blocks} blocked</span></Fragment>}
+                </span>
+              </div>
+            </a>
+          );
+        })}
+      </div>
+    </section>
+
+  </div>
+
+  <script is:inline>
+    // View switcher: SSR-rendered sections, JS only toggles `data-active`.
+    // Persisted under `kova-matrix-view` so return visits keep the view.
+    (function () {
+      const STORAGE_KEY = "kova-matrix-view";
+      const VIEWS = ["table", "heatmap", "cards"];
+      const DEFAULT_VIEW = "table";
+      const switcher = document.getElementById("matrix-view-switcher");
+      const viewName = document.getElementById("matrix-view-name");
+      if (!switcher) return;
+
+      function setView(name) {
+        if (VIEWS.indexOf(name) === -1) name = DEFAULT_VIEW;
+        VIEWS.forEach(function (v) {
+          const el = document.getElementById("matrix-view-" + v);
+          if (el) el.dataset.active = (v === name).toString();
+        });
+        switcher.querySelectorAll("button").forEach(function (b) {
+          b.setAttribute("aria-pressed", (b.dataset.view === name).toString());
+        });
+        if (viewName) viewName.textContent = name;
+        try { localStorage.setItem(STORAGE_KEY, name); } catch (_) { /* sandboxed */ }
+      }
+      switcher.addEventListener("click", function (e) {
+        const btn = e.target.closest("button[data-view]");
+        if (!btn) return;
+        setView(btn.dataset.view);
+      });
+      let saved = null;
+      try { saved = localStorage.getItem(STORAGE_KEY); } catch (_) { /* sandboxed */ }
+      setView(saved || DEFAULT_VIEW);
+    })();
+  </script>
+</Base>

@@ -4,8 +4,8 @@ import { Font } from "astro:assets";
 
 export interface Props {
   title: string;
-  /** Active nav item: "home" | "releases" | "scenarios" | "methodology". */
-  active?: "home" | "releases" | "scenarios" | "methodology";
+  /** Active nav item: "home" | "releases" | "scenarios" | "matrix" | "methodology". */
+  active?: "home" | "releases" | "scenarios" | "matrix" | "methodology";
 }
 
 const { title, active = "home" } = Astro.props;
@@ -66,6 +66,9 @@ const { title, active = "home" } = Astro.props;
             </a>
             <a href="/scenarios" aria-current={active === "scenarios" ? "page" : undefined}>
               Scenarios
+            </a>
+            <a href="/matrix" aria-current={active === "matrix" ? "page" : undefined}>
+              Matrix
             </a>
             <a href="#" aria-current={active === "methodology" ? "page" : undefined}>
               Methodology
