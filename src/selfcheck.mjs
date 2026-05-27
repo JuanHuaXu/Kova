@@ -10218,6 +10218,32 @@ function assertChannelObservationLogicalNativeBoundary() {
   }).find((invariant) => invariant.id.endsWith(":unmatched-native-visible-sends"));
   assertEqual(unmatchedInvariant?.status, "failed", "unmatched native visible sends fail generic channel evaluation");
 
+  const withNativeCompanionText = {
+    ...observations,
+    unmatchedNativeMessages: [{
+      channelId: "selfcheck",
+      method: "sendMessage",
+      path: "/messages",
+      deliveryId: "native-companion",
+      status: "sent",
+      visible: true,
+      timestampMs: 2,
+      raw: {
+        body: {
+          text: "KOVA_AGENT_MEDIA_OK"
+        }
+      }
+    }]
+  };
+  assertValidObservationSet(withNativeCompanionText, { caseId: workflowCase.id });
+  const companionTextInvariant = evaluateWorkflowCase({
+    workflowCase,
+    observations: withNativeCompanionText,
+    providerRequestsDelta: 1,
+    providerRequestsAfterEcho: 0
+  }).find((invariant) => invariant.id.endsWith(":unmatched-native-visible-sends"));
+  assertEqual(companionTextInvariant?.status, "passed", "media workflows allow one native companion text send matching the expected response text");
+
   const withUnexpectedCompanion = {
     ...observations,
     deliveries: [

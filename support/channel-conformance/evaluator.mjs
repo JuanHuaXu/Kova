@@ -192,7 +192,10 @@ function unmatchedNativeVisibleSends(workflowCase, observations, finalVisible, v
   const deliveryUnmatched = unexpectedVisibleDeliveries(workflowCase, finalVisible, visibleDeliveries)
     .flatMap((delivery) => Array.isArray(delivery.nativeMessages) ? delivery.nativeMessages : [])
     .filter((message) => message.visible === true);
-  return [...explicitUnmatched, ...deliveryUnmatched];
+  return [
+    ...filterAllowedCompanionNativeMessages(workflowCase, explicitUnmatched),
+    ...deliveryUnmatched
+  ];
 }
 
 function unmatchedNativeVisibleReason(caseId, unmatched) {
@@ -222,6 +225,27 @@ function nativeMessageText(message) {
     rawResult.text,
     rawResult.caption
   ].find((value) => typeof value === "string" && value.length > 0) ?? "";
+}
+
+function filterAllowedCompanionNativeMessages(workflowCase, messages) {
+  if (!allowsCompanionTextDelivery(workflowCase)) {
+    return messages;
+  }
+  let companionTextAllowed = true;
+  return messages.filter((message) => {
+    if (companionTextAllowed && isCompanionNativeVisibleMessage(workflowCase, message)) {
+      companionTextAllowed = false;
+      return false;
+    }
+    return true;
+  });
+}
+
+function isCompanionNativeVisibleMessage(workflowCase, message) {
+  const expectedText = objectOrEmpty(workflowCase.expects).text;
+  return typeof expectedText === "string" &&
+    expectedText.length > 0 &&
+    nativeMessageText(message).includes(expectedText);
 }
 
 function isVisibleFailureText(text) {
