@@ -1380,3 +1380,240 @@ button {
 .recent-row .sha.st-pass  { color: var(--pass); }
 .recent-row .sha.st-fail  { color: var(--fail); }
 .recent-row .sha.st-block { color: var(--warn); }
+
+/* ─────────────────────────────────────────────────────────────
+ * Matrix page (/matrix)
+ *
+ * Three views (Table / Heatmap / Cards) share one SSR-rendered DOM.
+ * A small inline script toggles `data-active` on the right section.
+ * ───────────────────────────────────────────────────────────── */
+
+.matrix-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin: var(--space-5) 0 var(--space-3);
+  flex-wrap: wrap;
+}
+.seg {
+  display: inline-flex;
+  border: 1px solid var(--border-2);
+  border-radius: 6px;
+  overflow: hidden;
+  background: var(--surface);
+}
+.seg button {
+  background: transparent;
+  border: none;
+  color: var(--text-2c);
+  font-family: var(--font-mono);
+  font-size: var(--text-1);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 8px 14px;
+  cursor: pointer;
+  border-right: 1px solid var(--border-1);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: color 120ms ease, background 120ms ease;
+}
+.seg button:last-child { border-right: none; }
+.seg button:hover { color: var(--text-1c); }
+.seg button[aria-pressed="true"] {
+  color: var(--text-1c);
+  background: var(--surface-2);
+  box-shadow: inset 0 -2px 0 var(--text-1c);
+}
+.seg svg { width: 12px; height: 12px; flex-shrink: 0; }
+
+.matrix-meta {
+  margin-left: auto;
+  font-family: var(--font-mono);
+  font-size: var(--text-1);
+  color: var(--text-3c);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.matrix-meta strong { color: var(--text-2c); font-weight: 500; }
+
+.matrix-view { display: none; }
+.matrix-view[data-active="true"] { display: block; }
+
+/* shared legend */
+.matrix-legend {
+  display: flex; gap: var(--space-3); flex-wrap: wrap;
+  font-family: var(--font-mono);
+  font-size: var(--text-1);
+  color: var(--text-3c);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: var(--space-3);
+}
+.matrix-legend .it { display: inline-flex; align-items: center; gap: 6px; }
+.matrix-legend .sw { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
+.matrix-legend .sw.pass  { background: var(--pass); }
+.matrix-legend .sw.fail  { background: var(--fail); }
+.matrix-legend .sw.block { background: var(--warn); }
+.matrix-legend .sw.gap   { background: var(--surface-2); border: 1px dashed var(--border-2); }
+
+/* ─── Heatmap ───────────────────────────────────────────────── */
+
+.matrix-heatmap-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--border-1);
+  border-radius: 6px;
+  background: var(--surface);
+}
+table.matrix-heatmap { width: 100%; border-collapse: separate; border-spacing: 0;
+  font-family: var(--font-mono); font-size: var(--text-1); }
+table.matrix-heatmap thead th {
+  position: sticky; top: 0; background: var(--surface);
+  color: var(--text-3c); font-weight: 500;
+  text-transform: uppercase; letter-spacing: 0.04em;
+  padding: var(--space-3) 6px;
+  border-bottom: 1px solid var(--border-1);
+  text-align: center; white-space: nowrap;
+}
+table.matrix-heatmap thead th.scenario-col {
+  text-align: left; padding-left: var(--space-4); min-width: 220px;
+  position: sticky; left: 0; z-index: 2;
+}
+table.matrix-heatmap tbody th {
+  text-align: left; padding: 0 var(--space-4);
+  color: var(--text-1c); font-weight: 400;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border-1);
+  position: sticky; left: 0; z-index: 1; white-space: nowrap;
+}
+table.matrix-heatmap tbody td {
+  padding: 0; height: 36px;
+  border-bottom: 1px solid var(--border-1);
+  text-align: center; vertical-align: middle;
+}
+.matrix-cell { display: block; width: 100%; height: 100%;
+  padding: 0 6px; color: var(--text-1c); text-align: center;
+  transition: background 120ms ease;
+  text-decoration: none;
+}
+.matrix-cell.pass  { background: color-mix(in srgb, var(--pass) 14%, transparent); }
+.matrix-cell.fail  { background: color-mix(in srgb, var(--fail) 22%, transparent); }
+.matrix-cell.block { background: color-mix(in srgb, var(--warn) 18%, transparent); }
+.matrix-cell.gap   { background: repeating-linear-gradient(45deg, transparent 0 4px, var(--surface-2) 4px 8px); color: var(--text-3c); }
+.matrix-cell:hover { filter: brightness(1.15); }
+.matrix-cell .v { font-variant-numeric: tabular-nums; }
+.matrix-cell .u { color: var(--text-3c); font-size: 9px; margin-left: 2px; }
+.matrix-cell .d { display: block; font-size: 9px; color: var(--text-3c); letter-spacing: 0.02em; }
+.matrix-cell.fail .d, .matrix-cell.pass .d { opacity: 0.8; }
+table.matrix-heatmap td.matrix-latest, table.matrix-heatmap th.matrix-latest {
+  box-shadow: inset 1px 0 0 var(--text-2c);
+}
+.matrix-agg-row th, .matrix-agg-row td {
+  background: var(--surface); border-bottom: 1px solid var(--border-1);
+  padding: var(--space-2) 6px;
+}
+.matrix-agg-block { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.matrix-agg-counts { display: inline-flex; gap: 4px; font-size: 10px; font-variant-numeric: tabular-nums; }
+.matrix-agg-counts .p { color: var(--pass); }
+.matrix-agg-counts .f { color: var(--fail); }
+.matrix-agg-counts .b { color: var(--warn); }
+.matrix-agg-row .verdict-text { font-size: 9px; color: var(--text-3c); text-transform: uppercase; letter-spacing: 0.04em; }
+
+/* ─── Aggregate table ───────────────────────────────────────── */
+
+.matrix-table-wrap {
+  border: 1px solid var(--border-1);
+  border-radius: 6px;
+  background: var(--surface);
+  overflow-x: auto;
+}
+table.matrix-agg { width: 100%; border-collapse: separate; border-spacing: 0;
+  font-family: var(--font-mono); font-size: var(--text-2); }
+table.matrix-agg thead th {
+  background: var(--surface); color: var(--text-3c);
+  font-weight: 500; text-transform: uppercase; letter-spacing: 0.04em;
+  font-size: var(--text-1);
+  padding: var(--space-3) var(--space-3);
+  border-bottom: 1px solid var(--border-1);
+  text-align: left; white-space: nowrap;
+}
+table.matrix-agg thead th.num { text-align: right; }
+table.matrix-agg tbody td {
+  padding: var(--space-3);
+  border-bottom: 1px solid var(--border-1);
+  color: var(--text-1c); vertical-align: middle;
+}
+table.matrix-agg tbody tr:hover td { background: var(--surface-2); }
+table.matrix-agg tbody tr:last-child td { border-bottom: none; }
+table.matrix-agg td.num { text-align: right; font-variant-numeric: tabular-nums; }
+table.matrix-agg .ver-cell a { color: var(--text-1c); text-decoration: none; font-weight: 500; }
+table.matrix-agg .ver-cell a:hover { color: var(--text-2c); text-decoration: underline; }
+table.matrix-agg .ver-cell .date,
+table.matrix-agg .ver-cell .sha { color: var(--text-3c); font-size: var(--text-1); margin-left: 6px; }
+.matrix-cnt { display: inline-flex; gap: 4px; font-variant-numeric: tabular-nums; }
+.matrix-cnt .p { color: var(--pass); }
+.matrix-cnt .f { color: var(--fail); }
+.matrix-cnt .b { color: var(--warn); }
+.matrix-cnt .dash { color: var(--text-3c); }
+.matrix-delta { font-size: var(--text-1); margin-left: 8px; }
+.matrix-delta.up   { color: var(--fail); }
+.matrix-delta.down { color: var(--pass); }
+.matrix-delta.flat { color: var(--text-3c); }
+.matrix-breach { color: var(--fail); }
+
+/* ─── Small multiples (cards) ───────────────────────────────── */
+
+.matrix-sm-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: var(--space-4);
+}
+.matrix-sm-card {
+  border: 1px solid var(--border-1);
+  border-radius: 6px;
+  background: var(--surface);
+  padding: var(--space-4);
+  display: flex; flex-direction: column; gap: var(--space-3);
+  text-decoration: none;
+  color: var(--text-1c);
+}
+.matrix-sm-card:hover { background: var(--surface-2); }
+.matrix-sm-head {
+  display: flex; align-items: baseline; justify-content: space-between; gap: var(--space-2);
+  border-bottom: 1px dashed var(--border-1);
+  padding-bottom: var(--space-2);
+}
+.matrix-sm-id { font-family: var(--font-mono); color: var(--text-1c); font-size: var(--text-2); }
+.matrix-sm-meta { font-family: var(--font-mono); color: var(--text-3c); font-size: var(--text-1); text-transform: uppercase; letter-spacing: 0.04em; }
+.matrix-sm-headline { display: flex; align-items: baseline; gap: var(--space-2); font-family: var(--font-mono); }
+.matrix-sm-headline .v { font-size: var(--text-5); color: var(--text-1c); font-variant-numeric: tabular-nums; }
+.matrix-sm-headline .u { font-size: var(--text-2); color: var(--text-3c); }
+.matrix-sm-headline .lbl { margin-left: auto; font-size: var(--text-1); color: var(--text-3c); text-transform: uppercase; letter-spacing: 0.04em; }
+.matrix-sm-headline.breach .v { color: var(--fail); }
+.matrix-sm-chart { position: relative; height: 70px; }
+.matrix-sm-chart svg { width: 100%; height: 100%; display: block; }
+.matrix-sm-chart .thr line { stroke: var(--text-3c); stroke-width: 1; stroke-dasharray: 3 3; opacity: 0.7; }
+.matrix-sm-chart .thr text { fill: var(--text-3c); font-family: var(--font-mono); font-size: 8px; text-transform: uppercase; letter-spacing: 0.04em; }
+.matrix-sm-chart .line { fill: none; stroke-width: 1.4; stroke-linejoin: round; stroke-linecap: round; }
+.matrix-sm-chart .line.pass { stroke: var(--pass); }
+.matrix-sm-chart .line.fail { stroke: var(--fail); }
+.matrix-sm-chart .dot { stroke: var(--bg); stroke-width: 1.2; }
+.matrix-sm-chart .dot.pass { fill: var(--pass); }
+.matrix-sm-chart .dot.fail { fill: var(--fail); }
+.matrix-sm-foot {
+  display: flex; gap: var(--space-3); justify-content: space-between;
+  font-family: var(--font-mono); font-size: var(--text-1); color: var(--text-3c);
+  text-transform: uppercase; letter-spacing: 0.04em;
+}
+.matrix-sm-foot .breaches { color: var(--fail); }
+.matrix-sm-foot .clean    { color: var(--pass); }
+.matrix-sm-foot .blocked  { color: var(--warn); }
+
+.matrix-note {
+  margin-top: var(--space-3);
+  font-family: var(--font-mono);
+  font-size: var(--text-1);
+  color: var(--text-3c);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
