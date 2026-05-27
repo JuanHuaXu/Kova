@@ -1,0 +1,47 @@
+---
+import Base from "../../layouts/Base.astro";
+import { scenarioHistories } from "../../lib/scenarios";
+import { fmtMetric, deltaClass } from "../../lib/release-format";
+
+const histories = await scenarioHistories();
+const list = [...histories.values()].sort((a, b) => a.id.localeCompare(b.id));
+---
+
+<Base title="kova — scenarios" active="scenarios">
+  <div class="container">
+    <div class="section-head" style="margin-top: var(--space-7)">
+      <h1 class="section-title">Scenarios</h1>
+      <span class="section-meta">{list.length} tracked</span>
+    </div>
+
+    <div class="recent">
+      {list.map((h) => {
+        const last = h.points[h.points.length - 1];
+        const prev = h.points[h.points.length - 2];
+        let deltaEl: unknown = null;
+        if (last && prev && last.value != null && prev.value != null) {
+          const deltaPct = ((last.value - prev.value) / prev.value) * 100;
+          const d = deltaClass(deltaPct, h.lowerIsBetter);
+          deltaEl = (
+            <span class:list={["chip", d.cls.replace("delta-", "")]}>
+              {d.arrow} {deltaPct > 0 ? "+" : ""}{deltaPct.toFixed(1)}%
+            </span>
+          );
+        }
+        return (
+          <a class="recent-row" href={`/scenarios/${h.id}`}>
+            <span class="rel">{h.id}</span>
+            <span class="info">
+              {h.points.length} datapoint{h.points.length === 1 ? "" : "s"} ·{" "}
+              <span class:list={["sha", last ? `st-${last.state}` : ""]}>
+                {last?.value != null ? fmtMetric(last.value, h.unit) : "—"}
+              </span>
+            </span>
+            <span class="delta">{deltaEl}</span>
+            <span class="arrow">→</span>
+          </a>
+        );
+      })}
+    </div>
+  </div>
+</Base>
