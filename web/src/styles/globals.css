@@ -1309,3 +1309,74 @@ button {
   background: var(--surface-2);
   border-color: var(--border-3);
 }
+
+/* ─── Trend chart (scenarios/[id]) ───────────────────────── */
+
+.trend {
+  margin: var(--space-4) 0 var(--space-2);
+}
+
+.trend svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 260px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+}
+
+.trend .trend-grid line {
+  stroke: var(--border-1);
+  stroke-width: 1;
+}
+
+.trend .trend-axis-y text,
+.trend .trend-axis-x text,
+.trend .trend-threshold text {
+  fill: var(--text-3c);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.trend .trend-threshold line {
+  stroke: var(--text-3c);
+  stroke-width: 1;
+  stroke-dasharray: 4 3;
+  opacity: 0.6;
+}
+
+.trend .trend-line {
+  fill: none;
+  stroke-width: 1.5;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+
+.trend .trend-line.pass  { stroke: var(--pass); }
+.trend .trend-line.fail  { stroke: var(--fail); }
+.trend .trend-line.block { stroke: var(--warn); }
+
+.trend .trend-points circle { stroke: var(--bg); stroke-width: 1.5; }
+.trend .trend-points .pt-pass  { fill: var(--pass); }
+.trend .trend-points .pt-fail  { fill: var(--fail); }
+.trend .trend-points .pt-block { fill: var(--warn); }
+
+.trend-cap {
+  margin-top: var(--space-2);
+  font-family: var(--font-mono);
+  font-size: var(--text-1);
+  color: var(--text-3c);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+/* state-colored chip variants for the recent strip */
+.chip.up   { background: rgba(245, 101, 101, 0.12); color: var(--fail); border-color: rgba(245,101,101,0.35); }
+.chip.down { background: rgba( 72, 187, 120, 0.12); color: var(--pass); border-color: rgba( 72,187,120,0.35); }
+.chip.flat { background: var(--surface-2);          color: var(--text-3c); border-color: var(--border-2); }
+
+.recent-row .sha.st-pass  { color: var(--pass); }
+.recent-row .sha.st-fail  { color: var(--fail); }
+.recent-row .sha.st-block { color: var(--warn); }

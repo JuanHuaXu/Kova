@@ -1,0 +1,127 @@
+---
+/**
+ * TrendChart: server-rendered SVG line chart for a scenario's history.
+ *
+ * Renders chronologically (oldest left → newest right). Uses a dashed
+ * threshold line so users can spot breaches without legend chatter. State of
+ * the rightmost (latest) point colors the line.
+ *
+ * No JS, no client hydration. When we accumulate real history we can swap
+ * the body for a uPlot island while keeping this API stable.
+ */
+import type { TrendPoint } from "../lib/scenarios";
+
+interface Props {
+  points: TrendPoint[];
+  unit: string;
+  threshold?: number;
+  lowerIsBetter?: boolean;
+}
+
+const { points, unit, threshold, lowerIsBetter = true } = Astro.props;
+
+const VB_W = 720;
+const VB_H = 220;
+const PAD_L = 56;
+const PAD_R = 18;
+const PAD_T = 18;
+const PAD_B = 36;
+
+const innerW = VB_W - PAD_L - PAD_R;
+const innerH = VB_H - PAD_T - PAD_B;
+
+// Use only the non-null values for the y-domain, but plot null points as gaps.
+const vals = points.map((p) => p.value).filter((v): v is number => v != null);
+const includeThreshold = typeof threshold === "number";
+const domainNums = includeThreshold ? [...vals, threshold!] : vals;
+let yMin = Math.min(...domainNums);
+let yMax = Math.max(...domainNums);
+if (yMin === yMax) {
+  yMin -= 1;
+  yMax += 1;
+}
+const yPad = (yMax - yMin) * 0.08;
+yMin -= yPad;
+yMax += yPad;
+const yRange = yMax - yMin;
+
+const x = (i: number) =>
+  PAD_L + (points.length <= 1 ? innerW / 2 : (i / (points.length - 1)) * innerW);
+const y = (v: number) => PAD_T + (1 - (v - yMin) / yRange) * innerH;
+
+// Build path with gaps where value is null.
+let pathData = "";
+let started = false;
+points.forEach((p, i) => {
+  if (p.value == null) {
+    started = false;
+    return;
+  }
+  const cx = x(i);
+  const cy = y(p.value);
+  pathData += `${started ? "L" : "M"}${cx.toFixed(1)},${cy.toFixed(1)} `;
+  started = true;
+});
+
+const latest = points[points.length - 1];
+const latestState = latest?.state ?? "pass";
+const lineCls = latestState === "fail" ? "trend-line fail" : latestState === "block" ? "trend-line block" : "trend-line pass";
+
+// Y-axis ticks: 4 evenly spaced.
+const ticks = Array.from({ length: 4 }, (_, i) => yMin + (yRange * (i + 1)) / 5).reverse();
+
+// Compress x labels to first/middle/last to avoid crowding.
+const labelIdx = points.length <= 4
+  ? points.map((_, i) => i)
+  : [0, Math.floor((points.length - 1) / 2), points.length - 1];
+
+function fmtTick(v: number) {
+  if (Math.abs(v) >= 1000) return v.toLocaleString("en-US", { maximumFractionDigits: 0 });
+  if (Math.abs(v) >= 10) return v.toFixed(1);
+  return v.toFixed(2);
+}
+
+const directionHint = lowerIsBetter ? "lower is better" : "higher is better";
+---
+
+<figure class="trend">
+  <svg viewBox={`0 0 ${VB_W} ${VB_H}`} role="img" aria-label={`Trend, ${unit}, ${directionHint}`}>
+    <g class="trend-grid">
+      {ticks.map((t) => (
+        <line x1={PAD_L} x2={VB_W - PAD_R} y1={y(t)} y2={y(t)} />
+      ))}
+    </g>
+
+    <g class="trend-axis-y">
+      {ticks.map((t) => (
+        <text x={PAD_L - 8} y={y(t)} text-anchor="end" dominant-baseline="middle">{fmtTick(t)}</text>
+      ))}
+    </g>
+
+    {includeThreshold && (
+      <g class="trend-threshold">
+        <line x1={PAD_L} x2={VB_W - PAD_R} y1={y(threshold!)} y2={y(threshold!)} />
+        <text x={VB_W - PAD_R} y={y(threshold!) - 4} text-anchor="end">threshold {fmtTick(threshold!)} {unit}</text>
+      </g>
+    )}
+
+    {pathData && <path class={lineCls} d={pathData.trim()} />}
+
+    <g class="trend-points">
+      {points.map((p, i) => p.value == null ? null : (
+        <circle cx={x(i)} cy={y(p.value)} r="3" class={`pt-${p.state}`}>
+          <title>{p.ver}: {fmtTick(p.value)} {unit}</title>
+        </circle>
+      ))}
+    </g>
+
+    <g class="trend-axis-x">
+      {labelIdx.map((i) => (
+        <text x={x(i)} y={VB_H - 14} text-anchor={i === 0 ? "start" : i === points.length - 1 ? "end" : "middle"}>
+          {points[i].ver}
+        </text>
+      ))}
+    </g>
+  </svg>
+  <figcaption class="trend-cap">{directionHint} · {points.length} datapoint{points.length === 1 ? "" : "s"}</figcaption>
+</figure>
