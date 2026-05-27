@@ -1,0 +1,18 @@
+---
+import type { Prove } from "../content.config";
+
+interface Props {
+  items: Prove[];
+}
+
+const { items } = Astro.props;
+---
+
+<ul class="proves">
+  {items.map((p) => (
+    <li>
+      <span class:list={["glyph", p.state]}>{p.state === "pass" ? "✓" : "✗"}</span>
+      <span>{p.text}</span>
+    </li>
+  ))}
+</ul>

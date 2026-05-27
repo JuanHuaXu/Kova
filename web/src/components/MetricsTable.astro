@@ -1,0 +1,28 @@
+---
+import type { MetricRow } from "../content.config";
+import { fmtMetric } from "../lib/release-format";
+
+interface Props {
+  metrics: MetricRow[];
+}
+
+const { metrics } = Astro.props;
+---
+
+<table class="tbl">
+  <thead>
+    <tr><th>metric</th><th class="num">value</th><th class="num">threshold</th><th>status</th></tr>
+  </thead>
+  <tbody>
+    {metrics.map((m) => (
+      <tr class={m.child ? "child" : undefined}>
+        <td>{m.name}</td>
+        <td class="num">{fmtMetric(m.value, m.unit)}</td>
+        <td class:list={["num", m.threshold == null && "dim"]}>
+          {m.threshold == null ? "—" : fmtMetric(m.threshold, m.unit)}
+        </td>
+        <td class={`st-${m.state}`}>{m.state}</td>
+      </tr>
+    ))}
+  </tbody>
+</table>

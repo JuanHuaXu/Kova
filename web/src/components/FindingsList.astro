@@ -1,0 +1,24 @@
+---
+import type { Finding } from "../content.config";
+
+interface Props {
+  items: Finding[];
+}
+
+const { items } = Astro.props;
+
+const GLYPH: Record<Finding["kind"], string> = {
+  fail: "✗",
+  warn: "⚠",
+  info: "ℹ",
+};
+---
+
+<ul class="findings">
+  {items.map((f) => (
+    <li>
+      <span class:list={["glyph", f.kind !== "fail" && f.kind]}>{GLYPH[f.kind]}</span>
+      <span>{f.text}</span>
+    </li>
+  ))}
+</ul>
