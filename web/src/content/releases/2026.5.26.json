@@ -1,0 +1,1252 @@
+{
+  "ver": "2026.5.26",
+  "releaseDate": "2026-05-28",
+  "date": "May 28, 2026",
+  "sha": "2026.5.26",
+  "passed": false,
+  "runCount": 10,
+  "host": "linux/x64",
+  "runtimeTargets": [
+    "npm:2026.5.26"
+  ],
+  "headline": [
+    {
+      "label": "startup",
+      "value": 0.56,
+      "unit": "s",
+      "lowerIsBetter": true,
+      "scenarioId": "release-runtime-startup",
+      "metric": "startup.s"
+    },
+    {
+      "label": "agent turn",
+      "value": 2.08,
+      "unit": "s",
+      "lowerIsBetter": true,
+      "scenarioId": "gateway-session-send-turn",
+      "metric": "agent.turn.s"
+    },
+    {
+      "label": "pre-provider",
+      "value": 1.72,
+      "unit": "s",
+      "lowerIsBetter": true,
+      "scenarioId": "gateway-session-send-turn",
+      "metric": "agent.pre_provider.s"
+    },
+    {
+      "label": "gw.p95",
+      "value": 4,
+      "unit": "ms",
+      "lowerIsBetter": true,
+      "scenarioId": "gateway-performance",
+      "metric": "health.p95.ms"
+    }
+  ],
+  "scenarios": [
+    {
+      "id": "agent-gateway-rpc-turn",
+      "metric": "full turn",
+      "value": 4020,
+      "unit": "ms",
+      "threshold": 45000,
+      "state": "fail",
+      "spark": [
+        4020
+      ],
+      "lowerIsBetter": true,
+      "worstMetric": {
+        "name": "preProvider share",
+        "value": 94.3,
+        "unit": "%"
+      }
+    },
+    {
+      "id": "openai-compatible-turn",
+      "metric": "full turn",
+      "value": 205,
+      "unit": "ms",
+      "threshold": 45000,
+      "state": "fail",
+      "spark": [
+        205
+      ],
+      "lowerIsBetter": true
+    },
+    {
+      "id": "plugin-lifecycle",
+      "metric": "full turn",
+      "value": 0,
+      "unit": "ms",
+      "threshold": 0,
+      "state": "fail",
+      "spark": [
+        0
+      ],
+      "lowerIsBetter": true
+    },
+    {
+      "id": "release-runtime-startup",
+      "metric": "startup",
+      "value": 564,
+      "unit": "ms",
+      "threshold": 30000,
+      "state": "pass",
+      "spark": [
+        564
+      ],
+      "lowerIsBetter": true
+    },
+    {
+      "id": "fresh-install",
+      "metric": "startup",
+      "value": 532,
+      "unit": "ms",
+      "threshold": 30000,
+      "state": "pass",
+      "spark": [
+        532
+      ],
+      "lowerIsBetter": true
+    },
+    {
+      "id": "gateway-performance",
+      "metric": "gw.p95",
+      "value": 4,
+      "unit": "ms",
+      "threshold": 1000,
+      "state": "pass",
+      "spark": [
+        4
+      ],
+      "lowerIsBetter": true
+    },
+    {
+      "id": "gateway-session-send-turn",
+      "metric": "full turn",
+      "value": 2078,
+      "unit": "ms",
+      "threshold": 45000,
+      "state": "pass",
+      "spark": [
+        2078
+      ],
+      "lowerIsBetter": true
+    },
+    {
+      "id": "agent-cold-warm-message",
+      "metric": "full turn",
+      "value": 5614,
+      "unit": "ms",
+      "threshold": 45000,
+      "state": "pass",
+      "spark": [
+        5614
+      ],
+      "lowerIsBetter": true
+    },
+    {
+      "id": "bundled-runtime-deps",
+      "metric": "full turn",
+      "value": 0,
+      "unit": "ms",
+      "threshold": 0,
+      "state": "pass",
+      "spark": [
+        0
+      ],
+      "lowerIsBetter": true
+    },
+    {
+      "id": "bundled-plugin-startup",
+      "metric": "full turn",
+      "value": 0,
+      "unit": "ms",
+      "threshold": 0,
+      "state": "pass",
+      "spark": [
+        0
+      ],
+      "lowerIsBetter": true
+    }
+  ],
+  "runs": [
+    {
+      "id": "kova-260528-030802-0ca629",
+      "runtime": "npm:2026.5.26",
+      "profile": "web-release",
+      "startedAt": "2026-05-28T03:08:02.214Z",
+      "durationMs": 172852,
+      "entryCount": 10,
+      "state": "fail",
+      "host": "linux/x64",
+      "command": "kova matrix run --profile web-release --target npm:2026.5.26 --execute",
+      "expandedByDefault": false,
+      "scenarios": [
+        {
+          "id": "agent-gateway-rpc-turn",
+          "state": "fail",
+          "sampleCount": 1,
+          "sampleValue": 4020,
+          "sampleUnit": "ms",
+          "phases": [
+            {
+              "name": "auth-prepare",
+              "elapsedMs": 291,
+              "state": "pass"
+            },
+            {
+              "name": "provision",
+              "elapsedMs": 447,
+              "state": "pass"
+            },
+            {
+              "name": "auth-setup",
+              "elapsedMs": 65,
+              "state": "pass"
+            },
+            {
+              "name": "gateway-start",
+              "elapsedMs": 127,
+              "state": "pass"
+            },
+            {
+              "name": "gateway-agent-turn",
+              "elapsedMs": 4020,
+              "state": "pass"
+            },
+            {
+              "name": "post-agent-health",
+              "elapsedMs": 2145,
+              "state": "pass"
+            },
+            {
+              "name": "auth-cleanup",
+              "elapsedMs": 68,
+              "state": "pass"
+            }
+          ],
+          "metrics": [
+            {
+              "name": "full turn",
+              "value": 4020,
+              "unit": "ms",
+              "threshold": 45000,
+              "state": "pass"
+            },
+            {
+              "name": "cold turn",
+              "value": 4020,
+              "unit": "ms",
+              "threshold": null,
+              "state": "pass"
+            },
+            {
+              "name": "pre-provider",
+              "value": 3790,
+              "unit": "ms",
+              "threshold": 10000,
+              "state": "pass"
+            },
+            {
+              "name": "provider",
+              "value": 3,
+              "unit": "ms",
+              "threshold": 3000,
+              "state": "pass"
+            },
+            {
+              "name": "post-provider",
+              "value": 227,
+              "unit": "ms",
+              "threshold": null,
+              "state": "pass"
+            },
+            {
+              "name": "preProvider share",
+              "value": 94.3,
+              "unit": "%",
+              "threshold": 80,
+              "state": "fail"
+            },
+            {
+              "name": "startup",
+              "value": 447,
+              "unit": "ms",
+              "threshold": null,
+              "state": "pass"
+            },
+            {
+              "name": "agent-cli.rss.mb",
+              "value": 471.2,
+              "unit": "MB",
+              "threshold": null,
+              "state": "pass"
+            },
+            {
+              "name": "cpu.max.%",
+              "value": 160.8,
+              "unit": "%",
+              "threshold": null,
+              "state": "pass"
+            },
+            {
+              "name": "event-loop.max.ms",
+              "value": 0,
+              "unit": "ms",
+              "threshold": null,
+              "state": "pass"
+            }
+          ],
+          "findings": [
+            {
+              "kind": "fail",
+              "text": "gateway-rpc pre-provider work dominated agent turn (94% of 4020ms)",
+              "scenarioId": "agent-gateway-rpc-turn",
+              "metric": "preProviderDominanceRatio"
+            }
+          ],
+          "proves": [
+            {
+              "state": "fail",
+              "text": "Send a simple user message through `openclaw agent` without `--local`, measuring the CLI client path that crosses the Gateway agent RPC boundary. This is CLI surface coverage, not the primary direct Gateway/session benchmark."
+            }
+          ]
+        },
+        {
+          "id": "openai-compatible-turn",
+          "state": "fail",
+          "sampleCount": 1,
+          "sampleValue": 205,
+          "sampleUnit": "ms",
+          "phases": [
+            {
+              "name": "auth-prepare",
+              "elapsedMs": 319,
+              "state": "pass"
+            },
+            {
+              "name": "provision",
+              "elapsedMs": 442,
+              "state": "pass"
+            },
+            {
+              "name": "auth-setup",
+              "elapsedMs": 60,
+              "state": "pass"
+            },
+            {
+              "name": "gateway-start",
+              "elapsedMs": 121,
+              "state": "pass"
+            },
+            {
+              "name": "openai-compatible-turn",
+              "elapsedMs": 205,
+              "state": "pass"
+            },
+            {
+              "name": "auth-cleanup",
+              "elapsedMs": 66,
+              "state": "pass"
+            }
+          ],
+          "metrics": [
+            {
+              "name": "full turn",
+              "value": 205,
+              "unit": "ms",
+              "threshold": 45000,
+              "state": "pass"
+            },
+            {
+              "name": "cold turn",
+              "value": 205,
+              "unit": "ms",
+              "threshold": null,
+              "state": "pass"
+            },
+            {
+              "name": "startup",
+              "value": 442,
+              "unit": "ms",
+              "threshold": null,
+              "state": "pass"
+            },
+            {
+              "name": "gateway.rss.mb",
+              "value": 485.3,
+              "unit": "MB",
+              "threshold": null,
+              "state": "pass"
+            },
+            {
+              "name": "cpu.max.%",
+              "value": 138,
+              "unit": "%",
+              "threshold": null,
+              "state": "pass"
+            },
+            {
+              "name": "event-loop.max.ms",
+              "value": 0,
+              "unit": "ms",
+              "threshold": null,
+              "state": "pass"
+            }
+          ],
+          "findings": [
+            {
+              "kind": "fail",
+              "text": "agent message command finished without a usable assistant response",
+              "scenarioId": "openai-compatible-turn",
+              "metric": "agentResponseOk"
+            },
+            {
+              "kind": "fail",
+              "text": "openai-compatible agent turn did not produce the expected assistant response",
+              "scenarioId": "openai-compatible-turn",
+              "metric": "agentTurn.responseOk"
+            },
+            {
+              "kind": "fail",
+              "text": "openai-compatible agent turn response did not exactly match expected text KOVA_AGENT_OK",
+              "scenarioId": "openai-compatible-turn",
+              "metric": "agentTurn.expectedTextPresent"
+            },
+            {
+              "kind": "fail",
+              "text": "openai-compatible agent turn ran with mock auth but no mock provider request was captured",
+              "scenarioId": "openai-compatible-turn",
+              "metric": "agentProviderRequestMissing"
+            },
+            {
+              "kind": "fail",
+              "text": "No provider request happened during the agent turn.",
+              "scenarioId": "openai-compatible-turn",
+              "metric": "agentLatencyDiagnosis"
+            },
+            {
+              "kind": "warn",
+              "text": "5 expected OpenClaw diagnostics span(s) were not observed; user-path verdict is based on functional and performance checks",
+              "scenarioId": "openai-compatible-turn",
+              "metric": "openclawMissingRequiredSpanCount"
+            }
+          ],
+          "proves": [
+            {
+              "state": "fail",
+              "text": "Send a chat-completions request to OpenClaw's OpenAI-compatible HTTP endpoint and verify the final assistant response, provider timing, auth handling, and gateway health."
+            }
+          ]
+        },
+        {
+          "id": "plugin-lifecycle",
+          "state": "fail",
+          "sampleCount": 1,
+          "sampleValue": 0,
+          "sampleUnit": "ms",
+          "phases": [
+            {
+              "name": "auth-prepare",
+              "elapsedMs": 327,
+              "state": "pass"
+            },
+            {
+              "name": "baseline",
+              "elapsedMs": 2966,
+              "state": "pass"
+            },
+            {
+              "name": "auth-setup",
+              "elapsedMs": 60,
+              "state": "pass"
+            },
+            {
+              "name": "state-baseline",
+              "elapsedMs": 62,
+              "state": "pass"
+            },
+            {
+              "name": "restart",
+              "elapsedMs": 92,
+              "state": "pass"
+            },
+            {
+              "name": "auth-cleanup",
+              "elapsedMs": 59,
+              "state": "pass"
+            }
+          ],
+          "metrics": [
+            {
+              "name": "startup",
+              "value": 563,
+              "unit": "ms",
+              "threshold": null,
+              "state": "pass"
+            },
+            {
+              "name": "warm ready",
+              "value": 92,
+              "unit": "ms",
+              "threshold": null,
+              "state": "pass"
+            },
+            {
+              "name": "gateway.rss.mb",
+              "value": 485,
+              "unit": "MB",
+              "threshold": null,
+              "state": "pass"
+            },
+            {
+              "name": "cpu.max.%",
+              "value": 140,
+              "unit": "%",
+              "threshold": null,
+              "state": "pass"
+            },
+            {
+              "name": "event-loop.max.ms",
+              "value": 0,
+              "unit": "ms",
+              "threshold": null,
+              "state": "pass"
+            }
+          ],
+          "findings": [
+            {
+              "kind": "fail",
+              "text": "final gateway state was restarting",
+              "scenarioId": "plugin-lifecycle",
+              "metric": "finalGatewayState"
+            },
+            {
+              "kind": "warn",
+              "text": "2 expected OpenClaw diagnostics span(s) were not observed; user-path verdict is based on functional and performance checks",
+              "scenarioId": "plugin-lifecycle",
+              "metric": "openclawMissingRequiredSpanCount"
+            }
+          ],
+          "proves": [
+            {
+              "state": "fail",
+              "text": "Exercise plugin list, update, install/remove-ready paths, runtime dependency diagnostics, restart behavior, and registry consistency."
+            }
+          ]
+        },
+        {
+          "id": "release-runtime-startup",
+          "state": "pass",
+          "sampleCount": 1,
+          "sampleValue": 564,
+          "sampleUnit": "ms",
+          "phases": [
+            {
+              "name": "provision",
+              "elapsedMs": 564,
+              "state": "pass"
+            },
+            {
+              "name": "post-start",
+              "elapsedMs": 2957,
+              "state": "pass"
+            },
+            {
+              "name": "startup-logs",
+              "elapsedMs": 0,
+              "state": "block"
+            }
+          ],
+          "metrics": [
+            {
+              "name": "startup",
+              "value": 564,
+              "unit": "ms",
+              "threshold": null,
+              "state": "pass"
+            },
+            {
+              "name": "gateway.rss.mb",
+              "value": 511.7,
+              "unit": "MB",
+              "threshold": null,
+              "state": "pass"
+            },
+            {
+              "name": "cpu.max.%",
+              "value": 135,
+              "unit": "%",
+              "threshold": null,
+              "state": "pass"
+            },
+            {
+              "name": "event-loop.max.ms",
+              "value": 0,
+              "unit": "ms",
+              "threshold": null,
+              "state": "pass"
+            }
+          ],
+          "findings": [],
+          "proves": [
+            {
+              "state": "pass",
+              "text": "Start a release-shaped OpenClaw runtime, measure cold readiness and bundled runtime dependency staging, and fail on degraded plugin startup."
+            }
+          ]
+        },
+        {
+          "id": "fresh-install",
+          "state": "pass",
+          "sampleCount": 1,
+          "sampleValue": 532,
+          "sampleUnit": "ms",
+          "phases": [
+            {
+              "name": "auth-prepare",
+              "elapsedMs": 293,
+              "state": "pass"
+            },
+            {
+              "name": "provision",
+              "elapsedMs": 532,
+              "state": "pass"
+            },
+            {
+              "name": "auth-setup",
+              "elapsedMs": 66,
+              "state": "pass"
+            },
+            {
+              "name": "readiness",
+              "elapsedMs": 2160,
+              "state": "pass"
+            },
+            {
+              "name": "plugins",
+              "elapsedMs": 2767,
+              "state": "pass"
+            },
+            {
+              "name": "models",
+              "elapsedMs": 7260,
+              "state": "pass"
+            },
+            {
+              "name": "logs",
+              "elapsedMs": 0,
+              "state": "block"
+            },
+            {
+              "name": "auth-cleanup",
+              "elapsedMs": 63,
+              "state": "pass"
+            }
+          ],
+          "metrics": [
+            {
+              "name": "startup",
+              "value": 532,
+              "unit": "ms",
+              "threshold": null,
+              "state": "pass"
+            },
+            {
+              "name": "gateway.rss.mb",
+              "value": 522,
+              "unit": "MB",
+              "threshold": null,
+              "state": "pass"
+            },
+            {
+              "name": "cpu.max.%",
+              "value": 164,
+              "unit": "%",
+              "threshold": null,
+              "state": "pass"
+            },
+            {
+              "name": "event-loop.max.ms",
+              "value": 0,
+              "unit": "ms",
+              "threshold": null,
+              "state": "pass"
+            }
+          ],
+          "findings": [
+            {
+              "kind": "warn",
+              "text": "3 expected OpenClaw diagnostics span(s) were not observed; user-path verdict is based on functional and performance checks",
+              "scenarioId": "fresh-install",
+              "metric": "openclawMissingRequiredSpanCount"
+            }
+          ],
+          "proves": [
+            {
+              "state": "pass",
+              "text": "Create a disposable fresh OpenClaw home from the target runtime, start the gateway, and verify basic user-facing commands without onboarding or manual setup."
+            }
+          ]
+        },
+        {
+          "id": "gateway-performance",
+          "state": "pass",
+          "sampleCount": 1,
+          "sampleValue": 4,
+          "sampleUnit": "ms",
+          "phases": [
+            {
+              "name": "auth-prepare",
+              "elapsedMs": 283,
+              "state": "pass"
+            },
+            {
+              "name": "cold-start",
+              "elapsedMs": 576,
+              "state": "pass"
+            },
+            {
+              "name": "auth-setup",
+              "elapsedMs": 64,
+              "state": "pass"
+            },
+            {
+              "name": "state-cold-start",
+              "elapsedMs": 35,
+              "state": "pass"
+            },
+            {
+              "name": "api-latency",
+              "elapsedMs": 10448,
+              "state": "pass"
+            },
+            {
+              "name": "warm-restart",
+              "elapsedMs": 101,
+              "state": "pass"
+            },
+            {
+              "name": "auth-cleanup",
+              "elapsedMs": 77,
+              "state": "pass"
+            }
+          ],
+          "metrics": [
+            {
+              "name": "startup",
+              "value": 576,
+              "unit": "ms",
+              "threshold": null,
+              "state": "pass"
+            },
+            {
+              "name": "warm ready",
+              "value": 101,
+              "unit": "ms",
+              "threshold": null,
+              "state": "pass"
+            },
+            {
+              "name": "gateway.rss.mb",
+              "value": 524,
+              "unit": "MB",
+              "threshold": null,
+              "state": "pass"
+            },
+            {
+              "name": "cpu.max.%",
+              "value": 151,
+              "unit": "%",
+              "threshold": null,
+              "state": "pass"
+            },
+            {
+              "name": "event-loop.max.ms",
+              "value": 0,
+              "unit": "ms",
+              "threshold": null,
+              "state": "pass"
+            }
+          ],
+          "findings": [
+            {
+              "kind": "warn",
+              "text": "3 expected OpenClaw diagnostics span(s) were not observed; user-path verdict is based on functional and performance checks",
+              "scenarioId": "gateway-performance",
+              "metric": "openclawMissingRequiredSpanCount"
+            }
+          ],
+          "proves": [
+            {
+              "state": "pass",
+              "text": "Measure cold start, warm start, health latency, memory, CPU, and user-facing command latency for a target OpenClaw runtime."
+            }
+          ]
+        },
+        {
+          "id": "gateway-session-send-turn",
+          "state": "pass",
+          "sampleCount": 1,
+          "sampleValue": 2078,
+          "sampleUnit": "ms",
+          "phases": [
+            {
+              "name": "auth-prepare",
+              "elapsedMs": 335,
+              "state": "pass"
+            },
+            {
+              "name": "provision",
+              "elapsedMs": 452,
+              "state": "pass"
+            },
+            {
+              "name": "auth-setup",
+              "elapsedMs": 53,
+              "state": "pass"
+            },
+            {
+              "name": "gateway-start",
+              "elapsedMs": 100,
+              "state": "pass"
+            },
+            {
+              "name": "cold-gateway-session-turn",
+              "elapsedMs": 2749,
+              "state": "pass"
+            },
+            {
+              "name": "warm-gateway-session-turn",
+              "elapsedMs": 827,
+              "state": "pass"
+            },
+            {
+              "name": "post-gateway-session-health",
+              "elapsedMs": 1435,
+              "state": "pass"
+            },
+            {
+              "name": "auth-cleanup",
+              "elapsedMs": 70,
+              "state": "pass"
+            }
+          ],
+          "metrics": [
+            {
+              "name": "full turn",
+              "value": 2078,
+              "unit": "ms",
+              "threshold": 45000,
+              "state": "pass"
+            },
+            {
+              "name": "cold turn",
+              "value": 2078,
+              "unit": "ms",
+              "threshold": 45000,
+              "state": "pass"
+            },
+            {
+              "name": "warm turn",
+              "value": 609,
+              "unit": "ms",
+              "threshold": 15000,
+              "state": "pass"
+            },
+            {
+              "name": "pre-provider",
+              "value": 1722,
+              "unit": "ms",
+              "threshold": 10000,
+              "state": "pass"
+            },
+            {
+              "name": "provider",
+              "value": 10,
+              "unit": "ms",
+              "threshold": 3000,
+              "state": "pass"
+            },
+            {
+              "name": "post-provider",
+              "value": 346,
+              "unit": "ms",
+              "threshold": null,
+              "state": "pass"
+            },
+            {
+              "name": "↳ cold send rpc",
+              "value": 21,
+              "unit": "ms",
+              "threshold": null,
+              "state": "pass",
+              "child": true
+            },
+            {
+              "name": "↳ cold matched assistant",
+              "value": 2078,
+              "unit": "ms",
+              "threshold": null,
+              "state": "pass",
+              "child": true
+            },
+            {
+              "name": "↳ warm send rpc",
+              "value": 87,
+              "unit": "ms",
+              "threshold": null,
+              "state": "pass",
+              "child": true
+            },
+            {
+              "name": "↳ warm matched assistant",
+              "value": 609,
+              "unit": "ms",
+              "threshold": null,
+              "state": "pass",
+              "child": true
+            },
+            {
+              "name": "startup",
+              "value": 452,
+              "unit": "ms",
+              "threshold": null,
+              "state": "pass"
+            },
+            {
+              "name": "gateway.rss.mb",
+              "value": 564.9,
+              "unit": "MB",
+              "threshold": null,
+              "state": "pass"
+            },
+            {
+              "name": "cpu.max.%",
+              "value": 131,
+              "unit": "%",
+              "threshold": null,
+              "state": "pass"
+            },
+            {
+              "name": "event-loop.max.ms",
+              "value": 0,
+              "unit": "ms",
+              "threshold": null,
+              "state": "pass"
+            }
+          ],
+          "findings": [],
+          "proves": [
+            {
+              "state": "pass",
+              "text": "Start a normal gateway, send cold and warm user messages through the Gateway session API, and wait for final assistant text in chat history."
+            }
+          ]
+        },
+        {
+          "id": "agent-cold-warm-message",
+          "state": "pass",
+          "sampleCount": 1,
+          "sampleValue": 5614,
+          "sampleUnit": "ms",
+          "phases": [
+            {
+              "name": "auth-prepare",
+              "elapsedMs": 307,
+              "state": "pass"
+            },
+            {
+              "name": "provision",
+              "elapsedMs": 614,
+              "state": "pass"
+            },
+            {
+              "name": "auth-setup",
+              "elapsedMs": 65,
+              "state": "pass"
+            },
+            {
+              "name": "cold-agent-turn",
+              "elapsedMs": 5614,
+              "state": "pass"
+            },
+            {
+              "name": "warm-agent-turn",
+              "elapsedMs": 5312,
+              "state": "pass"
+            },
+            {
+              "name": "post-agent-health",
+              "elapsedMs": 2154,
+              "state": "pass"
+            },
+            {
+              "name": "auth-cleanup",
+              "elapsedMs": 69,
+              "state": "pass"
+            }
+          ],
+          "metrics": [
+            {
+              "name": "full turn",
+              "value": 5614,
+              "unit": "ms",
+              "threshold": 45000,
+              "state": "pass"
+            },
+            {
+              "name": "cold turn",
+              "value": 5614,
+              "unit": "ms",
+              "threshold": 45000,
+              "state": "pass"
+            },
+            {
+              "name": "warm turn",
+              "value": 5312,
+              "unit": "ms",
+              "threshold": 15000,
+              "state": "pass"
+            },
+            {
+              "name": "pre-provider",
+              "value": 5287,
+              "unit": "ms",
+              "threshold": 10000,
+              "state": "pass"
+            },
+            {
+              "name": "provider",
+              "value": 4,
+              "unit": "ms",
+              "threshold": 3000,
+              "state": "pass"
+            },
+            {
+              "name": "post-provider",
+              "value": 323,
+              "unit": "ms",
+              "threshold": null,
+              "state": "pass"
+            },
+            {
+              "name": "startup",
+              "value": 614,
+              "unit": "ms",
+              "threshold": null,
+              "state": "pass"
+            },
+            {
+              "name": "tracked.total.rss.mb",
+              "value": 624.6,
+              "unit": "MB",
+              "threshold": null,
+              "state": "pass"
+            },
+            {
+              "name": "cpu.max.%",
+              "value": 182.4,
+              "unit": "%",
+              "threshold": null,
+              "state": "pass"
+            }
+          ],
+          "findings": [],
+          "proves": [
+            {
+              "state": "pass",
+              "text": "Send cold and warm simple messages through short-lived `openclaw agent --local` CLI processes, verify mock-provider responses, and attribute latency before, during, and after provider work."
+            }
+          ]
+        },
+        {
+          "id": "bundled-runtime-deps",
+          "state": "pass",
+          "sampleCount": 1,
+          "sampleValue": 0,
+          "sampleUnit": "ms",
+          "phases": [
+            {
+              "name": "auth-prepare",
+              "elapsedMs": 303,
+              "state": "pass"
+            },
+            {
+              "name": "cold-start",
+              "elapsedMs": 554,
+              "state": "pass"
+            },
+            {
+              "name": "auth-setup",
+              "elapsedMs": 52,
+              "state": "pass"
+            },
+            {
+              "name": "state-cold-start",
+              "elapsedMs": 37,
+              "state": "pass"
+            },
+            {
+              "name": "warm-restart",
+              "elapsedMs": 43,
+              "state": "pass"
+            },
+            {
+              "name": "auth-cleanup",
+              "elapsedMs": 47,
+              "state": "pass"
+            }
+          ],
+          "metrics": [
+            {
+              "name": "startup",
+              "value": 554,
+              "unit": "ms",
+              "threshold": null,
+              "state": "pass"
+            },
+            {
+              "name": "warm ready",
+              "value": 43,
+              "unit": "ms",
+              "threshold": null,
+              "state": "pass"
+            },
+            {
+              "name": "gateway.rss.mb",
+              "value": 480.5,
+              "unit": "MB",
+              "threshold": null,
+              "state": "pass"
+            },
+            {
+              "name": "cpu.max.%",
+              "value": 151,
+              "unit": "%",
+              "threshold": null,
+              "state": "pass"
+            },
+            {
+              "name": "event-loop.max.ms",
+              "value": 0,
+              "unit": "ms",
+              "threshold": null,
+              "state": "pass"
+            }
+          ],
+          "findings": [
+            {
+              "kind": "warn",
+              "text": "3 expected OpenClaw diagnostics span(s) were not observed; user-path verdict is based on functional and performance checks",
+              "scenarioId": "bundled-runtime-deps",
+              "metric": "openclawMissingRequiredSpanCount"
+            }
+          ],
+          "proves": [
+            {
+              "state": "pass",
+              "text": "Verify bundled plugin runtime dependencies stage correctly, remain reusable on warm starts, and do not produce missing dependency errors."
+            }
+          ]
+        },
+        {
+          "id": "bundled-plugin-startup",
+          "state": "pass",
+          "sampleCount": 1,
+          "sampleValue": 0,
+          "sampleUnit": "ms",
+          "phases": [
+            {
+              "name": "auth-prepare",
+              "elapsedMs": 298,
+              "state": "pass"
+            },
+            {
+              "name": "startup",
+              "elapsedMs": 581,
+              "state": "pass"
+            },
+            {
+              "name": "auth-setup",
+              "elapsedMs": 50,
+              "state": "pass"
+            },
+            {
+              "name": "inspect",
+              "elapsedMs": 2609,
+              "state": "pass"
+            },
+            {
+              "name": "restart",
+              "elapsedMs": 81,
+              "state": "pass"
+            },
+            {
+              "name": "auth-cleanup",
+              "elapsedMs": 46,
+              "state": "pass"
+            }
+          ],
+          "metrics": [
+            {
+              "name": "startup",
+              "value": 581,
+              "unit": "ms",
+              "threshold": null,
+              "state": "pass"
+            },
+            {
+              "name": "warm ready",
+              "value": 81,
+              "unit": "ms",
+              "threshold": null,
+              "state": "pass"
+            },
+            {
+              "name": "gateway.rss.mb",
+              "value": 523.2,
+              "unit": "MB",
+              "threshold": null,
+              "state": "pass"
+            },
+            {
+              "name": "cpu.max.%",
+              "value": 134,
+              "unit": "%",
+              "threshold": null,
+              "state": "pass"
+            },
+            {
+              "name": "event-loop.max.ms",
+              "value": 0,
+              "unit": "ms",
+              "threshold": null,
+              "state": "pass"
+            }
+          ],
+          "findings": [
+            {
+              "kind": "warn",
+              "text": "2 expected OpenClaw diagnostics span(s) were not observed; user-path verdict is based on functional and performance checks",
+              "scenarioId": "bundled-plugin-startup",
+              "metric": "openclawMissingRequiredSpanCount"
+            }
+          ],
+          "proves": [
+            {
+              "state": "pass",
+              "text": "Validate that OpenClaw's bundled plugins load during gateway startup without missing package/module errors or degraded plugin services."
+            }
+          ]
+        }
+      ],
+      "bundle": {
+        "name": "kova-260528-030802-0ca629-bundle.tar.gz",
+        "bytes": 1596039,
+        "href": "/bundles/kova-260528-030802-0ca629-bundle.tar.gz"
+      }
+    }
+  ]
+}

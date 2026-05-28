@@ -14,7 +14,7 @@
   },
   "dryRun": true,
   "augmented": true,
-  "priorVer": "2026.4.27",
+  "priorVer": null,
   "scenarioCount": 1,
   "runCount": 1,
   "coldReadyDeltaPct": null,
