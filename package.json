@@ -11,6 +11,7 @@
     "kova": "node bin/kova.mjs",
     "plan": "node bin/kova.mjs plan",
     "check": "node bin/kova.mjs self-check",
+    "check:web-payload": "node scripts/check-web-payload.mjs",
     "test:snapshots": "node tests/render-snapshots.mjs",
     "pack:release": "scripts/package-release.sh",
     "check:changed": "npm run check",
@@ -24,6 +25,7 @@
     "node": ">=22"
   },
   "dependencies": {
-    "mock-ai-provider": "0.1.2"
+    "mock-ai-provider": "0.1.2",
+    "zod": "^4.4.3"
   }
 }

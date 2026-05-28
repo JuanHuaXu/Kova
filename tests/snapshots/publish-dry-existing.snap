@@ -1,0 +1,10 @@
+# kova publish · 2026.5.16-beta
+
+_dry-run — no files written_
+
+- contract: `kova.web-payload.v1`
+- input: `web/src/content/releases/2026.5.16-beta.json` (web-payload)
+- destination: `web/src/content/releases/2026.5.16-beta.json` · replacing existing
+- sha: `7e3a2f1` · passed: no
+- scenarios: 10 · runs: 3 · headline rows: 2
+- augmented vs prior: `2026.5.10` · comparison rows: 5 · cold-ready Δ: +21.3%

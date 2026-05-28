@@ -1,0 +1,23 @@
+{
+  "schemaVersion": "kova.web-payload.v1",
+  "ver": "2026.4.30-internal",
+  "releaseDate": "2026-04-30",
+  "sha": "local-build",
+  "passed": false,
+  "input": {
+    "path": "artifacts/phase9-deep-profile-run2/kova-<runId>.json",
+    "kind": "internal-report"
+  },
+  "destination": {
+    "path": "web/src/content/releases/2026.4.30-internal.json",
+    "replacing": false
+  },
+  "dryRun": true,
+  "augmented": true,
+  "priorVer": "2026.4.27",
+  "scenarioCount": 1,
+  "runCount": 1,
+  "coldReadyDeltaPct": null,
+  "comparisonRows": 0,
+  "headlineCount": 1
+}

@@ -4,6 +4,7 @@ import { runCleanupCliCommand } from "./commands/cleanup.mjs";
 import { runInventoryCommand } from "./commands/inventory.mjs";
 import { runMatrixCommand } from "./commands/matrix.mjs";
 import { runPlanCommand } from "./commands/plan.mjs";
+import { runPublishCommand } from "./commands/publish.mjs";
 import { runReportCommand, runReportsCommand } from "./commands/report.mjs";
 import { runScenarioCommand } from "./commands/run.mjs";
 import { runVersionCommand } from "./commands/version.mjs";
@@ -66,6 +67,11 @@ export async function main(argv) {
 
   if (command === "reports") {
     await runReportsCommand(flags);
+    return;
+  }
+
+  if (command === "publish") {
+    await runPublishCommand(flags);
     return;
   }
 

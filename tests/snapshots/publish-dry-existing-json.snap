@@ -1,0 +1,23 @@
+{
+  "schemaVersion": "kova.web-payload.v1",
+  "ver": "2026.5.16-beta",
+  "releaseDate": "2026-05-18",
+  "sha": "7e3a2f1",
+  "passed": false,
+  "input": {
+    "path": "web/src/content/releases/2026.5.16-beta.json",
+    "kind": "web-payload"
+  },
+  "destination": {
+    "path": "web/src/content/releases/2026.5.16-beta.json",
+    "replacing": true
+  },
+  "dryRun": true,
+  "augmented": true,
+  "priorVer": "2026.5.10",
+  "scenarioCount": 10,
+  "runCount": 3,
+  "coldReadyDeltaPct": 21.3,
+  "comparisonRows": 5,
+  "headlineCount": 2
+}

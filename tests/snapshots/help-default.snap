@@ -13,6 +13,7 @@
   ◆ kova matrix       Profile-driven multi-scenario plan / run with optional gate.
   ◆ kova reports      List recent stored reports and their run IDs.
   ◆ kova report       Render a Kova report dashboard, summary, paste, compare, or bundle.
+  ◆ kova publish      Validate a web-payload release and write it into web/src/content/releases/.
   ◆ kova cleanup      Remove stale Kova-owned envs and run artifact dirs.
 
 ─── selectors ──────────────────────────────────────────────────────────────────

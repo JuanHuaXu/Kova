@@ -172,6 +172,29 @@ const COMMANDS = [
     ],
   },
   {
+    id: "publish", title: "kova publish",
+    blurb: "Validate a web-payload release and write it into web/src/content/releases/.",
+    usage: [
+      "kova publish <input.json|runId> [--ver <version>] [--release-date <date>] [--sha <sha>] [--report-dir <path>] [--out-dir <path>] [--no-augment] [--dry-run] [--json]",
+    ],
+    flags: [
+      ["--ver <version>", "public release version when input is an internal report"],
+      ["--release-date <date>", "public release date (defaults to report generated date)"],
+      ["--sha <sha>", "public source/runtime identifier (defaults from report target when possible)"],
+      ["--report-dir <path>", "resolve bare run ids from a custom report directory"],
+      ["--out-dir <path>", "target directory (default web/src/content/releases)"],
+      ["--no-augment",     "skip computing deltas + comparison vs prior release"],
+      ["--dry-run",        "validate + render receipt without writing"],
+      ["--json",           "machine-readable receipt"],
+    ],
+    examples: [
+      "kova publish kova-260518-094832-smoke --ver 2026.5.18 --dry-run",
+      "kova publish web/src/content/releases/2026.5.16-beta.json --dry-run",
+      "kova publish ./payload.json",
+      "kova publish ./payload.json --no-augment --json",
+    ],
+  },
+  {
     id: "cleanup", title: "kova cleanup",
     blurb: "Remove stale Kova-owned envs and run artifact dirs.",
     usage: [

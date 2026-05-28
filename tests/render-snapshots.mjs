@@ -51,6 +51,11 @@ const cases = [
   { name: "matrix-run-receipt-dry-json", args: ["matrix", "run", "--profile", "smoke", "--target", "runtime:stable", "--json"] },
   { name: "matrix-plan", args: ["matrix", "plan", "--profile", "smoke", "--target", "runtime:stable"] },
   { name: "matrix-plan-json", args: ["matrix", "plan", "--profile", "smoke", "--target", "runtime:stable", "--json"] },
+  // Publish dry-run receipt. Pins the kova.web-payload.v1 contract output
+  // so changes to the projector / contract version are caught immediately.
+  { name: "publish-dry-existing", args: ["publish", "web/src/content/releases/2026.5.16-beta.json", "--dry-run"] },
+  { name: "publish-dry-existing-json", args: ["publish", "web/src/content/releases/2026.5.16-beta.json", "--dry-run", "--json"] },
+  { name: "publish-dry-internal-report", args: ["publish", PASS_REPORT, "--ver", "2026.4.30-internal", "--release-date", "2026-04-30", "--sha", "local-build", "--dry-run", "--json"] },
 ];
 
 function normalize(out) {
