@@ -126,12 +126,14 @@ export async function collectEnvMetrics(envName, options = {}) {
       statusLabel: "INFO",
       error: null
     });
-    if (healthEnabled && serviceJson.childPid) {
+    if (healthEnabled && serviceJson.childPid && readinessMode === "none") {
       await collectPostReadyHealth(metrics, collectors, serviceJson.gatewayPort, {
         healthSampleCount,
         healthIntervalMs,
         timeoutMs
       });
+    } else if (healthEnabled && serviceJson.childPid) {
+      recordSkippedCollector(collectors, "health", "post-ready health sampling requires either a readiness wait or an explicit post-ready collection policy");
     } else if (!collectorEnabled(collectionPolicy, "health")) {
       recordSkippedCollector(collectors, "health", collectionPolicy.reason);
     }
@@ -172,11 +174,11 @@ export async function collectEnvMetrics(envName, options = {}) {
 }
 
 function shouldProbeReadiness(serviceJson, readinessTimeoutMs) {
-  if (serviceJson.childPid) {
-    return true;
-  }
   if (readinessTimeoutMs <= 0) {
     return false;
+  }
+  if (serviceJson.childPid) {
+    return true;
   }
   return serviceJson.running === true || serviceJson.desiredRunning === true || serviceJson.gatewayState === "running" || serviceJson.gatewayState === "backoff";
 }
