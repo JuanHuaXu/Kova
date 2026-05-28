@@ -1,0 +1,64 @@
+---
+/**
+ * Per-beta-group panel on the /releases page. Shows one collapsible
+ * <details> per upcoming/shipped/skipped target stable, with the beta
+ * iterations under it. UPCOMING groups are open by default; SHIPPED
+ * and SKIPPED collapse to keep the page short as old betas accumulate.
+ */
+import type { Release } from "../content.config";
+import type { BetaGroupState } from "../lib/release-flavor";
+import { betaIteration } from "../lib/release-flavor";
+
+interface Props {
+  target: string;
+  state: BetaGroupState;
+  betas: Array<Release & { id: string }>;
+  /** When state is "shipped" we link to the stable release. */
+  stableHref?: string;
+  /** When state is "skipped" we display the stable that replaced this target. */
+  skippedBy?: string;
+  open?: boolean;
+}
+
+const { target, state, betas, stableHref, skippedBy, open } = Astro.props;
+
+const latestDate = betas[0]?.date ?? "";
+const statusLabel =
+  state === "upcoming" ? "upcoming"
+  : state === "shipped" ? "shipped"
+  : "skipped";
+
+const meta =
+  state === "shipped" ? `${betas.length} beta build${betas.length === 1 ? "" : "s"} · shipped ${latestDate}`
+  : state === "skipped" ? `${betas.length} beta build${betas.length === 1 ? "" : "s"}${skippedBy ? ` · in favor of ${skippedBy}` : ""}`
+  : `${betas.length} beta build${betas.length === 1 ? "" : "s"} · latest ${latestDate} · no stable yet`;
+---
+
+<details class="beta-group" open={open}>
+  <summary>
+    <span class="beta-group-target">{target}</span>
+    <span class:list={["beta-group-status", state]}>{statusLabel}</span>
+    <span class="beta-group-meta">
+      {meta}
+      {state === "shipped" && stableHref && <> · <a href={stableHref}>view stable →</a></>}
+    </span>
+  </summary>
+
+  <div class="recent beta-group-list">
+    {betas.map((b) => (
+      <a class="recent-row beta-row" href={`/releases/${b.ver}`}>
+        <span class="rel">
+          <span class="beta-iter">{betaIteration(b.ver)}</span>
+          <span class="beta-tag">beta</span>
+        </span>
+        <span class="info">{b.date} · <span class="sha">{b.sha}</span></span>
+        <span class="delta">
+          <span class:list={["chip", b.passed ? "pass" : "fail"]}>
+            {b.passed ? "all gates passed" : "regressions"}
+          </span>
+        </span>
+        <span class="arrow">→</span>
+      </a>
+    ))}
+  </div>
+</details>

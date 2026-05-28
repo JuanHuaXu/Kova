@@ -1,21 +1,25 @@
 ---
 import Base from "../layouts/Base.astro";
-import { latestRelease, allReleases, scenarioCounts } from "../lib/releases";
+import { latestStableRelease, stableReleases, scenarioCounts } from "../lib/releases";
 import type { Scenario } from "../content.config";
 import ScenarioTile from "../components/ScenarioTile.astro";
 
-const release = await latestRelease();
-const scenarios = release.scenarios!;
+const release = await latestStableRelease();
+const scenarios = release.scenarios ?? [];
+const hasScenarioData = scenarios.length > 0;
 const counts = scenarioCounts(scenarios);
-const history = await allReleases();
+const history = await stableReleases();
 
-const coldDelta = release.coldReadyDeltaPct ?? 0;
+const coldDelta = hasScenarioData ? (release.coldReadyDeltaPct ?? 0) : null;
 const coldDeltaCls =
-  Math.abs(coldDelta) < 0.5 ? "delta-flat"
+  coldDelta == null ? "delta-flat"
+  : Math.abs(coldDelta) < 0.5 ? "delta-flat"
   : coldDelta > 0 ? "delta-up"
   : "delta-down";
 const coldDeltaText =
-  Math.abs(coldDelta) < 0.5
+  coldDelta == null
+    ? "— no scenario data"
+  : Math.abs(coldDelta) < 0.5
     ? "— stable cold ready"
     : `${coldDelta > 0 ? "▲" : "▼"} ${coldDelta > 0 ? "+" : ""}${coldDelta.toFixed(1)}% cold ready`;
 ---
@@ -48,11 +52,17 @@ const coldDeltaText =
       <span class="section-meta">current state · sparkline = last 6 releases</span>
     </div>
 
-    <div class="v2-wall">
-      {scenarios.map((s: Scenario) => (
-        <ScenarioTile scenario={s} href={`/releases/${release.ver}`} />
-      ))}
-    </div>
+    {hasScenarioData ? (
+      <div class="v2-wall">
+        {scenarios.map((s: Scenario) => (
+          <ScenarioTile scenario={s} href={`/releases/${release.ver}`} />
+        ))}
+      </div>
+    ) : (
+      <p class="releases-empty">
+        No detailed scenario data archived for the latest stable release.
+      </p>
+    )}
 
     {/* Release history: colored cells, neutral labels. Oldest-first reads naturally. */}
     <div class="v2-history">

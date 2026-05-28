@@ -7,7 +7,7 @@
  * series so deltas can't lie.
  */
 
-import { allReleases } from "./releases";
+import { allReleases, stableReleases } from "./releases";
 import type { Release, Scenario } from "../content.config";
 
 export interface TrendPoint {
@@ -36,7 +36,9 @@ export interface ScenarioHistory {
  * expose the bucket with the newest datapoint as the canonical scenario page.
  */
 export async function scenarioHistories(): Promise<Map<string, ScenarioHistory>> {
-  const releases = await allReleases();
+  // Trends only include stable releases — betas would add noise to the
+  // line chart and inflate datapoint counts on /scenarios/<id>.
+  const releases = await stableReleases();
   const byKey = new Map<string, ScenarioHistory>();
 
   // Iterate oldest → newest so points are chronological.

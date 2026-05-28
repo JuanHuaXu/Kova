@@ -9,7 +9,7 @@
  * is `null` (rendered as "not measured"), not faked.
  */
 
-import { allReleases } from "./releases";
+import { stableReleases } from "./releases";
 import { scenarioHistories, type ScenarioHistory, type TrendPoint } from "./scenarios";
 import type { Release, Scenario } from "../content.config";
 
@@ -110,7 +110,10 @@ function rowFromHistory(h: ScenarioHistory, releases: MatrixRelease[]): MatrixRo
 }
 
 export async function matrixData(): Promise<MatrixData> {
-  const releasesDesc = await allReleases(); // newest first
+  // Matrix view is the stable-release perspective; betas are surfaced
+  // on the releases list page only and excluded from cross-release
+  // headline comparisons.
+  const releasesDesc = await stableReleases(); // newest first
   // We render oldest → newest so deltas read forward in time.
   const releasesAsc = [...releasesDesc].reverse();
 

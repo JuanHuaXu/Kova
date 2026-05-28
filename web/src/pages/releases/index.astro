@@ -1,35 +1,185 @@
 ---
 import Base from "../../layouts/Base.astro";
-import { allReleases } from "../../lib/releases";
+import {
+  allReleases,
+  stableReleases,
+  betaReleases,
+  latestStableRelease,
+} from "../../lib/releases";
+import { betaTarget, betaGroupState } from "../../lib/release-flavor";
+import BetaGroup from "../../components/BetaGroup.astro";
 
-const releases = await allReleases();
-const latest = releases[0]!;
+const all = await allReleases();
+const stable = await stableReleases();
+const betas = await betaReleases();
+const latest = await latestStableRelease();
+
+const stableVersions = stable.map((r) => r.ver);
+
+// Group betas by their target stable, preserving the newest-first
+// ordering produced by allReleases() so iterations within a group
+// also surface newest-first.
+type GroupEntry = { target: string; betas: typeof betas };
+const groupMap = new Map<string, GroupEntry>();
+for (const b of betas) {
+  const t = betaTarget(b.ver);
+  let g = groupMap.get(t);
+  if (!g) {
+    g = { target: t, betas: [] };
+    groupMap.set(t, g);
+  }
+  g.betas.push(b);
+}
+const groups = [...groupMap.values()]
+  .map((g) => {
+    const state = betaGroupState(g.target, stableVersions);
+    // For skipped groups, name the stable that supplanted this target.
+    let skippedBy: string | undefined;
+    if (state === "skipped") {
+      const later = stableVersions.filter(
+        (v) => v.localeCompare(g.target, undefined, { numeric: true, sensitivity: "base" }) > 0,
+      );
+      skippedBy = later.sort((a, b) =>
+        a.localeCompare(b, undefined, { numeric: true, sensitivity: "base" }),
+      )[0];
+    }
+    return { ...g, state, skippedBy };
+  })
+  // Order by target newest first.
+  .sort((a, b) =>
+    b.target.localeCompare(a.target, undefined, { numeric: true, sensitivity: "base" }),
+  );
+
+const totalBetaBuilds = betas.length;
+const targetCount = groups.length;
+
+const subtitle = totalBetaBuilds === 0
+  ? `${stable.length} stable · latest ${latest.ver}`
+  : `${stable.length} stable · ${totalBetaBuilds} beta build${totalBetaBuilds === 1 ? "" : "s"} across ${targetCount} target release${targetCount === 1 ? "" : "s"}`;
 ---
 
-<Base title="kova — releases" active="releases">
+<Base
+  title="kova — OpenClaw releases"
+  active="releases"
+  description="Every measured OpenClaw release with pass/fail status, sorted newest first."
+>
   <div class="container">
     <div class="section-head" style="margin-top: var(--space-7)">
       <h1 class="section-title">Releases</h1>
-      <span class="section-meta">{releases.length} tracked · {latest.ver} latest</span>
+      <span class="section-meta">{subtitle}</span>
     </div>
 
-    {/*
-      Phase A placeholder: list links into per-release pages. Full timeline
-      cards (mockups/releases.html) land in the Phase A follow-up.
-    */}
-    <div class="recent">
-      {releases.map((r) => (
-        <a class="recent-row" href={`/releases/${r.ver}`}>
-          <span class="rel">{r.ver}</span>
-          <span class="info">{r.date} · <span class="sha">{r.sha}</span></span>
-          <span class="delta">
-            <span class:list={["chip", r.passed ? "pass" : "fail"]}>
-              {r.passed ? "all gates passed" : "regressions"}
-            </span>
-          </span>
-          <span class="arrow">→</span>
-        </a>
-      ))}
+    <div class="releases-filter" role="tablist" aria-label="Filter releases">
+      <button type="button" role="tab" data-view="stable" aria-selected="true">
+        Stable <span class="releases-filter-count">({stable.length})</span>
+      </button>
+      <button type="button" role="tab" data-view="beta" aria-selected="false">
+        Beta <span class="releases-filter-count">({totalBetaBuilds})</span>
+      </button>
+      <button type="button" role="tab" data-view="all" aria-selected="false">
+        All <span class="releases-filter-count">({all.length})</span>
+      </button>
+    </div>
+
+    {/* STABLE view (default) */}
+    <div class="releases-view active" data-view="stable">
+      {stable.length === 0 ? (
+        <p class="releases-empty">No stable releases published yet.</p>
+      ) : (
+        <div class="recent">
+          {stable.map((r) => (
+            <a class="recent-row" href={`/releases/${r.ver}`}>
+              <span class="rel">{r.ver}</span>
+              <span class="info">{r.date} · <span class="sha">{r.sha}</span></span>
+              <span class="delta">
+                <span class:list={["chip", r.passed ? "pass" : "fail"]}>
+                  {r.passed ? "all gates passed" : "regressions"}
+                </span>
+              </span>
+              <span class="arrow">→</span>
+            </a>
+          ))}
+        </div>
+      )}
+    </div>
+
+    {/* BETA view: grouped by target stable */}
+    <div class="releases-view" data-view="beta">
+      {groups.length === 0 ? (
+        <p class="releases-empty">No beta builds published.</p>
+      ) : (
+        groups.map((g) => (
+          <BetaGroup
+            target={g.target}
+            state={g.state}
+            betas={g.betas}
+            stableHref={g.state === "shipped" ? `/releases/${g.target}` : undefined}
+            skippedBy={g.skippedBy}
+            open={g.state === "upcoming"}
+          />
+        ))
+      )}
+    </div>
+
+    {/* ALL view: flat chronological list, betas tagged */}
+    <div class="releases-view" data-view="all">
+      <div class="recent">
+        {all.map((r) => {
+          const pre = r.ver.includes("-");
+          return (
+            <a class="recent-row" href={`/releases/${r.ver}`}>
+              <span class="rel">
+                {r.ver}
+                {pre && <span class="beta-tag" style="margin-left: var(--space-2);">beta</span>}
+              </span>
+              <span class="info">{r.date} · <span class="sha">{r.sha}</span></span>
+              <span class="delta">
+                <span class:list={["chip", r.passed ? "pass" : "fail"]}>
+                  {r.passed ? "all gates passed" : "regressions"}
+                </span>
+              </span>
+              <span class="arrow">→</span>
+            </a>
+          );
+        })}
+      </div>
     </div>
   </div>
+
+  <script>
+    /**
+     * Tab switching for the Stable / Beta / All filter. URL hash
+     * (#stable | #beta | #all) is the source of truth so links from
+     * elsewhere can deep-link a view, and the choice survives reload.
+     */
+    type View = "stable" | "beta" | "all";
+    const VIEWS: ReadonlyArray<View> = ["stable", "beta", "all"];
+
+    function apply(view: View) {
+      document.querySelectorAll<HTMLButtonElement>(".releases-filter button").forEach((b) => {
+        const on = b.dataset.view === view;
+        b.classList.toggle("active", on);
+        b.setAttribute("aria-selected", String(on));
+      });
+      document.querySelectorAll<HTMLDivElement>(".releases-view").forEach((v) => {
+        v.classList.toggle("active", v.dataset.view === view);
+      });
+    }
+
+    function fromHash(): View {
+      const h = window.location.hash.replace("#", "") as View;
+      return VIEWS.includes(h) ? h : "stable";
+    }
+
+    apply(fromHash());
+    window.addEventListener("hashchange", () => apply(fromHash()));
+
+    document.querySelectorAll<HTMLButtonElement>(".releases-filter button").forEach((b) => {
+      b.addEventListener("click", () => {
+        const v = (b.dataset.view ?? "stable") as View;
+        // Setting the hash triggers our hashchange listener, which calls apply().
+        window.location.hash = v;
+      });
+    });
+  </script>
 </Base>
