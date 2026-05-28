@@ -581,6 +581,16 @@ function mockProviderPolicy(scenario, state) {
       ? collectChannelWorkflowCaseOrder(scenario)
       : [];
   }
+  if (raw.gatewayHttpEndpoints !== undefined) {
+    const endpoints = Array.isArray(raw.gatewayHttpEndpoints) ? raw.gatewayHttpEndpoints : [];
+    const normalized = endpoints.map((value) => String(value).trim()).filter(Boolean);
+    const supported = new Set(["chatCompletions", "responses"]);
+    const unsupported = normalized.filter((value) => !supported.has(value));
+    if (unsupported.length > 0) {
+      throw new Error(`mockProvider.gatewayHttpEndpoints contains unsupported endpoint(s): ${unsupported.join(", ")}`);
+    }
+    policy.gatewayHttpEndpoints = [...new Set(normalized)];
+  }
   return policy;
 }
 
@@ -618,6 +628,9 @@ function configureMockAuthCommand(envName, dir, mockProvider = {}) {
     "--port-file",
     join(dir, "port")
   ];
+  for (const endpoint of mockProvider.gatewayHttpEndpoints ?? []) {
+    args.push("--gateway-http-endpoint", endpoint);
+  }
   return ocmEnvExec(envName, args);
 }
 

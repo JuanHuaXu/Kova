@@ -142,6 +142,21 @@ config.gateway = {
   }
 };
 
+if (options.gatewayHttpEndpoints.length > 0) {
+  config.gateway.http = {
+    ...(config.gateway.http || {}),
+    endpoints: {
+      ...(config.gateway.http?.endpoints || {})
+    }
+  };
+  for (const endpoint of options.gatewayHttpEndpoints) {
+    config.gateway.http.endpoints[endpoint] = {
+      ...(config.gateway.http.endpoints[endpoint] || {}),
+      enabled: true
+    };
+  }
+}
+
 config.session = {
   ...(config.session || {}),
   dmScope: config.session?.dmScope || "per-channel-peer"
@@ -151,7 +166,7 @@ fs.writeFileSync(configPath, `${JSON.stringify(config, null, 2)}\n`, "utf8");
 console.log(configPath);
 
 function parseArgs(args) {
-  const parsed = {};
+  const parsed = { gatewayHttpEndpoints: [] };
   for (let index = 0; index < args.length; index += 1) {
     const arg = args[index];
     if (!arg.startsWith("--")) {
@@ -162,11 +177,22 @@ function parseArgs(args) {
     if (!value || value.startsWith("--")) {
       throw new Error(`${arg} requires a value`);
     }
-    parsed[key] = value;
+    if (key === "gatewayhttpendpoint") {
+      parsed.gatewayHttpEndpoints.push(value);
+    } else {
+      parsed[key] = value;
+    }
     index += 1;
   }
+  const supportedGatewayHttpEndpoints = new Set(["chatCompletions", "responses"]);
+  for (const endpoint of parsed.gatewayHttpEndpoints) {
+    if (!supportedGatewayHttpEndpoints.has(endpoint)) {
+      throw new Error(`unsupported --gateway-http-endpoint: ${endpoint}`);
+    }
+  }
   return {
-    portFile: parsed.portfile
+    portFile: parsed.portfile,
+    gatewayHttpEndpoints: parsed.gatewayHttpEndpoints
   };
 }
 

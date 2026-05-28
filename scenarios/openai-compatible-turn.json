@@ -14,6 +14,11 @@
   "agent": {
     "expectedText": "KOVA_AGENT_OK"
   },
+  "mockProvider": {
+    "gatewayHttpEndpoints": [
+      "chatCompletions"
+    ]
+  },
   "thresholds": {
     "gatewayReadyMs": 30000,
     "agentTurnMs": 45000,

@@ -7171,6 +7171,11 @@ function agentColdWarmEvaluationCheck() {
     assertEqual(record.measurements.agentTurns[1].responseText, "KOVA_AGENT_OK", "final assistant response precedence");
     assertEqual(record.measurements.agentTurns[1].providerRoutes[0].value, "/v1/responses", "warm provider route evidence");
     assertEqual(
+      record.violations.some((violation) => violation.phaseId === "warm-agent-turn" && violation.metric === "preProviderDominanceRatio"),
+      false,
+      "warm mock turn should not fail dominance ratio while absolute pre-provider latency is below threshold"
+    );
+    assertEqual(
       renderPasteSummary({
         runId: "self-check-cold-warm",
         target: "runtime:stable",
@@ -10910,7 +10915,7 @@ async function mockAuthOpenClawConfigCheck(tmp) {
   await writeFile(portFile, "12345\n", "utf8");
   const command = [
     `OPENCLAW_HOME=${quoteShell(home)}`,
-    `node support/configure-openclaw-mock-auth.mjs --port-file ${quoteShell(portFile)}`
+    `node support/configure-openclaw-mock-auth.mjs --port-file ${quoteShell(portFile)} --gateway-http-endpoint chatCompletions`
   ].join(" ");
   const result = await runCommand(command, { timeoutMs: 30000, maxOutputChars: 1000000 });
   try {
@@ -10923,6 +10928,7 @@ async function mockAuthOpenClawConfigCheck(tmp) {
     assertEqual(config.gateway?.auth?.mode, "token", "mock gateway token mode");
     assertEqual(config.gateway?.auth?.token, "kova-mock-gateway-token", "mock gateway auth token");
     assertEqual(config.gateway?.remote?.token, "kova-mock-gateway-token", "mock gateway remote token");
+    assertEqual(config.gateway?.http?.endpoints?.chatCompletions?.enabled, true, "mock gateway chat completions endpoint enabled");
     return {
       id: "mock-auth-openclaw-config",
       status: "PASS",

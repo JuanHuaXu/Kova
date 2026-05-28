@@ -2014,7 +2014,8 @@ function checkAgentTurnThresholds(violations, turns, selected, thresholds, recor
     checkTurnThreshold(violations, turn, "cleanupMs", thresholds.agentCleanupMs, `${turn.label} agent cleanup took ${turn.cleanupMs}ms`);
     if (typeof thresholds.preProviderDominanceRatio === "number" &&
       typeof turn.preProviderDominance === "number" &&
-      turn.preProviderDominance > thresholds.preProviderDominanceRatio) {
+      turn.preProviderDominance > thresholds.preProviderDominanceRatio &&
+      preProviderDominanceExceededAbsoluteGate(turn, thresholds)) {
       violations.push({
         kind: "agent-latency",
         metric: "preProviderDominanceRatio",
@@ -2062,6 +2063,13 @@ function checkAgentTurnAggregateThresholds(violations, stats, thresholds) {
   checkAggregateThreshold(violations, stats.providerFinalMs.max, "agentProviderFinalMaxMs", thresholds.agentProviderFinalMaxMs);
   checkAggregateThreshold(violations, stats.cleanupMs.p95, "agentCleanupP95Ms", thresholds.agentCleanupP95Ms);
   checkAggregateThreshold(violations, stats.cleanupMs.max, "agentCleanupMaxMs", thresholds.agentCleanupMaxMs);
+}
+
+function preProviderDominanceExceededAbsoluteGate(turn, thresholds) {
+  if (typeof thresholds.preProviderMs !== "number" || typeof turn.preProviderMs !== "number") {
+    return true;
+  }
+  return turn.preProviderMs > thresholds.preProviderMs;
 }
 
 function diagnoseAgentLatency({ coldAgentTurn, warmAgentTurn, providerTurn, thresholds, timelineSummary, authMode = null, expectedProviderMode = "normal", providerSimulation = null }) {
