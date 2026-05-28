@@ -136,8 +136,9 @@ export async function matrixData(): Promise<MatrixData> {
   });
 
   const histories = await scenarioHistories();
+  const latestScenarioRank = scenarioRank(releasesDesc[0]?.scenarios ?? []);
   const rows = [...histories.values()]
-    .sort((a, b) => a.id.localeCompare(b.id))
+    .sort((a, b) => compareScenarioOrder(a, b, latestScenarioRank))
     .map((h) => rowFromHistory(h, matrixReleases));
 
   // Headlines per release: startup and agent turn are the public story.
@@ -157,6 +158,17 @@ export async function matrixData(): Promise<MatrixData> {
   });
 
   return { releases: matrixReleases, rows, headlines, sampleSummary: scenarioSampleSummary(releasesDesc[0]) };
+}
+
+function scenarioRank(scenarios: Scenario[]): Map<string, number> {
+  return new Map(scenarios.map((scenario, index) => [scenario.id, index]));
+}
+
+function compareScenarioOrder(a: ScenarioHistory, b: ScenarioHistory, rank: Map<string, number>): number {
+  const ar = rank.get(a.id) ?? Number.MAX_SAFE_INTEGER;
+  const br = rank.get(b.id) ?? Number.MAX_SAFE_INTEGER;
+  if (ar !== br) return ar - br;
+  return a.id.localeCompare(b.id);
 }
 
 function headlineMetric(r: Release, metrics: string[]): { value: number | null; breach: boolean } | null {

@@ -150,11 +150,11 @@ function deltaSpan(curr: number | null | undefined, prev: number | null | undefi
           <thead>
             <tr>
               <th>release</th>
-              <th>counts (p/f/b)</th>
-              <th class="num">startup</th>
-              <th class="num">agent turn</th>
-              <th class="num">pre-provider</th>
-              <th class="num">gw.p95</th>
+              <th class="num center">startup</th>
+              <th class="num center">agent turn</th>
+              <th class="num center">pre-provider</th>
+              <th class="num center">gw.p95</th>
+              <th class="center">counts (p/f/b)</th>
             </tr>
           </thead>
           <tbody>
@@ -167,18 +167,7 @@ function deltaSpan(curr: number | null | undefined, prev: number | null | undefi
                     <span class="date">{rel.date}</span>
                     <span class="sha">{rel.sha}</span>
                   </td>
-                  <td>
-                    {measured ? (
-                      <span class="matrix-cnt">
-                        <span class="p">{rel.counts.pass}</span>/
-                        <span class="f">{rel.counts.fail}</span>/
-                        <span class="b">{rel.counts.block}</span>
-                      </span>
-                    ) : (
-                      <span class="matrix-cnt"><span class="dash">— not measured</span></span>
-                    )}
-                  </td>
-                  <td class="num">
+                  <td class="num center">
                     {h.startup && h.startup.value != null ? (
                       <Fragment>
                         <span class:list={[h.startup.breach && "matrix-breach"]}>{fmtMetric(h.startup.value, "s")}</span>
@@ -188,7 +177,7 @@ function deltaSpan(curr: number | null | undefined, prev: number | null | undefi
                       <span style="color: var(--text-3c)">—</span>
                     )}
                   </td>
-                  <td class="num">
+                  <td class="num center">
                     {h.turn && h.turn.value != null ? (
                       <Fragment>
                         <span class:list={[h.turn.breach && "matrix-breach"]}>{fmtMetric(h.turn.value, "s")}</span>
@@ -198,7 +187,7 @@ function deltaSpan(curr: number | null | undefined, prev: number | null | undefi
                       <span style="color: var(--text-3c)">—</span>
                     )}
                   </td>
-                  <td class="num">
+                  <td class="num center">
                     {h.pre && h.pre.value != null ? (
                       <Fragment>
                         <span class:list={[h.pre.breach && "matrix-breach"]}>{fmtMetric(h.pre.value, "s")}</span>
@@ -208,7 +197,7 @@ function deltaSpan(curr: number | null | undefined, prev: number | null | undefi
                       <span style="color: var(--text-3c)">—</span>
                     )}
                   </td>
-                  <td class="num">
+                  <td class="num center">
                     {h.gw && h.gw.value != null ? (
                       <Fragment>
                         <span class:list={[h.gw.breach && "matrix-breach"]}>{fmtMetric(h.gw.value, "ms")}</span>
@@ -216,6 +205,17 @@ function deltaSpan(curr: number | null | undefined, prev: number | null | undefi
                       </Fragment>
                     ) : (
                       <span style="color: var(--text-3c)">—</span>
+                    )}
+                  </td>
+                  <td class="center">
+                    {measured ? (
+                      <span class="matrix-cnt">
+                        <span class="p">{rel.counts.pass}</span>/
+                        <span class="f">{rel.counts.fail}</span>/
+                        <span class="b">{rel.counts.block}</span>
+                      </span>
+                    ) : (
+                      <span class="matrix-cnt"><span class="dash">— not measured</span></span>
                     )}
                   </td>
                 </tr>

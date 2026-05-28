@@ -1502,6 +1502,7 @@ table.matrix-agg thead th {
   text-align: left; white-space: nowrap;
 }
 table.matrix-agg thead th.num { text-align: right; }
+table.matrix-agg thead th.center { text-align: center; }
 table.matrix-agg tbody td {
   padding: var(--space-3);
   border-bottom: 1px solid var(--border-1);
@@ -1510,6 +1511,7 @@ table.matrix-agg tbody td {
 table.matrix-agg tbody tr:hover td { background: var(--surface-2); }
 table.matrix-agg tbody tr:last-child td { border-bottom: none; }
 table.matrix-agg td.num { text-align: right; font-variant-numeric: tabular-nums; }
+table.matrix-agg td.center { text-align: center; }
 table.matrix-agg .ver-cell a { color: var(--text-1c); text-decoration: none; font-weight: 500; }
 table.matrix-agg .ver-cell a:hover { color: var(--text-2c); text-decoration: underline; }
 table.matrix-agg .ver-cell .date,
